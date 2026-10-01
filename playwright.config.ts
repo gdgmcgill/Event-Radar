@@ -55,32 +55,25 @@
  *   `npm run build && npm run start` has no HMR, hydrates, and is also the
  *   honest target: it is the artifact that deploys. The plan sanctions either.
  *
- * `bypassCSP` IS ON, AND THAT IS A LIMITATION THIS HARNESS OWNS RATHER THAN HIDES.
- *   `next.config.js` sets an unconditional
- *   `connect-src 'self' https://*.supabase.co wss://*.supabase.co ...`.
- *   The LOCAL stack is `http://127.0.0.1:54321`, which that list does not admit,
- *   so the browser refuses every client-side Supabase call before it leaves —
- *   `Refused to connect because it violates the document's Content Security
- *   Policy`, surfacing in the UI as a bare "Failed to fetch". The server side is
- *   unaffected, which makes the symptom read like a cookie bug for a while.
- *
- *   The CSP is CORRECT for production, where the app really does talk to
- *   `https://<ref>.supabase.co`. It has no local-development entry, and adding
- *   one is a change to application source — which this plan prohibits by name
- *   and which is a behaviour change in a phase whose core value is behaviour
- *   preservation. Registered as a finding for a later phase; see
- *   `evidence/harness-note.md`.
- *
- *   The consequence to state plainly: **this harness does not exercise the CSP.**
- *   Nothing here would notice if that header were weakened or removed.
+ * THE CSP IS ENFORCED (`bypassCSP: false`; research C13, DEC-77, plan 06-16).
+ *   `next.config.js` builds the policy from the build's environment: the
+ *   harness build's NEXT_PUBLIC_SUPABASE_URL (`http://127.0.0.1:54321`, from
+ *   the `env` block below) is admitted to img-src and connect-src with its
+ *   `ws://` twin, and production never carries 'unsafe-eval'. So every spec is
+ *   also a CSP regression check, and `e2e/specs/csp.spec.ts` asserts the header
+ *   and the absence of CSP console violations directly. (Until 06-16 this was
+ *   `bypassCSP: true`, and the harness did not exercise the CSP at all.)
  */
 
 import { defineConfig, devices } from "@playwright/test";
 
 import { assertSeedTargetAllowed } from "./scripts/seed/guard";
 import { localStackEnv } from "./e2e/env";
+import { LOCAL_HEALTH_TOKEN } from "./e2e/helpers/healthCredential";
 
-export const BASE_URL = "http://127.0.0.1:3000";
+// NextURL normalizes loopback IP origins to localhost, including callbacks.
+// Keep browser cookies and redirects on the same host; Supabase stays127.0.0.1.
+export const BASE_URL = "http://localhost:3000";
 
 const stack = localStackEnv();
 
@@ -105,9 +98,8 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    // See the CSP note above. Without this, every client-side Supabase call the
-    // application makes is refused by the browser before it leaves.
-    bypassCSP: true,
+    // The CSP is enforced (see the header; C13, DEC-77).
+    bypassCSP: false,
   },
   projects: [
     // One sign-in per persona per run. The local stack rate-limits sign-ins
@@ -120,10 +112,13 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       dependencies: ["setup"],
       testMatch: /specs\/.*\.spec\.ts/,
+      // Enabled-product acceptance specs run only under their own configs.
+      testIgnore: /specs\/(m1-m2|m3)-acceptance\.spec\.ts/,
     },
   ],
   webServer: {
-    command: "npm run build && npm run start",
+    // Match request.url callback origins to BASE_URL and cookie scope.
+    command: "npm run build && npm run start -- --hostname 127.0.0.1",
     url: BASE_URL,
     // NEVER REUSE. `reuseExistingServer: !process.env.CI` was 03-REVIEW.md
     // WR-03: a developer machine with `npm run dev` already on port 3000 — the
@@ -153,6 +148,20 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_URL: stack.url,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: stack.anonKey,
       SUPABASE_SERVICE_ROLE_KEY: stack.serviceRoleKey,
+      // Override any production monitor secret inherited by Next's env loader.
+      // This known test token belongs only to the local guarded server above.
+      HEALTH_TOKEN: LOCAL_HEALTH_TOKEN,
+      // The local server has no /_vercel/* script endpoints. Explicitly blank
+      // deployment detection instead of inheriting a shell or .env value.
+      VERCEL: "",
+      // Release switches must not leak in from local shell/.env files. The
+      // baseline harness verifies the fail-closed deployment configuration.
+      FEATURE_DISCOVERY_UI: "false",
+      FEATURE_DISCOVERY_ADMIN_PREVIEW: "false",
+      FEATURE_NATIVE_APPLICATIONS: "false",
+      FEATURE_RECRUITER_ACCESS: "false",
+      FEATURE_RESUME_PARSING: "false",
+      FEATURE_NEW_FEEDBACK_WRITES: "false",
       // The rate-limit store (plan 05-18, DEC-50, research C8/C13). All four
       // Upstash names are set to the empty string, never left unset: Next's
       // env loader (@next/env) never overrides a variable that is already
@@ -167,6 +176,12 @@ export default defineConfig({
       KV_REST_API_URL: "",
       KV_REST_API_TOKEN: "",
       RATE_LIMIT_REQUIRE_DISTRIBUTED: "",
+      // Sentry (plan 06-16): blank for the same reason, so a developer's .env
+      // can never make the harness report its deliberate errors to a real
+      // project, or its build upload source maps.
+      SENTRY_DSN: "",
+      NEXT_PUBLIC_SENTRY_DSN: "",
+      SENTRY_AUTH_TOKEN: "",
     },
   },
 });

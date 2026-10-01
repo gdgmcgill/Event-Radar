@@ -21,6 +21,7 @@ import * as ReactNamespace from "react";
 import type { User as AuthUser } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/lib/supabase/types";
+import { currentRequestId, log } from "./log";
 
 /** The client the existing server factory produces. Derived rather than
  * restated, so the seam cannot drift from the factory it wraps. */
@@ -67,19 +68,43 @@ export type RequestContext = {
 const PROFILE_COLUMNS =
   "id, roles, onboarding_completed, banned_at, ban_expires_at";
 
+/** supabase-js's error name when there is simply no session to read. */
+const SESSION_MISSING = "AuthSessionMissingError";
+
 /**
  * Builds the request context.
+ *
+ * The request id is the one in the request store (plan 06-12, DEC-74): the
+ * proxy stamps it and `withRoute` puts it in the store, so the proxy's and the
+ * handler's log lines for one request share it. Outside a store (a Server
+ * Component, a test) a fresh UUID is minted, as before.
+ *
+ * `auth.getUser()` does not reject on an auth or network failure; it returns
+ * `{ user: null, error }`, and the request continues as anonymous (every guard
+ * then answers 401). A failure other than a missing session is logged as ONE
+ * warn line with the error's code and status only (DI-45): an operator needs
+ * that signal to see a broken session refresh or credential stuffing, and the
+ * message is never logged because it can carry token or account detail.
  *
  * An anonymous request never reaches the profile table: there is no id to scope
  * the read to, and issuing an unscoped read would be worse than issuing none.
  */
 export async function createRequestContext(): Promise<RequestContext> {
   const supabase = await createClient();
-  const requestId = crypto.randomUUID();
+  const requestId = currentRequestId() ?? crypto.randomUUID();
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+
+  if (authError && authError.name !== SESSION_MISSING) {
+    log.warn("auth user lookup failed", {
+      scope: "Auth",
+      code: authError.code,
+      status: authError.status,
+    });
+  }
 
   if (!user) {
     return { supabase, user: null, profile: null, requestId };
@@ -94,27 +119,30 @@ export async function createRequestContext(): Promise<RequestContext> {
   return { supabase, user, profile: profile ?? null, requestId };
 }
 
-type RenderPassMemo = <T extends () => unknown>(fn: T) => T;
+type RenderPassMemo = <T extends (...args: never[]) => unknown>(fn: T) => T;
 
 /**
  * React's `cache` memoizes per RENDER PASS, and is exported from `react` only
  * under the `react-server` condition.
  *
- * DEVIATION, recorded rather than hidden: React is pinned to 18.3.x for this
- * program and React 19 is explicitly out of scope. React 18.3.1 exports `cache`
- * from NEITHER build — not `index.js` and not `react.shared-subset.js` — and
- * `@types/react` 18.3 declares it only in `canary.d.ts`, which this project
- * does not reference. So the alias is resolved by capability rather than by a
- * static import that would fail to type-check and would be `undefined` at
- * runtime.
+ * WHERE IT IS AND IS NOT PRESENT (corrected in 06-12, DI-70, REVIEW-05 IN-13):
+ * the project's own `react` package is 18.3.1, which exports `cache` from
+ * neither build, and `@types/react` 18.3 declares it only in `canary.d.ts`,
+ * which this project does not reference. But the App Router does not run
+ * Server Components on that package: it resolves `react` to Next's vendored
+ * canary, whose `react-server` build
+ * (`next/dist/compiled/react/cjs/react.react-server.production.js`) DOES export
+ * `cache`. So in layouts, pages and `generateMetadata` this alias memoizes per
+ * render pass, and under Jest (plain `react` 18.3.1) it is the un-memoized
+ * function. The alias is resolved by capability rather than by a static import,
+ * which would fail to type-check against `@types/react` 18.3.
  *
- * The fallback is the un-memoized function, which is CORRECT and merely
- * re-reads the user — never a module-level cache, which would be scoped to the
- * process rather than the request and would leak one user's profile into
- * another user's response. When React gains `cache`, this memoizes with no
- * further change.
+ * Both outcomes are safe. The fallback is CORRECT and merely re-reads the user;
+ * the memoized form is scoped to one render pass. Neither is a module-level
+ * cache, which would be scoped to the process rather than the request and
+ * would leak one user's profile into another user's response.
  */
-const memoizePerRenderPass: RenderPassMemo = (() => {
+export const memoizePerRenderPass: RenderPassMemo = (() => {
   const maybeCache: unknown = (ReactNamespace as Record<string, unknown>).cache;
   return typeof maybeCache === "function"
     ? (maybeCache as RenderPassMemo)

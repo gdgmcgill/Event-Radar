@@ -1,0 +1,63 @@
+[
+  {
+    "username": "example_club_a",
+    "fullName": "Example Club A",
+    "latestPosts": [
+      {
+        "id": "fixture-a-1",
+        "caption": "Robotics Build Night\nJoin us on October 3 at 6:00 PM for a hands-on robotics workshop.\nLocation: Trottier 1100\nFree snacks. Register via the link in bio!",
+        "timestamp": "2026-09-18T15:00:00.000Z",
+        "displayUrl": "https://scontent.cdninstagram.com/v/fixture-a-1.jpg",
+        "url": "https://www.instagram.com/p/fixtureA1/",
+        "likesCount": 40,
+        "commentsCount": 3
+      },
+      {
+        "id": "fixture-a-2",
+        "caption": "Congratulations to our new executive team! Thank you all for an amazing year.",
+        "timestamp": "2026-09-17T15:00:00.000Z",
+        "displayUrl": "https://scontent.cdninstagram.com/v/fixture-a-2.jpg",
+        "url": "https://www.instagram.com/p/fixtureA2/",
+        "likesCount": 12,
+        "commentsCount": 0
+      },
+      {
+        "id": "fixture-a-3",
+        "caption": "Summer Coding Workshop\nJoin us on June 10 at 5:00 PM.\nLocation: Trottier 1100\nRegister via the link in bio!",
+        "timestamp": "2026-06-01T15:00:00.000Z",
+        "displayUrl": "https://scontent.cdninstagram.com/v/fixture-a-3.jpg",
+        "url": "https://www.instagram.com/p/fixtureA3/",
+        "likesCount": 9,
+        "commentsCount": 1
+      },
+      {
+        "caption": "A post without an id is dropped.",
+        "timestamp": "2026-09-18T15:00:00.000Z"
+      }
+    ]
+  },
+  {
+    "username": "example_club_b",
+    "fullName": "Example Club B",
+    "latestPosts": [
+      {
+        "id": "fixture-b-1",
+        "caption": "Networking Night with alumni\nThursday, October 8 at 5:30 PM\n📍 Bronfman Building, room 151\nRSVP now, spots are limited!",
+        "timestamp": "2026-09-19T12:00:00.000Z",
+        "displayUrl": "https://scontent.cdninstagram.com/v/fixture-b-1.jpg",
+        "url": "https://www.instagram.com/p/fixtureB1/",
+        "likesCount": 30,
+        "commentsCount": 2
+      }
+    ]
+  },
+  {
+    "error": "not_found",
+    "errorDescription": "Profile does not exist",
+    "url": "https://www.instagram.com/example_missing_club/"
+  },
+  {
+    "username": 42,
+    "latestPosts": "not an array"
+  }
+]

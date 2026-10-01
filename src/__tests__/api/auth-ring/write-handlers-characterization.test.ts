@@ -16,7 +16,10 @@
  * measurements are in `evidence/slice-3-characterization-handlers.txt`):
  *   - P0 the table is the tree: the descriptor ids equal the enumeration, the
  *     ten legacy-ban arms, the two onboarding exemptions and the two
- *     anonymous-tolerant arms are exactly the named ones;
+ *     anonymous-tolerant arms are exactly the named ones. (The enumeration
+ *     read `export async function`; it moved out of PRESERVE in 06-13, when
+ *     F-058's `withRoute` changed that text, to `write-arm-tree-defect.test.ts`
+ *     T0 with a defect-ledger row. The uniqueness and the count stay here);
  *   - P1 every arm, anonymous caller: the exact status and parsed body today
  *     (`ANONYMOUS_BYTES`). 34 arms answer 401 `{"error":"Unauthorized"}`, three
  *     answer 401 with their own text, and no anonymous request writes. The
@@ -50,8 +53,6 @@
  * 1, 3 and 4 turn P2, P1 and P3 rows red by editing SOURCE only.
  */
 
-import { readFileSync, readdirSync } from "node:fs";
-import { join, relative, sep } from "node:path";
 import {
   createFakeSupabase,
   type FakeSupabase,
@@ -108,29 +109,10 @@ function rows(filter: (arm: WriteArm) => boolean): [string, WriteArm][] {
 
 // ─── P0: the table is the tree ─────────────────────────────────────────────
 
-const API_DIR = join(process.cwd(), "src", "app", "api");
-const EXCLUDED = ["admin/", "cron/", "recommendations/batch/"];
-const WRITE_VERB = /export\s+(?:async\s+)?function\s+(POST|PUT|PATCH|DELETE)\b/g;
-
-function enumerateWriteArms(): string[] {
-  const arms: string[] = [];
-  for (const entry of readdirSync(API_DIR, { recursive: true, withFileTypes: true })) {
-    if (!entry.isFile() || entry.name !== "route.ts") continue;
-    const file = join(entry.parentPath, entry.name);
-    const route = relative(API_DIR, entry.parentPath).split(sep).join("/");
-    if (EXCLUDED.some((prefix) => `${route}/`.startsWith(prefix))) continue;
-    for (const match of readFileSync(file, "utf8").matchAll(WRITE_VERB)) {
-      arms.push(`${route} ${match[1]}`);
-    }
-  }
-  return arms.sort();
-}
-
 describe("P0 the descriptor table equals the route tree", () => {
   test("every write arm under src/app/api has exactly one descriptor", () => {
     const ids = WRITE_ARMS.map((arm) => arm.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect([...ids].sort()).toEqual(enumerateWriteArms());
     expect(ids).toHaveLength(39);
   });
 
@@ -281,14 +263,14 @@ describe("P3 un-onboarded caller on the two onboarding exemptions", () => {
       as("unonboarded");
       const outcome = await runArm(arm);
       expect(refusedWith(outcome, 403, "Onboarding required")).toBe(false);
-      expect(outcome.status).toBe(200);
+      expect(outcome.status).toBe(arm.id === "onboarding/complete POST" ? 400 : 200);
     }
   );
 
-  test("P3 onboarding/complete POST answers 200 {success:true}", async () => {
+  test("P1-02 onboarding/complete cannot substitute for completed profile", async () => {
     as("unonboarded");
     const arm = WRITE_ARMS.find((a) => a.id === "onboarding/complete POST")!;
-    expect(await runArm(arm)).toEqual({ status: 200, body: { success: true } });
+    expect(await runArm(arm)).toEqual({ status: 400, body: { error: "Complete your profile first" } });
   });
 
   test("P3 users/[id] PATCH (self) stores onboarding_completed true", async () => {

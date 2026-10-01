@@ -1,8 +1,11 @@
 import type { MetadataRoute } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getFeatureFlags } from "@/lib/features";
+import { log } from "@/server/log";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://universeapp.ca";
+  const discoveryEnabled = getFeatureFlags().discovery_ui;
 
   const staticPages: MetadataRoute.Sitemap = [
     {
@@ -17,12 +20,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.8,
     },
-    {
-      url: `${baseUrl}/landing`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
+    // `/landing` stays out of the sitemap once `/` is the editorial
+    // homepage — it now redirects there and has nothing of its own to index.
+    ...(discoveryEnabled
+      ? []
+      : [
+          {
+            url: `${baseUrl}/landing`,
+            lastModified: new Date(),
+            changeFrequency: "monthly" as const,
+            priority: 0.7,
+          },
+        ]),
     {
       url: `${baseUrl}/about`,
       lastModified: new Date(),
@@ -41,9 +50,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.3,
     },
+    ...(discoveryEnabled
+      ? [
+          {
+            url: `${baseUrl}/discover`,
+            lastModified: new Date(),
+            changeFrequency: "daily" as const,
+            priority: 0.9,
+          },
+          {
+            url: `${baseUrl}/resources`,
+            lastModified: new Date(),
+            changeFrequency: "weekly" as const,
+            priority: 0.6,
+          },
+          {
+            url: `${baseUrl}/submit`,
+            lastModified: new Date(),
+            changeFrequency: "monthly" as const,
+            priority: 0.4,
+          },
+          {
+            url: `${baseUrl}/for-companies`,
+            lastModified: new Date(),
+            changeFrequency: "monthly" as const,
+            priority: 0.4,
+          },
+        ]
+      : []),
   ];
 
-  // Fetch approved events for dynamic pages
   try {
     const supabase = await createClient();
     const { data: events } = await supabase
@@ -60,7 +96,50 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-    return [...staticPages, ...eventPages];
+    if (!discoveryEnabled) return [...staticPages, ...eventPages];
+
+    // `discovery_public` has no `updated_at` column (deviation from the
+    // brief, which named that column); `published_at` is the closest
+    // freshness signal the public projection actually carries.
+    const now = new Date().toISOString();
+    const { data: opportunities, error: opportunitiesError } = await supabase
+      .from("discovery_public")
+      .select("id, published_at")
+      .eq("kind", "opportunity")
+      .is("canonical_id", null)
+      .lte("published_at", now)
+      .limit(500);
+    if (opportunitiesError) {
+      log.warn("sitemap query failed", { scope: "sitemap", section: "opportunities" });
+    }
+
+    const opportunityPages: MetadataRoute.Sitemap = (opportunities ?? [])
+      .filter((row): row is { id: string; published_at: string | null } => !!row.id)
+      .map((row) => ({
+        url: `${baseUrl}/opportunities/${row.id}`,
+        lastModified: new Date(row.published_at ?? Date.now()),
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+      }));
+
+    const { data: resources, error: resourcesError } = await supabase
+      .from("resources")
+      .select("slug, reviewed_at")
+      .eq("status", "published")
+      .is("deleted_at", null)
+      .limit(500);
+    if (resourcesError) {
+      log.warn("sitemap query failed", { scope: "sitemap", section: "resources" });
+    }
+
+    const resourcePages: MetadataRoute.Sitemap = (resources ?? []).map((row) => ({
+      url: `${baseUrl}/resources/${row.slug}`,
+      lastModified: new Date(row.reviewed_at ?? Date.now()),
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    }));
+
+    return [...staticPages, ...eventPages, ...opportunityPages, ...resourcePages];
   } catch {
     return staticPages;
   }

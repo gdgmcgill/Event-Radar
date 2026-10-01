@@ -1,0 +1,294 @@
+# Plan 06-08 evidence: events family and calendar on zod contracts (REFAC-15, F-094)
+
+Plan: 06-08 · Phase: 06-slices-6-7-async-edge-contracts-caching-observability · Recorded: 2026-09-27
+Base: aa04365 (06-07 complete). Task 1 commit: 4caf196. Task 2 commit: the commit carrying this file.
+Every block below is the tool's own output (trimmed to its summary lines) with the exit code the
+shell reported. Time-boxed with the scratchpad's with-timeout.sh (exit 124 on timeout; none timed out).
+
+## 0. Floor at the base (aa04365), the 44-suite events set
+
+$ npx jest --ci <contracts, body, events, review05, export, auth-ring, service-role, error-text,
+    uncaught-throw, cache-headers, admin-guard, club-gates>        exit 0
+Test Suites: 44 passed, 44 total
+Tests:       1365 passed, 1365 total
+
+## 1. Task 1 RED (tests before code)
+
+$ npx jest --ci src/contracts/__tests__/events.test.ts src/server/__tests__/body.test.ts        exit 1
+Test Suites: 2 failed, 2 total
+Tests:       9 failed, 25 passed, 34 total
+events.test.ts could not load: "Could not locate module @/contracts/events". The 9 parseForm rows:
+  ● Test suite failed to run
+  ● parseForm › accepts a file exactly at the size limit
+  ● parseForm › answers the route's missing text when there is no file
+  ● parseForm › answers the route's own status and body when the form cannot be read
+  ● parseForm › answers the route's size text for an oversize file
+  ● parseForm › answers the route's type text, naming the type, for a wrong type
+  ● parseForm › checks size before type by default, and type first when the route did
+  ● parseForm › returns the file and the parsed non-file fields
+  ● parseForm › treats a string in the file field as no file
+  ● parseForm › validates the non-file fields with the schema after the file is present
+
+## 2. Task 1 GREEN (parseForm, checkFile, src/contracts/events.ts)
+
+$ npx jest --ci src/contracts/__tests__/events.test.ts src/server/__tests__/body.test.ts        exit 0
+Test Suites: 2 passed, 2 total
+Tests:       117 passed, 117 total
+
+## 3. Ledger protocol for the F-094 moves (malformed-input-defect.test.ts)
+
+3.1 Step 2: the fix applied at the 8 routes, every suite UNEDITED        exit 1
+Test Suites: 1 failed, 44 passed, 45 total
+Tests:       15 failed, 1442 passed, 1457 total
+Only malformed-input-defect.test.ts is red. Its 15 red rows (D0 x2, D1 x4, D2 x6, D3 x3):
+  ● D0: the site lists are the tree › RAW_SITES covers every raw request.json() in a route file (18 sites)
+  ● D0: the site lists are the tree › RJO_SITES is every route file calling readJsonObject (15)
+  ● D1: each raw site, a body that is not JSON › events/[id] PATCH
+  ● D1: each raw site, a body that is not JSON › events/[id]/invite POST
+  ● D1: each raw site, a body that is not JSON › events/[id]/rsvp DELETE
+  ● D1: each raw site, a body that is not JSON › events/create POST
+  ● D2: each raw site, a JSON array › events/[id] PATCH
+  ● D2: each raw site, a JSON array › events/[id]/invite POST
+  ● D2: each raw site, a JSON array › events/[id]/reviews POST
+  ● D2: each raw site, a JSON array › events/[id]/rsvp DELETE
+  ● D2: each raw site, a JSON array › events/[id]/rsvp POST
+  ● D2: each raw site, a JSON array › events/create POST
+  ● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › events/[id] PATCH
+  ● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › events/[id]/appeal POST
+  ● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › events/create POST
+Every PRESERVE suite in the set (bad-request-characterization, events-list, events-detail, rsvp,
+save, calendar, write-handlers, service-role-routing) and every other DEFECT suite stayed green.
+
+3.2 Step 3: rows moved (ADOPTED_RAW_SITES / ADOPTED_RJO_SITES, new outcomes, D0 counts 18->12 and
+15->13, plus one new D0 check that the 7 adopted files call parseBody and nothing raw)        exit 0
+Test Suites: 1 passed, 1 total
+Tests:       73 passed, 73 total
+
+3.3 Step 4: the 8 route files swapped to `git show HEAD:<path>` (pre-fix), moved suite run        exit 1
+Test Suites: 1 failed, 1 total
+Tests:       16 failed, 57 passed, 73 total
+  ● D0: the site lists are the tree › RAW_SITES covers every raw request.json() in a route file (12 sites)
+  ● D0: the site lists are the tree › RJO_SITES is every route file calling readJsonObject (13)
+  ● D0: the site lists are the tree › the adopted sites read their body through parseBody and nothing raw (06-08)
+  ● D1: each raw site, a body that is not JSON › events/[id] PATCH
+  ● D1: each raw site, a body that is not JSON › events/[id]/invite POST
+  ● D1: each raw site, a body that is not JSON › events/[id]/rsvp DELETE
+  ● D1: each raw site, a body that is not JSON › events/create POST
+  ● D2: each raw site, a JSON array › events/[id] PATCH
+  ● D2: each raw site, a JSON array › events/[id]/invite POST
+  ● D2: each raw site, a JSON array › events/[id]/reviews POST
+  ● D2: each raw site, a JSON array › events/[id]/rsvp DELETE
+  ● D2: each raw site, a JSON array › events/[id]/rsvp POST
+  ● D2: each raw site, a JSON array › events/create POST
+  ● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › events/[id] PATCH
+  ● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › events/[id]/appeal POST
+  ● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › events/create POST
+Fixed sources restored from copies; cmp against the copies:
+cmp src/app/api/events/create/route.ts exit 0
+cmp src/app/api/events/[id]/route.ts exit 0
+cmp src/app/api/events/[id]/rsvp/route.ts exit 0
+cmp src/app/api/events/[id]/invite/route.ts exit 0
+cmp src/app/api/events/[id]/reviews/route.ts exit 0
+cmp src/app/api/events/[id]/report/route.ts exit 0
+cmp src/app/api/events/[id]/appeal/route.ts exit 0
+cmp src/app/api/events/upload-image/route.ts exit 0
+
+3.4 Step 5: the PRESERVE files are byte-unchanged over the whole plan
+$ git diff aa04365 --stat -- src/__tests__/contracts/bad-request-characterization.test.ts \
+    src/__tests__/contracts/badRequestTable.ts src/__tests__/api/events src/app/api/events/export/route.test.ts
+(empty)
+
+## 4. Task 1 <verify>, verbatim
+
+$ npx jest --ci src/contracts src/server/__tests__/body.test.ts src/__tests__/contracts src/__tests__/api/events \
+    && node scripts/check-contracts.mjs && npx tsc --noEmit        exit 0
+Test Suites: 25 passed, 25 total
+Tests:       705 passed, 705 total
+committed=77 live=77 delta=0
+PASS: the live census is within the committed allow-list
+
+$ node -e '<acceptance: no allow-list entry matches api/events/(create|[id]|upload-image)>'        exit 0
+Wider set (review05, export route test, auth-ring, service-role, error-text, uncaught-throw,
+cache-headers, admin, clubs, scripts)        exit 0
+Test Suites: 26 passed, 26 total
+Tests:       864 passed, 864 total
+$ npm run lint        exit 0   (168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings); none in a touched file)
+
+## 5. Task 2 RED (query rows before the query contracts)
+
+$ npx jest --ci src/contracts/__tests__/events.test.ts        exit 1
+Tests:       31 failed, 83 passed, 114 total
+Failing rows by block: EventsListQuery 19, ExportQuery 9, PopularQuery 2, CalendarQuery 1 (31).
+
+## 6. Task 2 GREEN, and the one PRESERVE red it met
+
+$ npx jest --ci src/contracts/__tests__/events.test.ts        exit 0
+Test Suites: 1 passed, 1 total
+Tests:       114 passed, 114 total
+
+With calendar/events adopting `parseQuery(`, the PRESERVE P0 coverage check went red (the file is
+not edited):
+Test Suites: 1 failed, 45 passed, 46 total
+Tests:       1 failed, 1498 passed, 1499 total
+  ● P0: the table covers the tree › every route file that can answer a 400 has a row here or a named suite elsewhere
+    Received: ["calendar/events"]
+Cause: P0's detector counts `parseQuery(` as "can answer a 400"; CalendarQuery cannot refuse and the
+table has no calendar 400 (it has none today). Resolution (Rule 3): `readQuery(params, schema)` in
+src/server/body.ts, for a query contract with no 400. It shares parseQuery's input building and
+throws on a refusal (a schema bug), so the calendar route has no 400 branch it could never take.
+Re-run after the change:        exit 0
+Test Suites: 46 passed, 46 total
+Tests:       1502 passed, 1502 total
+
+## 7. Allow-list diff (scripts/contracts-allowlist.json)
+
+before: 51 entries, 86 sites; after: 39 entries, 53 sites
+  - src/app/api/calendar/events/route.ts R3 2
+  - src/app/api/events/[id]/appeal/route.ts R4 1
+  - src/app/api/events/[id]/invite/route.ts R1 1
+  - src/app/api/events/[id]/report/route.ts R4 1
+  - src/app/api/events/[id]/reviews/route.ts R1 1
+  - src/app/api/events/[id]/route.ts R1 1
+  - src/app/api/events/[id]/rsvp/route.ts R1 2
+  - src/app/api/events/create/route.ts R1 1
+  - src/app/api/events/export/route.ts R3 8
+  - src/app/api/events/popular/route.ts R3 4
+  - src/app/api/events/route.ts R3 10
+  - src/app/api/events/upload-image/route.ts R2 1
+removed: 12 entries, 33 sites
+$ node scripts/check-contracts.mjs        exit 0
+committed=53 live=53 delta=0
+PASS: the live census is within the committed allow-list
+$ node -e '<acceptance: no allow-list entry matches api/(events|calendar)/>'        exit 0
+
+## 8. Defect-ledger rows added (15, all F-094, commit 4caf196)
+
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: RAW_SITES) | the raw `request.json()` list is the tree at **18 sites** (17 files), the six events sites included | the list is the tree at **12 sites** (12 files); the six events sites moved to `ADOPTED_RAW_SITES`, and a new D0 check asserts all seven adopted files call `parseBody(request, ` with no raw read or `readJsonObject(` | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: RJO_SITES) | the `readJsonObject` file list is the tree at **15** files, `events/[id]/appeal` and `events/[id]/report` included | the list is the tree at **13**; appeal and report moved to `ADOPTED_RJO_SITES` (they read through `parseBody` with `EventAppealBody` and `EventReportBody`) | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: events/create POST, not JSON) | **500** `{"error":"Failed to create event"}` (the raw read threw inside the try) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `CreateEventBody`), no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: events/[id] PATCH, not JSON) | **500** `{"error":"Failed to update event"}` | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `EventUpdateBody`, after the 404 and permission checks), no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: events/[id]/invite POST, not JSON) | **500** `{"error":"Failed to send invites"}` | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `EventInviteBody`), no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: events/[id]/rsvp DELETE, not JSON) | **400** `{"error":"user_id is required"}` (the handler's catch read the body as `{}`) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `RsvpDeleteBody`), no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: events/create POST, array) | **400** `{"error":"Title is required"}` (an array read as an object with no keys) | **400** `{"error":"Request body must be a JSON object"}`, no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: events/[id] PATCH, array) | **400** `{"error":"No valid fields to update"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: events/[id]/invite POST, array) | **400** `{"error":"No invitees provided"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: events/[id]/rsvp POST, array) | **400** `{"error":"user_id is required"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: events/[id]/rsvp DELETE, array) | **400** `{"error":"user_id is required"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: events/[id]/reviews POST, array) | **400** `{"error":"Rating must be an integer between 1 and 5"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: events/create POST, numeric `title`) | **201**, the event inserted with `title: "5"` (`sanitizeText` coerced the number) | **400** `{"error":"Title is required"}` (a non-string title fails the sanitized-required rule), no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: events/[id] PATCH, numeric `title`) | **200**, the number written as a pending edit (`pending_edits.title: 5`, `pending_fields: ["title"]`) | **400** `{"error":"Title must be a string"}` (new text: none existed to keep), no write | `4caf196` | 06-08 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: events/[id]/appeal POST, numeric `message`) | rejected handler promise, `message?.trim is not a function` (no outer try: Next's HTML 500, F-058) | **400** `{"error":"Appeal message is required"}` (`NonEmptyTrimmedString`), no write | `4caf196` | 06-08 |
+
+## 9. Task 2 <verify>, verbatim
+
+$ npx jest --ci && node scripts/check-contracts.mjs && npx tsc --noEmit && npm run lint        exit 0
+Test Suites: 1 skipped, 112 passed, 112 of 113 total
+Tests:       1 skipped, 2557 passed, 2558 total
+committed=53 live=53 delta=0
+PASS: the live census is within the committed allow-list
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+Also: node scripts/check-characterization-tags.mjs --all -> ok 53 files (exit 0);
+node scripts/check-elevated-ratchet.mjs -> committed=0 live=0 delta=0 (exit 0).
+
+## 10. Playwright: the four event specs from a fresh reset and seed
+
+10.1 Run 1
+$ supabase db reset --local        exit 0
+Finished supabase db reset on branch main.
+$ npx tsx scripts/seed/load.ts        exit 0
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+$ npx playwright test e2e/specs/event-read-path.spec.ts e2e/specs/save-and-rsvp.spec.ts \
+    e2e/specs/event-moderation-notifications.spec.ts e2e/specs/anonymous-browse.spec.ts --reporter=list        exit 1
+  ✓   1 [setup] › e2e/auth.setup.ts:59:18 › authenticate as onboarded_student (464ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:18 › authenticate as mid_onboarding_student (266ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_member (487ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_owner (439ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:18 › authenticate as multi_club_organizer (255ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:18 › authenticate as cross_club_attacker (451ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:18 › authenticate as admin (488ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:18 › authenticate as banned_permanent (211ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspended_active (202ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspension_expired (231ms)
+  ✓  11 [chromium] › e2e/specs/anonymous-browse.spec.ts:35:16 › an anonymous visitor browses the event feed and sees only approved events (427ms)
+  ✓  12 [chromium] › e2e/specs/anonymous-browse.spec.ts:53:16 › an anonymous visitor searches, and the search narrows the feed (1.2s)
+  ✓  13 [chromium] › e2e/specs/anonymous-browse.spec.ts:66:16 › an anonymous visitor browses public club content (234ms)
+  ✓  14 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:129:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › an approval writes exactly one event_approved notification (164ms)
+  ✓  15 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:136:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a suspension writes one event_suspended notification (139ms)
+  ✓  16 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:143:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second approval refreshes the one event_approved row, unread again (131ms)
+  ✓  17 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:156:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second suspension refreshes the one event_suspended row with the new reason (145ms)
+  ✓  18 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:165:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › the creator's appeal through the real route passes the events guard (+1) (49ms)
+  ✓  19 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:191:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a rejection after the appeal writes one event_rejected notification (122ms)
+  ✓  20 [chromium] › e2e/specs/event-read-path.spec.ts:84:5 › PRESERVE: GET /api/events?limit=1 returns 200 with the approved event first and total 2 (4ms)
+  ✓  21 [chromium] › e2e/specs/event-read-path.spec.ts:95:5 › PRESERVE: GET /api/events?search=Music Night returns exactly the second approved event (5ms)
+  ✓  22 [chromium] › e2e/specs/event-read-path.spec.ts:104:5 › PRESERVE: typing a,b into the search box shows the No events found state (605ms)
+  ✓  23 [chromium] › e2e/specs/event-read-path.spec.ts:117:5 › PRESERVE: the approved event's detail page renders its title (235ms)
+  ✓  24 [chromium] › e2e/specs/event-read-path.spec.ts:149:5 › PRESERVE: limit=1 then its nextCursor traverses both approved events in start_date order, total 2 on each page (19ms)
+  ✓  25 [chromium] › e2e/specs/event-read-path.spec.ts:163:5 › PRESERVE: the same cursor traversal with search=Seed yields the same two pages (the search or() and the keyset or() are both applied) (23ms)
+  ✓  26 [chromium] › e2e/specs/event-read-path.spec.ts:174:5 › PRESERVE: cursor=not-a-valid-cursor is a 400 with Invalid cursor (4ms)
+  ✓  27 [chromium] › e2e/specs/event-read-path.spec.ts:182:5 › DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix) (205ms)
+  ✓  28 [chromium] › e2e/specs/event-read-path.spec.ts:203:5 › DEFECT F-081: the feed files the academic+tech event under a Social row, and there is no Tech row (moves only if 04-11 ships the identity mappings) (316ms)
+  ✓  29 [chromium] › e2e/specs/event-read-path.spec.ts:226:5 › FIXED F-082: search=a,b is a 200 with an empty events list (moved in 04-08) (10ms)
+  ✓  30 [chromium] › e2e/specs/event-read-path.spec.ts:238:5 › FIXED F-082: search=% matches only a literal percent, so no seeded event (moved in 04-08) (10ms)
+  ✓  31 [chromium] › e2e/specs/event-read-path.spec.ts:250:5 › FIXED F-083: the list body carries a nextCursor when more rows remain (moved in 04-09) (5ms)
+  ✘  32 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (15.5s)
+  ✓  33 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (968ms)
+  ✓  34 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (419ms)
+  1 failed
+  33 passed (38.6s)
+Failure: save-and-rsvp.spec.ts:53 "the save control must report the saved state" (Unsave not visible
+in 15 s). The awaited POST /api/events/<e1>/save had answered. Probe right after the run (one
+time-boxed, non-interactive psql):
+  saved_events: 5eed0000-0000-4000-8000-000000000001 | 5eed0000-0000-4000-8000-0000000000e1 | 2026-09-27 02:53:48
+The write landed with saved=true, but the page showed "Save". EventDetailClient's mount-time
+GET /api/users/saved-events (`checkSaved`) can resolve after the toggle and set saved=false. Neither
+route is touched by this plan (git log on events/[id]/save: last change aa50ff6, 05-06).
+
+10.2 Run 2 (fresh reset and seed again)
+$ supabase db reset --local        exit 0
+Finished supabase db reset on branch main.
+$ npx tsx scripts/seed/load.ts        exit 0
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+$ npx playwright test <the same four specs> --reporter=list        exit 0
+  ✓   1 [setup] › e2e/auth.setup.ts:59:18 › authenticate as onboarded_student (399ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:18 › authenticate as mid_onboarding_student (265ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_member (529ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_owner (244ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:18 › authenticate as multi_club_organizer (310ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:18 › authenticate as cross_club_attacker (288ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:18 › authenticate as admin (240ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:18 › authenticate as banned_permanent (210ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspended_active (212ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspension_expired (235ms)
+  ✓  11 [chromium] › e2e/specs/anonymous-browse.spec.ts:35:16 › an anonymous visitor browses the event feed and sees only approved events (429ms)
+  ✓  12 [chromium] › e2e/specs/anonymous-browse.spec.ts:53:16 › an anonymous visitor searches, and the search narrows the feed (1.2s)
+  ✓  13 [chromium] › e2e/specs/anonymous-browse.spec.ts:66:16 › an anonymous visitor browses public club content (238ms)
+  ✓  14 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:129:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › an approval writes exactly one event_approved notification (165ms)
+  ✓  15 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:136:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a suspension writes one event_suspended notification (140ms)
+  ✓  16 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:143:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second approval refreshes the one event_approved row, unread again (139ms)
+  ✓  17 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:156:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a second suspension refreshes the one event_suspended row with the new reason (121ms)
+  ✓  18 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:165:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › the creator's appeal through the real route passes the events guard (+1) (51ms)
+  ✓  19 [chromium] › e2e/specs/event-moderation-notifications.spec.ts:191:7 › event moderation notifications (REVIEW-05 iter3 WR-07, WR-02) › a rejection after the appeal writes one event_rejected notification (115ms)
+  ✓  20 [chromium] › e2e/specs/event-read-path.spec.ts:84:5 › PRESERVE: GET /api/events?limit=1 returns 200 with the approved event first and total 2 (5ms)
+  ✓  21 [chromium] › e2e/specs/event-read-path.spec.ts:95:5 › PRESERVE: GET /api/events?search=Music Night returns exactly the second approved event (5ms)
+  ✓  22 [chromium] › e2e/specs/event-read-path.spec.ts:104:5 › PRESERVE: typing a,b into the search box shows the No events found state (570ms)
+  ✓  23 [chromium] › e2e/specs/event-read-path.spec.ts:117:5 › PRESERVE: the approved event's detail page renders its title (226ms)
+  ✓  24 [chromium] › e2e/specs/event-read-path.spec.ts:149:5 › PRESERVE: limit=1 then its nextCursor traverses both approved events in start_date order, total 2 on each page (12ms)
+  ✓  25 [chromium] › e2e/specs/event-read-path.spec.ts:163:5 › PRESERVE: the same cursor traversal with search=Seed yields the same two pages (the search or() and the keyset or() are both applied) (14ms)
+  ✓  26 [chromium] › e2e/specs/event-read-path.spec.ts:174:5 › PRESERVE: cursor=not-a-valid-cursor is a 400 with Invalid cursor (4ms)
+  ✓  27 [chromium] › e2e/specs/event-read-path.spec.ts:182:5 › DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix) (210ms)
+  ✓  28 [chromium] › e2e/specs/event-read-path.spec.ts:203:5 › DEFECT F-081: the feed files the academic+tech event under a Social row, and there is no Tech row (moves only if 04-11 ships the identity mappings) (338ms)
+  ✓  29 [chromium] › e2e/specs/event-read-path.spec.ts:226:5 › FIXED F-082: search=a,b is a 200 with an empty events list (moved in 04-08) (12ms)
+  ✓  30 [chromium] › e2e/specs/event-read-path.spec.ts:238:5 › FIXED F-082: search=% matches only a literal percent, so no seeded event (moved in 04-08) (10ms)
+  ✓  31 [chromium] › e2e/specs/event-read-path.spec.ts:250:5 › FIXED F-083: the list body carries a nextCursor when more rows remain (moved in 04-09) (6ms)
+  ✓  32 [chromium] › e2e/specs/save-and-rsvp.spec.ts:53:5 › a student saves an event and it appears on their profile (1.2s)
+  ✓  33 [chromium] › e2e/specs/save-and-rsvp.spec.ts:96:5 › a student RSVPs going to an event (930ms)
+  ✓  34 [chromium] › e2e/specs/save-and-rsvp.spec.ts:130:5 › a cancelled RSVP is not counted as going (441ms)
+  34 passed (18.2s)
+The webServer's `next build` compiled successfully in both runs. Port 3000 free afterwards;
+test-results/ from run 1 moved out of the tree.

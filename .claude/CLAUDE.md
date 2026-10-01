@@ -1,3 +1,7 @@
+## Current product execution (2026-09-28)
+
+The owner has closed M0 as the prerequisite and authorized M1–M2 of the expanded Phase 1 product direction. See `.planning/milestones/m1-m2/DECISIONS.md`. The foundation history below remains provenance; new product decisions supersede its McGill-only admission and public-review preservation rules. Admit any verified email, never delete accounts based on domain, keep affiliation separate from permissions, and preserve legacy reviews as owner/admin history only. All new release switches default off. Do not deploy until requested; `.env.local` remains untouched.
+
 <!-- GSD:project-start source:PROJECT.md -->
 
 ## Project
@@ -14,7 +18,7 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 - **Behavior preservation**: Every Validated requirement above must still work after each stage — that is the core value
 - **No production data injection**: Synthetic datasets go to local and staging only
 - **Tech stack**: Stay on Next.js App Router, Supabase, Vercel — the program stabilizes the stack, it does not replace it
-- **Security**: Never modify `.env.local`; McGill email enforcement stays in place
+- **Security**: Never modify `.env.local`; preserve verified-session admission and all role/ban boundaries
 - **Refactor style**: Tested vertical slices, bottom-up (schema → types → auth → services → validation → endpoints → routing → pages → performance → observability)
 
 <!-- GSD:project-end -->
@@ -73,7 +77,9 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 
 ## Key Dependencies
 
-- `@supabase/supabase-js` ^2.49.0 - Supabase client SDK (database, auth, storage)
+- `@supabase/supabase-js` 2.116.0 (exact) - Supabase client SDK (database, auth, storage)
+- `zod` 4.6.5 (exact) - request contracts in `src/contracts/`, parsed at the boundary by `src/server/body.ts`, and the events-webhook payload contract
+- `@sentry/nextjs` 10.75.3 (exact) - error reporting, disabled unless `SENTRY_DSN` is set; scrubbing and request-id tags in `src/server/observability/sentry.ts` (`docs/observability.md`)
 - `@supabase/ssr` ^0.7.0 - SSR-compatible Supabase client (cookie-based auth)
 - `swr` ^2.3.7 - Data fetching/caching for client components
 - `zustand` ^5.0.9 - Client-side state management; the single store is `src/store/useAuthStore.ts` (auth state), initialized once by `AuthProvider`
@@ -102,7 +108,8 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 - Ignores: `.claude/**`, `.next/**`, `AI/**`, `node_modules/**`, `demo-video/**`
 - Config: `next.config.js`
 - Remote image patterns: `**.supabase.co`, `**.supabase.in`, `images.unsplash.com`
-- Security headers: X-Frame-Options DENY, HSTS, X-Content-Type-Options nosniff, X-XSS-Protection, strict Referrer-Policy
+- Security headers: X-Frame-Options DENY, HSTS, X-Content-Type-Options nosniff, X-XSS-Protection, strict Referrer-Policy, and a Content-Security-Policy from `contentSecurityPolicy(env)` (no `'unsafe-eval'` outside `next dev`; `'unsafe-inline'` remains)
+- Wrapped by `withSentryConfig` (no tunnel route, telemetry off, source maps uploaded only when `SENTRY_AUTH_TOKEN` is set)
 - `.env.local` - Local secrets (not committed)
 - `.env.local.example` - Template with required var names
 - Required vars:
@@ -117,11 +124,12 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 - Vercel (see `vercel.json`)
 - Region: `iad1` (US East)
 - Framework: `nextjs`
-- API cache headers: `s-maxage=60, stale-while-revalidate=300`
+- No `headers` rule: each route sets its own Cache-Control through its `withRoute` cache class (`CACHE_CLASSES` in `src/server/http.ts`); personalized and auth-gated routes answer `private, no-store`
 - GitHub Actions (`.github/workflows/ci.yml`)
 - Runs on: push to `main`, PRs to `main`
 - Node comes from `node-version-file: '.nvmrc'`; there is no competing `node-version` literal
-- Steps, in order: `npm ci`, lint, TypeScript type-check (`tsc --noEmit`), **`npm test`**, **`npm audit --audit-level=high --omit=dev`**, build
+- Steps, in order: `npm ci`, lint, TypeScript type-check (`tsc --noEmit`), migration filename parse check, elevated-callsite ratchet, contracts census (server and `--client`), server console census, characterization tag gate, **`npm test`**, **`npm audit --audit-level=high --omit=dev`**, build
+- Workflow-level `SENTRYCLI_SKIP_DOWNLOAD: "1"`; separate jobs run the schema type-drift gate with pgTAP and the Playwright persona harness
 - The production vulnerability gate is unsuppressed - no `continue-on-error`, no `|| true`
 
 <!-- GSD:stack-end -->
@@ -183,11 +191,12 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 
 ## Error Handling
 
+- Export the handler through `withRoute({ cache, action }, handler)` (`src/server/route.ts`); an uncaught throw becomes `{ "error": "Failed to <action>" }` 500 with one log line
 - Wrap entire handler in try/catch
-- Return `NextResponse.json({ error: message }, { status: code })` for errors
+- Return `NextResponse.json({ error: message }, { status: code })` for errors; never put a caught error's `.message` in the body
 - Use specific HTTP status codes: 400 for validation, 401 for auth, 403 for authorization, 404 for not found, 500 for server errors
 - Include `field` property in validation errors: `{ error: "message", field: "start_date" }`
-- Log errors with `console.error()` before returning error responses
+- Log errors with `log.error("msg", { error })` from `@/server/log` before returning error responses (server code; `console.*` is refused by CI's server console census)
 - Outer catch returns generic message: `{ error: "Failed to [action]" }`
 - Try/catch around async operations (fetch calls)
 - Log errors with `console.error()`
@@ -198,10 +207,10 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 
 ## Logging
 
-- API routes: `console.error("Error context:", error)` before returning error responses
+- Server code (routes, the proxy, `src/server/`, instrumentation): `log.debug/info/warn/error` from `src/server/log.ts` - one redacted JSON line `{ ts, level, msg, requestId, route, scope, ... }`; the request id comes from the proxy's `x-request-id`
 - Auth store: prefixed with `[Auth]` tag: `console.log("[Auth] Initializing...")`
-- Middleware: prefixed with `[Middleware]`: `console.error("[Middleware] Error:", e)`
-- No structured logging library in use
+- Proxy: JSON lines through the same logger (the file is `src/proxy.ts`)
+- The one server console call left is `src/lib/tagMapping.ts` (shared with client components), allow-listed in `scripts/server-console-allowlist.json`
 
 ## Comments
 
@@ -343,20 +352,21 @@ Uni-Verse is a campus event discovery platform for McGill University. Students b
 - Responsibilities: Event discovery hub - search, filters, happening now, popular/recommended events, paginated event grid
 - Location: `src/app/auth/callback/route.ts`
 - Triggers: OAuth redirect from Supabase/Azure
-- Responsibilities: Session exchange, McGill email enforcement, user profile upsert through the elevated door (fails closed), validated `next` redirect, onboarding redirect from database truth (no role assignment at sign-in since Phase 5)
+- Responsibilities: Session exchange, verified-email admission, profile synchronization through the elevated door (fails closed), validated `next` redirect, onboarding redirect from database truth (no role assignment at sign-in since Phase 5)
 - Location: `src/app/auth/signout/route.ts`
 - Triggers: POST from `useAuthStore.signOut()`
 - Responsibilities: Server-side sign out to properly clear cookies
 - Location: `src/app/api/events/route.ts`
 - Triggers: GET requests from `useEvents` hook
 - Responsibilities: Paginated event query with tag/search/date filters, DB-to-frontend field transformation
-- Location: `src/app/api/cron/send-reminders/route.ts`
-- Triggers: Scheduled (likely Vercel cron)
-- Responsibilities: Send event reminders to users
+- Reminders and feedback requests: pg_cron jobs `send-event-reminders` (every 15 minutes) and `send-feedback-requests` (every 30) call `public.send_event_reminders()` and `public.send_feedback_requests()`; there is no Next.js cron route (deleted in Phase 6)
+- Location: `src/app/api/health/route.ts`
+- Triggers: uptime monitors and the admin `/health` page
+- Responsibilities: liveness `{ status, version }` for anyone; the documented report (`docs/health.md`) for an admin or a `HEALTH_TOKEN` bearer
 
 ## Error Handling
 
-- API routes wrap entire handler in try/catch, return 500 with error message
+- API routes wrap entire handler in try/catch and return a generic 500 body; `withRoute` turns anything uncaught into a JSON 500 and reports it to Sentry when a DSN is set
 - Client hooks store `Error | null` in state, expose to components
 - `ErrorBoundary` component (`src/components/ErrorBoundary.tsx`) wraps page sections
 - Recommendation service failures fall back gracefully: returns empty recommendations, client falls back to `PopularEventsSection`

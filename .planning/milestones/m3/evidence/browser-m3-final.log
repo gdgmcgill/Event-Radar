@@ -1,0 +1,253 @@
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 build
+[WebServer] > next build
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5 (Turbopack)
+[WebServer] - Environments: .env.local, .env
+[WebServer] ✓ Running next.config.js took 216ms
+[WebServer] - Experiments (use with caution):
+[WebServer]   · clientTraceMetadata
+[WebServer] 
+[WebServer]   Creating an optimized production build ...
+[WebServer] ✓ Compiled successfully in 3.1s
+[WebServer]   Running next.config.js provided runAfterProductionCompile ...
+[WebServer] ✓ Completed runAfterProductionCompile in 111ms
+[WebServer]   Running TypeScript ...
+[WebServer]   Finished TypeScript in 5.1s ...
+[WebServer]   Collecting page data using 9 workers ...
+[WebServer]   Generating static pages using 9 workers (0/121) ...
+[WebServer]   Generating static pages using 9 workers (30/121) 
+[WebServer]   Generating static pages using 9 workers (60/121) 
+[WebServer]   Generating static pages using 9 workers (90/121) 
+[WebServer] ✓ Generating static pages using 9 workers (121/121) in 311ms
+[WebServer]   Finalizing page optimization ...
+[WebServer] 
+[WebServer] Route (app)
+[WebServer] ┌ ƒ /
+[WebServer] ├ ○ /_not-found
+[WebServer] ├ ○ /about
+[WebServer] ├ ○ /admin-login
+[WebServer] ├ ƒ /admin/experiments
+[WebServer] ├ ƒ /admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/analytics/events
+[WebServer] ├ ƒ /api/admin/analytics/users
+[WebServer] ├ ƒ /api/admin/audit-log
+[WebServer] ├ ƒ /api/admin/calculate-popularity
+[WebServer] ├ ƒ /api/admin/clubs
+[WebServer] ├ ƒ /api/admin/clubs/[id]
+[WebServer] ├ ƒ /api/admin/events
+[WebServer] ├ ƒ /api/admin/events/[id]
+[WebServer] ├ ƒ /api/admin/events/[id]/discovery
+[WebServer] ├ ƒ /api/admin/events/[id]/edits
+[WebServer] ├ ƒ /api/admin/events/[id]/status
+[WebServer] ├ ƒ /api/admin/experiments
+[WebServer] ├ ƒ /api/admin/experiments/[id]
+[WebServer] ├ ƒ /api/admin/experiments/[id]/results
+[WebServer] ├ ƒ /api/admin/featured
+[WebServer] ├ ƒ /api/admin/featured/[id]
+[WebServer] ├ ƒ /api/admin/ingestion
+[WebServer] ├ ƒ /api/admin/ingestion/images
+[WebServer] ├ ƒ /api/admin/listing-reports
+[WebServer] ├ ƒ /api/admin/listing-reports/[id]
+[WebServer] ├ ƒ /api/admin/opportunities
+[WebServer] ├ ƒ /api/admin/opportunities/[id]
+[WebServer] ├ ƒ /api/admin/organizer-requests
+[WebServer] ├ ƒ /api/admin/organizer-requests/[id]
+[WebServer] ├ ƒ /api/admin/organizers
+[WebServer] ├ ƒ /api/admin/reports
+[WebServer] ├ ƒ /api/admin/reports/[id]
+[WebServer] ├ ƒ /api/admin/resources
+[WebServer] ├ ƒ /api/admin/resources/[id]
+[WebServer] ├ ƒ /api/admin/resources/[id]/file
+[WebServer] ├ ƒ /api/admin/stats
+[WebServer] ├ ƒ /api/admin/submissions
+[WebServer] ├ ƒ /api/admin/submissions/[id]
+[WebServer] ├ ƒ /api/admin/users
+[WebServer] ├ ƒ /api/admin/users/[id]
+[WebServer] ├ ƒ /api/admin/users/[id]/ban
+[WebServer] ├ ƒ /api/calendar/events
+[WebServer] ├ ƒ /api/clubs
+[WebServer] ├ ƒ /api/clubs/[id]
+[WebServer] ├ ƒ /api/clubs/[id]/analytics
+[WebServer] ├ ƒ /api/clubs/[id]/appeal
+[WebServer] ├ ƒ /api/clubs/[id]/events
+[WebServer] ├ ƒ /api/clubs/[id]/follow
+[WebServer] ├ ƒ /api/clubs/[id]/invites
+[WebServer] ├ ƒ /api/clubs/[id]/members
+[WebServer] ├ ƒ /api/clubs/[id]/members/role
+[WebServer] ├ ƒ /api/clubs/[id]/transfer
+[WebServer] ├ ƒ /api/clubs/banner
+[WebServer] ├ ƒ /api/clubs/featured
+[WebServer] ├ ƒ /api/clubs/friends
+[WebServer] ├ ƒ /api/clubs/logo
+[WebServer] ├ ƒ /api/clubs/new
+[WebServer] ├ ƒ /api/clubs/trending
+[WebServer] ├ ƒ /api/company-requests
+[WebServer] ├ ƒ /api/discovery
+[WebServer] ├ ƒ /api/events
+[WebServer] ├ ƒ /api/events/[id]
+[WebServer] ├ ƒ /api/events/[id]/analytics
+[WebServer] ├ ƒ /api/events/[id]/appeal
+[WebServer] ├ ƒ /api/events/[id]/friends
+[WebServer] ├ ƒ /api/events/[id]/invite
+[WebServer] ├ ƒ /api/events/[id]/report
+[WebServer] ├ ƒ /api/events/[id]/reviews
+[WebServer] ├ ƒ /api/events/[id]/rsvp
+[WebServer] ├ ƒ /api/events/[id]/save
+[WebServer] ├ ƒ /api/events/create
+[WebServer] ├ ƒ /api/events/export
+[WebServer] ├ ƒ /api/events/featured
+[WebServer] ├ ƒ /api/events/following
+[WebServer] ├ ƒ /api/events/friends-activity
+[WebServer] ├ ƒ /api/events/friends-organizing
+[WebServer] ├ ƒ /api/events/happening-now
+[WebServer] ├ ƒ /api/events/my-events
+[WebServer] ├ ƒ /api/events/new
+[WebServer] ├ ƒ /api/events/popular
+[WebServer] ├ ƒ /api/events/upload-image
+[WebServer] ├ ƒ /api/feedback
+[WebServer] ├ ƒ /api/health
+[WebServer] ├ ƒ /api/interactions
+[WebServer] ├ ƒ /api/listing-reports
+[WebServer] ├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+[WebServer] ├ ƒ /api/my-clubs
+[WebServer] ├ ƒ /api/notifications
+[WebServer] ├ ƒ /api/notifications/[id]
+[WebServer] ├ ƒ /api/notifications/count
+[WebServer] ├ ƒ /api/onboarding/complete
+[WebServer] ├ ƒ /api/opportunities/[id]
+[WebServer] ├ ƒ /api/opportunities/[id]/save
+[WebServer] ├ ƒ /api/organizer-requests
+[WebServer] ├ ƒ /api/profile/avatar
+[WebServer] ├ ƒ /api/profile/banner
+[WebServer] ├ ƒ /api/profile/inferred-tags
+[WebServer] ├ ƒ /api/profile/interests
+[WebServer] ├ ƒ /api/recommendations
+[WebServer] ├ ƒ /api/recommendations/analytics
+[WebServer] ├ ƒ /api/recommendations/batch
+[WebServer] ├ ƒ /api/recommendations/feedback
+[WebServer] ├ ƒ /api/resources
+[WebServer] ├ ƒ /api/resources/[slug]
+[WebServer] ├ ƒ /api/resources/[slug]/open
+[WebServer] ├ ƒ /api/saved
+[WebServer] ├ ƒ /api/saved/status
+[WebServer] ├ ƒ /api/submissions
+[WebServer] ├ ƒ /api/universities
+[WebServer] ├ ƒ /api/user/engagement
+[WebServer] ├ ƒ /api/user/following
+[WebServer] ├ ƒ /api/users/[id]
+[WebServer] ├ ƒ /api/users/[id]/follow
+[WebServer] ├ ƒ /api/users/me/friends
+[WebServer] ├ ƒ /api/users/me/requests
+[WebServer] ├ ƒ /api/users/me/suggestions
+[WebServer] ├ ƒ /api/users/saved-events
+[WebServer] ├ ƒ /api/users/search
+[WebServer] ├ ƒ /auth/callback
+[WebServer] ├ ƒ /auth/signout
+[WebServer] ├ ƒ /banned
+[WebServer] ├ ○ /calendar
+[WebServer] ├ ƒ /clubs
+[WebServer] ├ ƒ /clubs/[id]
+[WebServer] ├ ○ /clubs/create
+[WebServer] ├ ○ /contributors
+[WebServer] ├ ○ /create-event
+[WebServer] ├ ○ /discover
+[WebServer] ├ ƒ /docs
+[WebServer] ├ ƒ /events/[id]
+[WebServer] ├ ○ /feedback
+[WebServer] ├ ○ /for-companies
+[WebServer] ├ ○ /friends
+[WebServer] ├ ƒ /health
+[WebServer] ├ ○ /help
+[WebServer] ├ ƒ /invites/[token]
+[WebServer] ├ ○ /landing
+[WebServer] ├ ƒ /moderation
+[WebServer] ├ ƒ /moderation/appeals
+[WebServer] ├ ƒ /moderation/audit-log
+[WebServer] ├ ƒ /moderation/clubs
+[WebServer] ├ ƒ /moderation/events
+[WebServer] ├ ƒ /moderation/featured
+[WebServer] ├ ƒ /moderation/ingestion
+[WebServer] ├ ƒ /moderation/opportunities
+[WebServer] ├ ƒ /moderation/organizer-requests
+[WebServer] ├ ƒ /moderation/organizers
+[WebServer] ├ ƒ /moderation/pending
+[WebServer] ├ ƒ /moderation/reports
+[WebServer] ├ ƒ /moderation/resources
+[WebServer] ├ ƒ /moderation/stats
+[WebServer] ├ ƒ /moderation/submissions
+[WebServer] ├ ƒ /moderation/users
+[WebServer] ├ ƒ /my-clubs
+[WebServer] ├ ƒ /my-clubs/[id]
+[WebServer] ├ ○ /my-events
+[WebServer] ├ ○ /notifications
+[WebServer] ├ ƒ /onboarding
+[WebServer] ├ ƒ /opportunities/[id]
+[WebServer] ├ ○ /people
+[WebServer] ├ ○ /privacy
+[WebServer] ├ ƒ /profile
+[WebServer] ├ ƒ /resources
+[WebServer] ├ ƒ /resources/[slug]
+[WebServer] ├ ○ /robots.txt
+[WebServer] ├ ○ /saved
+[WebServer] ├ ○ /settings
+[WebServer] ├ ƒ /sitemap.xml
+[WebServer] ├ ○ /submit
+[WebServer] ├ ○ /terms
+[WebServer] └ ƒ /users/[id]
+[WebServer] 
+[WebServer] 
+[WebServer] ƒ Proxy (Middleware)
+[WebServer] 
+[WebServer] ○  (Static)   prerendered as static content
+[WebServer] ƒ  (Dynamic)  server-rendered on demand
+[WebServer] 
+[WebServer] 
+[WebServer] > uni-verse@0.1.0 start
+[WebServer] > next start --hostname 127.0.0.1
+[WebServer] 
+[WebServer] ▲ Next.js 16.3.5
+[WebServer] - Local:         http://127.0.0.1:3000
+[WebServer] - Network:       http://127.0.0.1:3000
+[WebServer] ✓ Ready in 55ms
+[WebServer] ✓ Running next.config.js took 139ms
+[WebServer] {"ts":"2026-09-29T22:41:46.508Z","level":"info","msg":"Sentry disabled","scope":"Sentry","reason":"SENTRY_DSN is not set"}
+[WebServer] {"ts":"2026-09-29T22:41:46.726Z","level":"warn","msg":"Upstash not configured; using the in-memory store (not shared across instances)","requestId":"4130a24f-5c49-4f11-8f3d-85905c5a8357","route":"/","scope":"RateLimit"}
+
+Running 21 tests using 1 worker
+
+  ✓   1 [setup] › e2e/auth.setup.ts:61:8 › authenticate as onboarded_student (364ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:61:8 › authenticate as mid_onboarding_student (245ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:61:8 › authenticate as club_member (239ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:61:8 › authenticate as club_owner (241ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:61:8 › authenticate as multi_club_organizer (229ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:61:8 › authenticate as cross_club_attacker (238ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:61:8 › authenticate as admin (230ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:61:8 › authenticate as banned_permanent (213ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:61:8 › authenticate as suspended_active (266ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:61:8 › authenticate as suspension_expired (238ms)
+  ✓  11 [chromium] › e2e/specs/m3-acceptance.spec.ts:111:5 › guest home: editorial hero reaches discovery without sign-in and carries no future-milestone copy (235ms)
+  ✓  12 [chromium] › e2e/specs/m3-acceptance.spec.ts:122:5 › discover filters survive reload and browser back after opening a listing (679ms)
+  ✓  13 [chromium] › e2e/specs/m3-acceptance.spec.ts:148:5 › detail facts: a date-only deadline, eligibility and provenance; a closed listing has no action (173ms)
+  ✓  14 [chromium] › e2e/specs/m3-acceptance.spec.ts:165:5 › student saves the listing after sign-in; /saved shows it with the legacy saved event (791ms)
+[WebServer] ⨯ Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '3371026682'
+[WebServer] }
+[WebServer] ⨯ Error: The destination stream closed early.
+[WebServer]     at ignore-listed frames {
+[WebServer]   digest: '3371026682'
+[WebServer] }
+  ✓  15 [chromium] › e2e/specs/m3-acceptance.spec.ts:180:5 › resources: published guide reflows at 360px; drafts stay private; unsafe Markdown is refused (306ms)
+  ✓  16 [chromium] › e2e/specs/m3-acceptance.spec.ts:221:5 › public submission becomes a published listing only through moderation; retries and bots add nothing (1.9s)
+  ✓  17 [chromium] › e2e/specs/m3-acceptance.spec.ts:308:5 › guest report reaches the moderation queue and never appears publicly (1.1s)
+  ✓  18 [chromium] › e2e/specs/m3-acceptance.spec.ts:340:5 › company request converts to a partner job draft without leaking the contact or changing roles (1.3s)
+  ✓  19 [chromium] › e2e/specs/m3-acceptance.spec.ts:395:5 › private fields never reach public HTML or RSC payloads (69ms)
+  ✓  20 [chromium] › e2e/specs/m3-acceptance.spec.ts:417:5 › ingestion page shows deliveries to an admin and is closed to a student (1.2s)
+[WebServer] [tags] Unmapped tags rendered as Social {
+[WebServer]   eventId: 'ad070300-0000-4000-8000-000000000012',
+[WebServer]   unmapped: [ 'tech' ]
+[WebServer] }
+  ✓  21 [chromium] › e2e/specs/m3-acceptance.spec.ts:437:5 › an unreachable event image on an allowed host falls back to the placeholder (258ms)
+
+  21 passed (25.3s)

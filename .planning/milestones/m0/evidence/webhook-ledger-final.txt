@@ -1,0 +1,73 @@
+PASS node src/__tests__/webhook/webhook-handler.test.ts
+  row 1: OPTIONS preflight
+    ✓ answers 204 with today's CORS headers and no body, before any configuration check (2 ms)
+  row 2: configuration
+    ✓ the database env unset (configured false) -> 500 Server configuration error (1 ms)
+    ✓ WEBHOOK_SECRET unset -> 500 Server configuration error (1 ms)
+    ✓ WEBHOOK_SECRET empty -> 500 Server configuration error (2 ms)
+  row 3: missing signature
+    ✓ no signature header -> 401 Missing signature header
+    ✓ all three headers empty -> 401 Missing signature header (1 ms)
+    ✓ x-hub-signature-256 is the bare prefix -> 401 Missing signature header
+  row 4: wrong signature of the right length
+    ✓ one hex digit changed -> 401 Invalid signature
+    ✓ the correct digest upper-cased -> 401 Invalid signature
+    ✓ signed with another secret -> 401 Invalid signature
+    ✓ x-signature takes precedence: a wrong x-signature beside a correct x-webhook-signature -> 401
+  row 5 (INTENTIONAL, F-039): a wrong-LENGTH signature is 401, not 500
+    ✓ x-signature: abc -> 401 Invalid signature (was 500 Internal server error)
+    ✓ x-signature: invalid-signature-12345 -> 401 Invalid signature (was 500 Internal server error)
+    ✓ x-signature: 6ebd04b70928c38de865e0de33707b75c1d7be38c3d1f5d5ce4a6140efa7fa7300 -> 401 Invalid signature (was 500 Internal server error) (1 ms)
+    ✓ x-signature: bd04b70928c38de865e0de33707b75c1d7be38c3d1f5d5ce4a6140efa7fa73 -> 401 Invalid signature (was 500 Internal server error)
+    ✓ x-signature: sha256=6ebd04b70928c38de865e0de33707b75c1d7be38c3d1f5d5ce4a6140efa7fa73 -> 401 Invalid signature (was 500 Internal server error)
+    ✓ x-webhook-signature: sha256=6ebd04b70928c38de865e0de33707b75c1d7be38c3d1f5d5ce4a6140efa7fa73 -> 401 Invalid signature (was 500 Internal server error)
+    ✓ x-webhook-signature: éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé -> 401 Invalid signature (was 500 Internal server error)
+    ✓ x-hub-signature-256: sha256=abc -> 401 Invalid signature (was 500 Internal server error)
+  the three accepted signature headers
+    ✓ x-signature carrying the correct digest -> 200 (3 ms)
+    ✓ x-hub-signature-256 carrying the correct digest -> 200
+    ✓ x-hub-signature-256 carrying the correct digest -> 200 (1 ms)
+    ✓ x-webhook-signature carrying the correct digest -> 200 (1 ms)
+  rows 6-9: the envelope
+    ✓ row 6: a body that is not JSON -> 400 Invalid JSON payload
+    ✓ row 7 (INTENTIONAL, DI-83): a JSON null body -> 400 structure error
+    ✓ row 8: event_count a string -> 400 Invalid payload structure (1 ms)
+    ✓ row 8: events not an array -> 400 Invalid payload structure (1 ms)
+    ✓ row 8: events missing -> 400 Invalid payload structure (1 ms)
+    ✓ row 8: the payload an array -> 400 Invalid payload structure
+    ✓ row 8: the payload a number -> 400 Invalid payload structure (1 ms)
+    ✓ row 9: event_count disagreeing with events.length -> 400 with today's message
+  rows 10-12: per-event validation
+    ✓ row 10: one invalid event -> 400 Invalid events found, and NOTHING is inserted
+    ✓ row 10: every message for an event, in validateEvent's order
+    ✓ row 10: an unparseable date -> 'date must be a valid date string'
+    ✓ row 11 (INTENTIONAL, DI-83): a null element -> 400 required-field errors, nothing inserted
+    ✓ a primitive element reads as having no fields -> 400 with the four required messages (1 ms)
+    ✓ row 12 (INTENTIONAL, DI-83): non-string tag 1 -> 400 before any insert
+    ✓ row 12 (INTENTIONAL, DI-83): non-string tag null -> 400 before any insert (1 ms)
+    ✓ row 12 (INTENTIONAL, DI-83): non-string tag true -> 400 before any insert
+    ✓ row 12 (INTENTIONAL, DI-83): non-string tag {} -> 400 before any insert
+    ✓ row 12 (INTENTIONAL, DI-83): non-string tag [] -> 400 before any insert (1 ms)
+  row 13: every event inserts -> 200
+    ✓ two events -> two stored rows, each with content_hash and status pending (8 ms)
+    ✓ maps each event as today's mapEventToDatabase did, plus content_hash (1 ms)
+    ✓ event_count 0 with events [] -> 200 'Successfully processed 0 event(s)'
+  row 14: some insert, some fail -> 207
+    ✓ a mapping failure (time not HH:mm) beside a good event (1 ms)
+    ✓ IN-05: a non-23505 error retains partial reporting without database text
+  row 15: nothing inserts -> 400
+    ✓ every event failing its insert -> 400 Failed to process all events (1 ms)
+  row 16 (INTENTIONAL, F-039): a replayed payload inserts nothing new
+    ✓ the same signed body sent twice: both events are duplicate the second time, one row each
+    ✓ a replay under a different accepted header is still duplicate (1 ms)
+    ✓ a payload mixing a replayed event with a new one -> 207, the old one duplicate
+    ✓ the dedupe key is title, date and organizer: an edited description is still duplicate (T-06-03-04, accepted)
+  row 17: anything thrown after the configuration check
+    ✓ an insert that throws -> 500 Internal server error (1 ms)
+    ✓ IN-05: diagnostics never echo unknown SQL codes or thrown values
+
+Test Suites: 1 passed, 1 total
+Tests:       53 passed, 53 total
+Snapshots:   0 total
+Time:        0.287 s, estimated 1 s
+Ran all test suites matching src/__tests__/webhook/webhook-handler.test.ts.

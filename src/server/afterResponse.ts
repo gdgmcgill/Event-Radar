@@ -14,6 +14,7 @@
  */
 
 import { after } from "next/server";
+import { log } from "./log";
 
 /** Next's error code for `after()` called outside a request scope. */
 const OUTSIDE_REQUEST_SCOPE = "E468";
@@ -28,14 +29,15 @@ function isOutsideRequestScope(error: unknown): boolean {
 
 /**
  * Runs `task` after the response is sent. The task must handle its own
- * errors: a rejection is logged here, never thrown into the handler.
+ * errors: a rejection is logged here (one JSON line, scope "afterResponse",
+ * the error as `{ name, message, code }`), never thrown into the handler.
  */
 export function runAfterResponse(task: () => Promise<void>): void {
   const guarded = async () => {
     try {
       await task();
     } catch (error) {
-      console.error("[afterResponse] task failed:", error);
+      log.error("task failed", { scope: "afterResponse", error });
     }
   };
   try {

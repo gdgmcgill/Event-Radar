@@ -1,19 +1,21 @@
 /**
  * GET /api/recommendations/analytics
  * Admin-only: recommendation quality metrics (CTR, save rate, dismiss rate, avg rank).
- * Uses current user's session; with RLS, returns only that user's feedback.
- * For org-wide metrics, use a Supabase client with service role key.
+ * Reads aggregate feedback across participants after active-admin authorization.
  */
 
 import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { parseQuery } from "@/server/body";
+import { AnalyticsQuery } from "@/contracts/recommendations";
 import type { NextRequest } from "next/server";
+import { withRoute } from "@/server/route";
+import { getElevatedClient } from "@/server/db/elevated";
+import { log } from "@/server/log";
 
-type Period = "7d" | "30d";
-
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch analytics" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const activeUser = requireActiveUser(ctx);
@@ -22,27 +24,25 @@ export async function GET(request: NextRequest) {
     if (!auth.ok) return auth.response;
     const supabase = ctx.supabase;
 
-    const searchParams = request.nextUrl.searchParams;
-    const period = (searchParams.get("period") || "7d") as Period;
-    if (period !== "7d" && period !== "30d") {
-      return NextResponse.json(
-        { error: "Invalid period. Use 7d or 30d" },
-        { status: 400 }
-      );
-    }
+    // `period` defaults to 7d; anything but 7d or 30d is today's 400.
+    const query = parseQuery(request.nextUrl.searchParams, AnalyticsQuery);
+    if (!query.ok) return query.response;
+    const { period } = query.data;
 
     const days = period === "7d" ? 7 : 30;
     const since = new Date();
     since.setDate(since.getDate() - days);
     const sinceIso = since.toISOString();
 
-    const { data: rawRows, error } = await supabase
+    // Feedback RLS permits only own-row SELECT; admin metrics need all users.
+    const elevated = getElevatedClient();
+    const { data: rawRows, error } = await elevated
       .from("recommendation_feedback")
       .select("action, recommendation_rank, created_at")
       .gte("created_at", sinceIso);
 
     if (error) {
-      console.error("Analytics query error:", error);
+      log.error("Analytics query error", { error });
       return NextResponse.json(
         { error: "Failed to fetch analytics" },
         { status: 500 }
@@ -76,20 +76,24 @@ export async function GET(request: NextRequest) {
         : null;
 
     // Tag distribution from recent recommendation feedback
-    const { data: recentEvents } = await supabase
+    const { data: recentEvents, error: recentError } = await elevated
       .from("recommendation_feedback")
       .select("event_id")
       .gte("created_at", sinceIso)
       .eq("action", "impression");
 
+    if (recentError) throw recentError;
+
     const eventIds = [...new Set((recentEvents ?? []).map((r: { event_id: string }) => r.event_id))];
 
     let tagDistribution: Record<string, number> = {};
     if (eventIds.length > 0) {
-      const { data: events } = await supabase
+      const { data: events, error: eventsError } = await supabase
         .from("events")
         .select("tags")
         .in("id", eventIds);
+
+      if (eventsError) throw eventsError;
 
       for (const ev of (events ?? []) as { tags: string[] }[]) {
         for (const tag of ev.tags ?? []) {
@@ -118,10 +122,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Recommendation analytics error:", error);
+    log.error("Recommendation analytics error", { error });
     return NextResponse.json(
       { error: "Failed to compute analytics" },
       { status: 500 }
     );
   }
-}
+});

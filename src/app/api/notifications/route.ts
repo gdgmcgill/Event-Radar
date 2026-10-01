@@ -4,6 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { parseQuery } from "@/server/body";
+import {
+  NotificationsListQuery,
+  NotificationsQuery,
+} from "@/contracts/notifications";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 const PAGE_SIZE = 20;
 
@@ -13,7 +20,7 @@ const PAGE_SIZE = 20;
  * POST /api/notifications?action=mark-all-read - Mark all as read
  */
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch notifications" }, async (request: NextRequest) => {
   try {
     const supabase = await createClient();
     const {
@@ -25,7 +32,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const cursor = request.nextUrl.searchParams.get("cursor");
+    const params = parseQuery(request.nextUrl.searchParams, NotificationsListQuery);
+    if (!params.ok) return params.response;
+    const { cursor } = params.data;
 
     let query = supabase
       .from("notifications")
@@ -41,7 +50,11 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Notifications query failed", { error });
+      return NextResponse.json(
+        { error: "Failed to fetch notifications" },
+        { status: 500 }
+      );
     }
 
     const items = data || [];
@@ -64,15 +77,15 @@ export async function GET(request: NextRequest) {
       next_cursor: nextCursor,
     });
   } catch (error) {
-    console.error("Error fetching notifications:", error);
+    log.error("Error fetching notifications", { error });
     return NextResponse.json(
       { error: "Failed to fetch notifications" },
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "update notifications" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -82,28 +95,31 @@ export async function POST(request: NextRequest) {
     const user = active.user;
     const supabase = ctx.supabase;
 
-    const action = request.nextUrl.searchParams.get("action");
+    // `mark-all-read` is the only action; any other, or none, is today's 400
+    // `Invalid action`, read after the guards as before.
+    const query = parseQuery(request.nextUrl.searchParams, NotificationsQuery);
+    if (!query.ok) return query.response;
 
-    if (action === "mark-all-read") {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("user_id", user.id)
-        .eq("read", false);
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-
-      return NextResponse.json({ success: true });
+    if (error) {
+      log.error("Mark-all-read update failed", { error });
+      return NextResponse.json(
+        { error: "Failed to update notifications" },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error updating notifications:", error);
+    log.error("Error updating notifications", { error });
     return NextResponse.json(
       { error: "Failed to update notifications" },
       { status: 500 }
     );
   }
-}
+});

@@ -14,6 +14,11 @@ import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { serverError } from "@/server/errors";
 import { ok } from "@/server/http";
+import { readQuery } from "@/server/body";
+import { SavedEventsQuery } from "@/contracts/users";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
+import { getESTNowISO } from "@/lib/timezone";
 
 /**
  * @swagger
@@ -39,7 +44,7 @@ import { ok } from "@/server/http";
  *       500:
  *         description: Internal server error
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch saved events" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
 
@@ -49,7 +54,11 @@ export async function GET(request: NextRequest) {
     const user = auth.user;
     const supabase = ctx.supabase;
 
-    const sort = request.nextUrl.searchParams.get("sort") || "recent";
+    // sort defaults to "recent"; include_past is exactly "true". No 400.
+    const { sort, include_past: includePast } = readQuery(
+      request.nextUrl.searchParams,
+      SavedEventsQuery
+    );
 
     // Step 1: Get saved event rows for this user
      
@@ -60,7 +69,7 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (savedError) {
-      console.error("Fetch saved events error:", savedError);
+      log.error("Fetch saved events error", { error: savedError });
       return serverError("fetch saved events");
     }
 
@@ -77,8 +86,6 @@ export async function GET(request: NextRequest) {
     const eventIds = Array.from(savedAtMap.keys());
 
     // Step 2: Fetch full event details (only approved, non-past events)
-    const includePast = request.nextUrl.searchParams.get("include_past") === "true";
-
     let eventsQuery = supabase
       .from("events")
       .select(EVENT_WITH_CLUB_SELECT)
@@ -86,14 +93,16 @@ export async function GET(request: NextRequest) {
       .eq("status", "approved")
       .is("deleted_at", null);
 
+    // start_date is Eastern wall-clock stored with a +00 offset, so "now" is
+    // expressed the same way: the floor /api/events uses (F-085).
     if (!includePast) {
-      eventsQuery = eventsQuery.gte("start_date", new Date().toISOString());
+      eventsQuery = eventsQuery.gte("start_date", getESTNowISO());
     }
 
     const { data: eventsData, error: eventsError } = await eventsQuery;
 
     if (eventsError) {
-      console.error("Fetch event details error:", eventsError);
+      log.error("Fetch event details error", { error: eventsError });
       return serverError("fetch event details");
     }
 
@@ -126,10 +135,10 @@ export async function GET(request: NextRequest) {
       savedEventIds: events.map((e) => e.id),
     });
   } catch (error) {
-    console.error("Unexpected error fetching saved events:", error);
+    log.error("Unexpected error fetching saved events", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

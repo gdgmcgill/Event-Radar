@@ -57,6 +57,7 @@ interface ServiceCall {
 let serviceCalls: ServiceCall[] = [];
 let targetRow: Record<string, unknown> | null = null;
 let sessionReads = 0;
+let mockViewer: { id: string } | null = null;
 
 function tableResult(table: string): { data: unknown; error: unknown; count: number | null } {
   if (table === "users") {
@@ -114,10 +115,11 @@ jest.mock("@/lib/supabase/server", () => ({
       auth: {
         getUser: async () => {
           sessionReads += 1;
-          return { data: { user: null }, error: null };
+          return { data: { user: mockViewer }, error: null };
         },
       },
-      from: () => {
+      from: (table: string) => {
+        if (mockViewer) return builder(table);
         throw new Error("the anonymous page read a table on the cookie client");
       },
     }),
@@ -187,6 +189,7 @@ function textOf(element: ReactElement | null): string {
 }
 
 beforeEach(() => {
+  mockViewer = null;
   serviceCalls = [];
   sessionReads = 0;
   targetRow = null;
@@ -281,4 +284,25 @@ describe("F-005 rows that do not move: a public profile, viewed anonymously", ()
 
     expect(thrown).toBe(NOT_FOUND);
   });
+});
+
+
+it("F-011: even a public profile never reads or renders the target's RSVP activity", async () => {
+  targetRow = target("public");
+  const { element, thrown } = await renderPage(await load());
+  expect(thrown).toBeNull();
+  expect(serviceCalls.some((call) => call.table === "rsvps")).toBe(false);
+  expect(textOf(element)).toContain("Event attendance is private");
+  expect(textOf(element)).not.toContain("No upcoming events");
+});
+
+
+it("F-011: the owner retains their existing private /profile route", async () => {
+  targetRow = target("public");
+  mockViewer = { id: TARGET_ID };
+  const { thrown } = await renderPage(await load());
+  const { redirect } = jest.requireMock<{ redirect: jest.Mock }>("next/navigation");
+  expect(thrown).toBe(REDIRECT);
+  expect(redirect).toHaveBeenCalledWith("/profile");
+  expect(serviceCalls.some((call) => call.table === "rsvps")).toBe(false);
 });

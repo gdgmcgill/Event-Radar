@@ -4,6 +4,9 @@ import { requireUser } from "@/server/authz/requireUser";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
+import { parseBody } from "@/server/body";
+import { ClubMemberBody } from "@/contracts/clubs";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,7 +16,7 @@ interface RouteParams {
  * GET /api/clubs/[id]/members
  * Returns club members with user details. Requires club membership (owner or organizer).
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "fetch members" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const { id: clubId } = await params;
     const ctx = await createRequestContext();
@@ -40,6 +43,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       .order("created_at", { ascending: true });
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to fetch members" },
         { status: 500 }
@@ -65,19 +69,20 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     }));
 
     return NextResponse.json({ members: membersWithUsers });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch members" },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/clubs/[id]/members
  * Remove a member from the club. Owner-only. Cannot remove self.
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export const DELETE = withRoute({ cache: "private", action: "remove member" }, async (request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -99,15 +104,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
     if (!gate.ok) return gate.response;
 
-    const body = await request.json();
-    const { memberId } = body as { memberId: string };
-
-    if (!memberId) {
-      return NextResponse.json(
-        { error: "memberId is required" },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, ClubMemberBody);
+    if (!parsed.ok) return parsed.response;
+    const { memberId } = parsed.data;
 
     // Fetch the target member to verify they're not the owner
     const { data: targetMember } = await supabase
@@ -145,6 +144,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .eq("club_id", clubId);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to remove member" },
         { status: 500 }
@@ -152,10 +152,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to remove member" },
       { status: 500 }
     );
   }
-}
+});

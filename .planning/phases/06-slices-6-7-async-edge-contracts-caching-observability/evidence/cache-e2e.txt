@@ -1,0 +1,373 @@
+# Cache e2e — plan 06-15 Tasks 2 and 3 (REFAC-19, F-025, F-026, DI-26, DEC-73, DI-81)
+
+Recorded 2026-09-27 on the local stack only. Base for Task 2: 83e2f7e (Task 1). Nothing here touched
+production: no deploy, no push, no production read. The Playwright harness builds and starts its own
+server on port 3000 every run (reuseExistingServer: false); `lsof -nP -iTCP:3000 -sTCP:LISTEN` exited 1
+(free) before and after every run below. Every reset is `supabase db reset --local` (exit 0) followed by
+`npx tsx scripts/seed/load.ts` (exit 0, "seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps,
+0 saved events"). Test lines are quoted from the list reporter with their timings removed. No response
+body is quoted anywhere in this file except the one Task 2 failure message in § 2.2, which is seeded
+fixture data (event titles and ids), not personal data.
+
+## 1. The stand-in (e2e/helpers/sharedCacheProxy.ts)
+
+- `startSharedCacheProxy(upstream)` -> `{ url, stats(), close() }`; a Node `http` server on 127.0.0.1,
+  port 0. Node built-ins only (node:http, node:net types): no dependency was added, package.json and
+  package-lock.json are untouched.
+- Stores a response only when every Vercel rule holds: GET/HEAD; no Authorization on the request; 200 or
+  404; no Set-Cookie; the governing directive (Vercel-CDN-Cache-Control, else CDN-Cache-Control, else
+  Cache-Control) names no private/no-cache/no-store and has s-maxage > 0 (max-age counts on the two
+  CDN-specific headers only); Vary names neither Cookie nor *. Key: `METHOD URL`, never the cookie.
+  Expiry honours the shared lifetime; stale-while-revalidate is not modelled (stated in the file).
+- Answers `x-sim-cache: HIT|MISS|BYPASS`; a HIT is served from memory without contacting the origin
+  (`stats().upstream` is asserted unchanged across the HIT).
+- Bodies live in memory only and are cleared by close(); no fs write, no console call in the file:
+  $ grep -n "writeFile\|appendFile\|createWriteStream\|console\." e2e/helpers/sharedCacheProxy.ts
+  exit=1 (no match)
+- Persona cookies: the storage states are host-only cookies for 127.0.0.1 (auth.setup.ts adds them with
+  url http://127.0.0.1:3000), and a cookie's domain match ignores the port, so the stand-in listens on
+  127.0.0.1 rather than `localhost` (which would carry no cookie). Recorded as a deviation from the plan's
+  "on localhost" wording.
+
+## 2. Task 2 — the cross-user spec (e2e/specs/cross-user-cache.spec.ts)
+
+### 2.1 RED: the same spec against a pass-through stand-in (sharedLifetime() returning null first: nothing
+is ever stored, which is `next start` without a CDN, research Pitfall 10). Temporary edit, reverted from a
+copy before GREEN (`grep -c "RED:" e2e/helpers/sharedCacheProxy.ts` -> 0).
+
+Reset and seed: exit 0, exit 0.
+$ npx playwright test e2e/specs/cross-user-cache.spec.ts --reporter=list
+  ✘  11 [chromium] › e2e/specs/cross-user-cache.spec.ts:109:5 › positive control: an anonymous public read HITs on its second request
+1 failed
+22 did not run
+10 passed (12.4s)
+exit=1
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "MISS"
+    Received: "BYPASS"
+
+$ npx playwright test e2e/specs/cross-user-cache.spec.ts --reporter=list -g "negative control: B receives"   (serial mode had stopped the file at the positive control; the negative control alone)
+  ✘  11 [chromium] › e2e/specs/cross-user-cache.spec.ts:206:7 › negative control: a per-cookie body the stand-in is told it may share › negative control: B receives A's body with a HIT when a personalized answer is marked public
+1 failed
+10 passed (10.8s)
+exit=1
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "MISS"
+    Received: "BYPASS"
+
+Reading: with nothing shared, the positive control cannot HIT and the negative control cannot leak, so
+both fail. The controls are what distinguish "the app does not share personalized answers" from "there
+is no shared cache".
+
+### 2.2 GREEN, first attempt (fresh reset): 28 passed, 1 failed, 4 did not run (exit 1)
+  ✘  29 [chromium] › e2e/specs/cross-user-cache.spec.ts:309:9 › personalized GETs through the shared cache › /api/clubs/5eed0000-0000-4000-8000-0000000000c1/events: A then B then anonymous, never shared (members see the club's pending event (DEC-69))
+    Error: A's own answer carries 5eed0000-0000-4000-8000-0000000000e3
+The spec's own assumption was wrong, not the app: club_member is an organizer of the approved club, so
+the answer carries "isOrganizer":true and per-event "rsvp_counts", but RLS ("Organizers can view own
+events") hides the pending event from an organizer who did not create it (club_owner did). The A-only
+markers for that row became '"isOrganizer":true' and '"rsvp_counts"'; the header and not-HIT assertions
+had already passed for the row's A request. No app file changed.
+
+### 2.3 GREEN run 1 (fresh reset, seed) and run 2 (immediately after, no reset)
+$ npx playwright test e2e/specs/cross-user-cache.spec.ts --reporter=list   (run 1)
+  ✓  11 [chromium] › e2e/specs/cross-user-cache.spec.ts:110:5 › positive control: an anonymous public read HITs on its second request
+  ✓  12 [chromium] › e2e/specs/cross-user-cache.spec.ts:207:7 › negative control: a per-cookie body the stand-in is told it may share › negative control: B receives A's body with a HIT when a personalized answer is marked public
+  ✓  13 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: private, no-store
+  ✓  14 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: no-store beside s-maxage
+  ✓  15 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: a Set-Cookie on the answer
+  ✓  16 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: Vary: Cookie
+  ✓  17 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: max-age without s-maxage
+  ✓  18 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: s-maxage=0
+  ✓  19 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: a 500
+  ✓  20 [chromium] › e2e/specs/cross-user-cache.spec.ts:231:9 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share: an Authorization header on the request
+  ✓  21 [chromium] › e2e/specs/cross-user-cache.spec.ts:240:7 › negative control: a per-cookie body the stand-in is told it may share › the stand-in refuses to share a POST
+  ✓  22 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/users/saved-events: A then B then anonymous, never shared (A saves secondApprovedEvent for this test)
+  ✓  23 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/notifications: A then B then anonymous, never shared (no seeded notification)
+  ✓  24 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/notifications/count: A then B then anonymous, never shared (a count, no ids)
+  ✓  25 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/recommendations: A then B then anonymous, never shared (the feed carries no viewer id)
+  ✓  26 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/users/me/friends: A then B then anonymous, never shared (no seeded follow)
+  ✓  27 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/my-clubs: A then B then anonymous, never shared (A is an organizer of the approved club)
+  ✓  28 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/events/5eed0000-0000-4000-8000-0000000000e1/rsvp: A then B then anonymous, never shared (A's own going RSVP row)
+  ✓  29 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/clubs/5eed0000-0000-4000-8000-0000000000c1/events: A then B then anonymous, never shared (A's organizer view: the flag and the RSVP counts)
+  ✓  30 [chromium] › e2e/specs/cross-user-cache.spec.ts:314:9 › personalized GETs through the shared cache › /api/user/following: A then B then anonymous, never shared (no seeded club follow)
+  ✓  31 [chromium] › e2e/specs/cross-user-cache.spec.ts:344:5 › C7: the admin's 200 on a pending event is not served to an anonymous visitor
+  ✓  32 [chromium] › e2e/specs/cross-user-cache.spec.ts:359:5 › C7: an anonymous 404 on a pending event is not served to the admin
+  ✓  33 [chromium] › e2e/specs/cross-user-cache.spec.ts:372:5 › recorded: a public-class 404 is shared (the club detail read, unknown id)
+33 passed (12.5s)
+exit=0 (10 of the 33 are the setup project's persona sign-ins)
+
+$ npx playwright test e2e/specs/cross-user-cache.spec.ts --reporter=list   (run 2)
+33 passed (13.0s)
+exit=0
+Run 2 also proves the one write is restored: the saved-events describe saves secondApprovedEvent for
+club_member directly on the origin in beforeAll, and its afterAll deletes it and asserts it is gone; run 2
+starts from that state and passes.
+
+$ npx tsc --noEmit -> exit=0; $ npx eslint e2e/helpers/sharedCacheProxy.ts e2e/specs/cross-user-cache.spec.ts -> exit=0
+
+## 3. Task 3 — the live header sweep (e2e/specs/cache-headers.spec.ts)
+
+Rows: `.planning/audit/inventory/endpoints.json` (as regenerated in 83e2f7e), read at spec load. Segments:
+events -> IDS.approvedEvent, clubs -> IDS.approvedClub, users -> IDS.onboarded_student,
+[targetType]/[targetId] -> event / IDS.approvedEvent; families with no seeded row (experiments,
+featured, organizer-requests, reports, notifications) -> the unseeded 5eed0000-0000-4000-8000-0000000000ff.
+Queries: /api/events/export?format=csv, /api/users/search?q=seed. Persona: admin for admin rows,
+onboarded_student otherwise. Redirects are not followed. No authenticated mutation is sent.
+
+### 3.1 Skipped rows, with reasons
+SKIPPED /api/auth-debug: handler file deleted; the row is retained by DEC-55 (classification-rules.md § 8)
+SKIPPED /api/cron/send-feedback-requests: handler file deleted; the row is retained by DEC-55 (classification-rules.md § 8)
+SKIPPED /api/cron/send-reminders: handler file deleted; the row is retained by DEC-55 (classification-rules.md § 8)
+(`notifications/[id]` is NOT skipped, unlike the plan's example: its only method is PATCH, which an
+anonymous caller is refused before any lookup, so the unseeded id is enough.)
+
+### 3.2 Coverage
+COVERAGE live_rows=91 get_rows=59 get_requests=118 mutation_methods=59 skipped=3
+59 GET rows x 2 callers = 118 requests; 59 anonymous mutation requests (one per method per row); 177
+SWEEP lines in all, 0 without a UUID x-request-id.
+
+### 3.3 Per-row header results (run 1, fresh reset; from the spec's SWEEP lines)
+
+Class names: private = "private, no-store"; public-60-300 = "public, s-maxage=60,
+stale-while-revalidate=300"; public-30-60 = "public, s-maxage=30, stale-while-revalidate=60";
+public-60-120 = "public, s-maxage=60, stale-while-revalidate=120".
+
+GET rows (target class | anonymous status cache-control | persona status cache-control | x-request-id)
+/api/admin/analytics/events                        private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/analytics/users                         private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/audit-log                               private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/calculate-popularity                    private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/clubs                                   private       | anon 401 private       | admin 500 private       | uuid
+/api/admin/events                                  private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/experiments/[id]/results                private       | anon 401 private       | admin 404 private       | uuid
+/api/admin/experiments/[id]                        private       | anon 401 private       | admin 404 private       | uuid
+/api/admin/experiments                             private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/featured                                private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/organizer-requests                      private       | anon 401 private       | admin 500 private       | uuid
+/api/admin/organizers                              private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/reports                                 private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/stats                                   private       | anon 401 private       | admin 200 private       | uuid
+/api/admin/users                                   private       | anon 401 private       | admin 200 private       | uuid
+/api/calendar/events                               private       | anon 401 private       | student 200 private       | uuid
+/api/clubs/[id]/analytics                          private       | anon 401 private       | student 403 private       | uuid
+/api/clubs/[id]/events                             private       | anon 200 private       | student 200 private       | uuid
+/api/clubs/[id]/follow                             private       | anon 401 private       | student 200 private       | uuid
+/api/clubs/[id]/invites                            private       | anon 401 private       | student 403 private       | uuid
+/api/clubs/[id]/members                            private       | anon 401 private       | student 403 private       | uuid
+/api/clubs/[id]                                    public-60-300 | anon 200 public-60-300 | student 200 public-60-300 | uuid
+/api/clubs/featured                                public-60-120 | anon 200 public-60-120 | student 200 public-60-120 | uuid
+/api/clubs/friends                                 private       | anon 401 private       | student 200 private       | uuid
+/api/clubs/new                                     public-60-300 | anon 200 public-60-300 | student 200 public-60-300 | uuid
+/api/clubs                                         public-60-300 | anon 200 public-60-300 | student 200 public-60-300 | uuid
+/api/clubs/trending                                public-60-300 | anon 200 public-60-300 | student 200 public-60-300 | uuid
+/api/events/[id]/analytics                         private       | anon 401 private       | student 403 private       | uuid
+/api/events/[id]/friends                           private       | anon 401 private       | student 200 private       | uuid
+/api/events/[id]/reviews                           private       | anon 401 private       | student 200 private       | uuid
+/api/events/[id]                                   private       | anon 200 private       | student 200 private       | uuid
+/api/events/[id]/rsvp                              private       | anon 200 private       | student 200 private       | uuid
+/api/events/export                                 public-60-300 | anon 200 public-60-300 | student 200 public-60-300 | uuid
+/api/events/featured                               public-60-120 | anon 200 public-60-120 | student 200 public-60-120 | uuid
+/api/events/following                              private       | anon 401 private       | student 200 private       | uuid
+/api/events/friends-activity                       private       | anon 401 private       | student 200 private       | uuid
+/api/events/friends-organizing                     private       | anon 401 private       | student 200 private       | uuid
+/api/events/happening-now                          public-60-300 | anon 200 public-60-300 | student 200 public-60-300 | uuid
+/api/events/my-events                              private       | anon 401 private       | student 200 private       | uuid
+/api/events/new                                    public-60-300 | anon 200 public-60-300 | student 200 public-60-300 | uuid
+/api/events/popular                                public-60-300 | anon 200 public-60-300 | student 200 public-60-300 | uuid
+/api/events                                        public-30-60  | anon 200 public-30-60  | student 200 public-30-60  | uuid
+/api/health                                        private       | anon 200 private       | student 200 private       | uuid
+/api/moderation/reviews/[targetType]/[targetId]    private       | anon 401 private       | student 403 private       | uuid
+/api/my-clubs                                      private       | anon 401 private       | student 200 private       | uuid
+/api/notifications/count                           private       | anon 401 private       | student 200 private       | uuid
+/api/notifications                                 private       | anon 401 private       | student 200 private       | uuid
+/api/organizer-requests                            private       | anon 401 private       | student 200 private       | uuid
+/api/recommendations/analytics                     private       | anon 401 private       | admin 200 private       | uuid
+/api/recommendations/feedback                      private       | anon 401 private       | student 200 private       | uuid
+/api/recommendations                               private       | anon 200 private       | student 200 private       | uuid
+/api/user/engagement                               private       | anon 401 private       | student 500 private       | uuid
+/api/user/following                                private       | anon 401 private       | student 200 private       | uuid
+/api/users/me/friends                              private       | anon 401 private       | student 200 private       | uuid
+/api/users/me/requests                             private       | anon 401 private       | student 200 private       | uuid
+/api/users/me/suggestions                          private       | anon 401 private       | student 200 private       | uuid
+/api/users/saved-events                            private       | anon 401 private       | student 200 private       | uuid
+/api/users/search                                  private       | anon 401 private       | student 200 private       | uuid
+/auth/callback                                     private       | anon 307 private       | student 307 private       | uuid
+
+Mutation methods, anonymous, no body (method route | status | cache-control | x-request-id)
+POST /api/admin/calculate-popularity                       | 401 | private | uuid
+PATCH /api/admin/clubs/[id]                                | 401 | private | uuid
+PATCH /api/admin/events/[id]/edits                         | 401 | private | uuid
+PUT /api/admin/events/[id]                                 | 401 | private | uuid
+DELETE /api/admin/events/[id]                              | 401 | private | uuid
+PATCH /api/admin/events/[id]/status                        | 401 | private | uuid
+POST /api/admin/events                                     | 401 | private | uuid
+PATCH /api/admin/experiments/[id]                          | 401 | private | uuid
+DELETE /api/admin/experiments/[id]                         | 401 | private | uuid
+POST /api/admin/experiments                                | 401 | private | uuid
+PATCH /api/admin/featured/[id]                             | 401 | private | uuid
+DELETE /api/admin/featured/[id]                            | 401 | private | uuid
+POST /api/admin/featured                                   | 401 | private | uuid
+PATCH /api/admin/organizer-requests/[id]                   | 401 | private | uuid
+PATCH /api/admin/reports/[id]                              | 401 | private | uuid
+POST /api/admin/users/[id]/ban                             | 401 | private | uuid
+DELETE /api/admin/users/[id]/ban                           | 401 | private | uuid
+PATCH /api/admin/users/[id]                                | 401 | private | uuid
+POST /api/clubs/[id]/appeal                                | 401 | private | uuid
+POST /api/clubs/[id]/follow                                | 401 | private | uuid
+DELETE /api/clubs/[id]/follow                              | 401 | private | uuid
+POST /api/clubs/[id]/invites                               | 401 | private | uuid
+PATCH /api/clubs/[id]/members/role                         | 401 | private | uuid
+DELETE /api/clubs/[id]/members                             | 401 | private | uuid
+PATCH /api/clubs/[id]                                      | 401 | private | uuid
+DELETE /api/clubs/[id]                                     | 401 | private | uuid
+POST /api/clubs/[id]/transfer                              | 401 | private | uuid
+POST /api/clubs/banner                                     | 401 | private | uuid
+POST /api/clubs/logo                                       | 401 | private | uuid
+POST /api/clubs                                            | 401 | private | uuid
+POST /api/events/[id]/appeal                               | 401 | private | uuid
+POST /api/events/[id]/invite                               | 401 | private | uuid
+POST /api/events/[id]/report                               | 401 | private | uuid
+POST /api/events/[id]/reviews                              | 401 | private | uuid
+PATCH /api/events/[id]                                     | 401 | private | uuid
+DELETE /api/events/[id]                                    | 401 | private | uuid
+POST /api/events/[id]/rsvp                                 | 401 | private | uuid
+DELETE /api/events/[id]/rsvp                               | 401 | private | uuid
+DELETE /api/events/[id]/save                               | 401 | private | uuid
+POST /api/events/[id]/save                                 | 401 | private | uuid
+POST /api/events/create                                    | 401 | private | uuid
+POST /api/events/upload-image                              | 401 | private | uuid
+POST /api/feedback                                         | 400 | private | uuid
+POST /api/interactions                                     | 400 | private | uuid
+PATCH /api/notifications/[id]                              | 401 | private | uuid
+POST /api/notifications                                    | 401 | private | uuid
+POST /api/onboarding/complete                              | 401 | private | uuid
+POST /api/organizer-requests                               | 401 | private | uuid
+POST /api/profile/avatar                                   | 401 | private | uuid
+POST /api/profile/banner                                   | 401 | private | uuid
+DELETE /api/profile/inferred-tags                          | 401 | private | uuid
+PUT /api/profile/interests                                 | 401 | private | uuid
+POST /api/recommendations/batch                            | 401 | private | uuid
+POST /api/recommendations/feedback                         | 401 | private | uuid
+POST /api/user/engagement                                  | 401 | private | uuid
+POST /api/users/[id]/follow                                | 401 | private | uuid
+DELETE /api/users/[id]/follow                              | 401 | private | uuid
+PATCH /api/users/[id]                                      | 401 | private | uuid
+POST /auth/signout                                         | 302 | private | uuid
+
+Distribution (run 1):
+   42  GET 401 private, no-store
+   42  GET 200 private, no-store
+    3  GET 500 private, no-store
+    2  GET 404 private, no-store
+    5  GET 403 private, no-store
+   16  GET 200 public, s-maxage=60, stale-while-revalidate=300
+    4  GET 200 public, s-maxage=60, stale-while-revalidate=120
+    2  GET 200 public, s-maxage=30, stale-while-revalidate=60
+    2  GET 307 private, no-store
+   56  mutation 401 private, no-store
+    2  mutation 400 private, no-store
+    1  mutation 302 private, no-store
+
+Reading:
+- Every 200 or 404 carries its row's class value; every other status (401, 403, 500, 307, 302, 400) is
+  private, no-store. All 11 public rows answer 200 anonymously and carry their own public value, so the
+  three byte-kept values (events public-30-60, both featured public-60-120) and the eight public-60-300
+  values are observed on the wire. Every personalized row is private on both callers. (F-026, DI-26)
+- Every mutation answers 401 (56), 400 (2: /api/feedback and /api/interactions, anonymous-by-design
+  routes whose contracts refuse an empty body) or the recorded sign-out 302 (1), all private, no-store.
+  MUTATION_STATUS_EXCEPTIONS: "POST /auth/signout" 302 — sign-out is open to every caller by design
+  (BAN_EXEMPT_PATHS in src/proxy.ts); an anonymous POST has no session to end and is redirected to /.
+- Three GETs answer 500 on the reset local schema, with the correct private header. None is caused by this
+  plan (no app file changed), none is covered by an earlier spec, and none is in the registers; they are
+  registered as DI-87 (phase deferred register), with the local PostgREST reproduction:
+    admin GET /api/admin/clubs -> PGRST200 "Could not find a relationship between 'clubs' and 'users'"
+      (select "*, users!created_by(name, email)"; clubs.created_by has no FK to users);
+    admin GET /api/admin/organizer-requests -> PGRST201, two FKs from organizer_requests to users
+      (user_id, reviewed_by), so "user:users(*)" is ambiguous; the route logs nothing (a silent 500);
+    student GET /api/user/engagement -> PGRST205 "Could not find the table 'public.user_engagement_summary'"
+      (F-048 was closed because the declaring migration was retired, so the view exists nowhere).
+  Probe used (local only; the script refused any non-127.0.0.1 API_URL; keys never printed):
+    curl "$API_URL/rest/v1/organizer_requests?select=*,club:clubs(*),user:users(*)&limit=1" (service key) -> PGRST201
+    curl "$API_URL/rest/v1/clubs?select=id,creator:users!created_by(id)&limit=1" (service key) -> PGRST200
+
+### 3.4 The runs
+$ npx playwright test e2e/specs/cache-headers.spec.ts e2e/specs/cross-user-cache.spec.ts --reporter=list   (run 1, fresh reset and seed; the plan verify command)
+153 passed (16.1s)
+exit=0 (10 setup + 23 cross-user + 120 sweep)
+
+$ npx playwright test e2e/specs/cache-headers.spec.ts e2e/specs/cross-user-cache.spec.ts --reporter=list   (run 2, no reset)
+153 passed (15.4s)
+exit=0
+
+$ npx playwright test --reporter=list   (the full suite, fresh reset and seed; 21 spec files)
+243 passed (39.2s)
+exit=0: 0 failed, 0 flaky, 0 skipped, no retry (10 setup + 233 spec tests: the 90 of 06-14's floor, 23 cross-user, 120 sweep)
+Per spec file (tests passed):
+     2 admin-audit-row.spec.ts
+     3 admin-guard.spec.ts
+     1 admin-login-cookie-equivalence.spec.ts
+     3 admin-moderation-queue.spec.ts
+     5 admin-write-paths.spec.ts
+     3 anonymous-browse.spec.ts
+     3 async-edge.spec.ts
+    11 ban-and-onboarding-ring.spec.ts
+     3 banned-redirect.spec.ts
+   120 cache-headers.spec.ts
+    19 club-authorization.spec.ts
+     4 club-invitation-acceptance.spec.ts
+     3 club-owner-surfaces.spec.ts
+    23 cross-user-cache.spec.ts
+     4 csrf-origin.spec.ts
+     6 event-moderation-notifications.spec.ts
+    12 event-read-path.spec.ts
+     2 no-profile-row.spec.ts
+     2 protected-route-redirect.spec.ts
+     1 public-profile-privacy.spec.ts
+     3 save-and-rsvp.spec.ts
+Observed in the server output, pre-existing and already recorded: search_events_fuzzy fails with 0A000
+and the route falls back to ILIKE (F-078, Open at "08").
+
+$ npx tsc --noEmit -> exit=0; $ npx eslint e2e/specs/cache-headers.spec.ts -> exit=0
+
+## 4. Recorded behaviour of the public classes (not changed here)
+
+- A HIT replays the x-request-id of the request that filled the cache (06-12 note). The positive control
+  asserts it: the second /api/events/popular answer carries the first answer's id. Under a shared cache
+  that is expected; correlation for a HIT lives in the CDN's own id (x-vercel-id), not the origin's.
+- A public-class 404 is shared (06-12 decision: Vercel caches 404s). The spec's recorded test: an
+  anonymous GET /api/clubs/5eed0000-0000-4000-8000-0000000000ff answers 404 public-60-300 (MISS) and the
+  student's next request for the same URL is a HIT. 06-13's flag stands: /api/clubs/[id] also answers
+  404 when its database read fails, so under the CDN a transient database error is shared for up to 60 s
+  (plus stale-while-revalidate). The local stack cannot inject that fault without editing the route, so
+  it is registered as DI-88 rather than changed.
+- DEC-69's club listing: an organizer who did not create a pending event does not see it (RLS
+  "Organizers can view own events"); the member view differs by isOrganizer and rsvp_counts (§ 2.2).
+
+## 5. Owner action (DI-81): the real-CDN probe
+
+Not run. Production and preview deploys are outside what this executor may touch, and no recorded
+post-06-14 probe exists in the repository: `.planning/audit/cache/curl-summary.json` is the 01-12
+production run against the old blanket rule. F-025 stays Open at "08" until the probe below shows no
+personalized HIT (DEC-72). The owner runs, after deploying this branch to a preview (DI-81 item 3):
+
+  export PROD_HOST=<preview URL, scheme included, e.g. https://<deployment>.vercel.app>
+  export COOKIE_A='<complete signed-in Cookie header of account A>'
+  export COOKIE_B='<complete signed-in Cookie header of a DIFFERENT account B>'
+  export CLUB_ID=<a real approved club id>    # optional; probes /api/clubs/[id]/... against a live row
+  export EVENT_ID=<a real approved event id>  # optional; the same for /api/events/[id]/...
+  bash .planning/audit/tools/cache-probe.sh && node .planning/audit/tools/gen-cache-matrix.mjs
+
+Expected result:
+- The script's control rows (/api/clubs/featured, /api/events/featured) show x-vercel-cache: HIT at least
+  once, so the run is valid (gen-cache-matrix's CONTROL_VALID; otherwise every verdict is "not-probed,
+  BROKEN HARNESS" and the run must be repeated).
+- No personalized route shows x-vercel-cache: HIT or STALE for session b after session a, and each
+  personalized response carries cache-control: private, no-store; so no row in
+  .planning/audit/cache/cache-matrix.json has verdict "leak-confirmed".
+- The probe writes GET-only, header-only captures and redacts set-cookie in its own pipeline (its READ-ONLY
+  CONTRACT). It overwrites the 01-12 files under .planning/audit/cache/; commit the new run as the F-025
+  closure evidence, or copy the 01-12 files aside first if the audit-time capture must stay beside it.
+- gen-cache-matrix.mjs reads vercel.json's headers for its static column; 06-14 removed them, so that
+  column now names no blanket rule, which is the intended state.

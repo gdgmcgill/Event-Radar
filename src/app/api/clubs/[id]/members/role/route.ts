@@ -4,15 +4,17 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
 import { getElevatedClient } from "@/server/db/elevated";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { ClubMemberRoleBody } from "@/contracts/clubs";
+import { logRouteError, withRoute } from "@/server/route";
 
 /** PostgREST's code when `.single()` matches no row. */
 const NO_ROW = "PGRST116";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update role" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -33,13 +35,10 @@ export async function PATCH(
   );
   if (!gate.ok) return gate.response;
 
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const { memberId, role } = parsedBody.body;
-
-  if (!memberId || role !== "organizer") {
-    return NextResponse.json({ error: "Invalid request. Role must be 'organizer'." }, { status: 400 });
-  }
+  // `!memberId || role !== "organizer"`, one message for both.
+  const parsed = await parseBody(request, ClubMemberRoleBody);
+  if (!parsed.ok) return parsed.response;
+  const { memberId, role } = parsed.data;
 
   // Cannot change own role
   const { data: targetMember } = await supabase
@@ -89,8 +88,9 @@ export async function PATCH(
   }
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Failed to update role" }, { status: 500 });
   }
 
   return NextResponse.json({ member: updated });
-}
+});

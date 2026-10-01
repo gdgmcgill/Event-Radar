@@ -3,8 +3,11 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { parseBody } from "@/server/body";
+import { ExperimentCreateBody } from "@/contracts/admin";
+import { logRouteError, withRoute } from "@/server/route";
 
-export async function GET(_request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch experiments" }, async (_request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -18,6 +21,7 @@ export async function GET(_request: NextRequest) {
     .order("created_at", { ascending: false });
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -33,6 +37,7 @@ export async function GET(_request: NextRequest) {
     .in("experiment_id", experimentIds);
 
   if (variantsError) {
+    logRouteError(variantsError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -42,6 +47,7 @@ export async function GET(_request: NextRequest) {
     .in("experiment_id", experimentIds);
 
   if (assignmentsError) {
+    logRouteError(assignmentsError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -66,9 +72,9 @@ export async function GET(_request: NextRequest) {
   }));
 
   return NextResponse.json({ experiments: enrichedExperiments });
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create experiment" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -76,23 +82,11 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const supabase = ctx.supabase;
 
-  const body = await request.json();
+  // The name, then at least two variants (src/contracts/admin.ts).
+  const parsed = await parseBody(request, ExperimentCreateBody);
+  if (!parsed.ok) return parsed.response;
   const { name, description, target_metric, start_date, end_date, variants } =
-    body;
-
-  if (!name) {
-    return NextResponse.json(
-      { error: "name is required" },
-      { status: 400 }
-    );
-  }
-
-  if (!variants || !Array.isArray(variants) || variants.length < 2) {
-    return NextResponse.json(
-      { error: "At least 2 variants are required" },
-      { status: 400 }
-    );
-  }
+    parsed.data;
 
   const { data: experiment, error: expError } = await supabase
     .from("experiments")
@@ -107,17 +101,16 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (expError) {
+    logRouteError(expError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
-  const variantRows = variants.map(
-    (v: { name: string; config?: Record<string, unknown>; weight?: number }) => ({
-      experiment_id: experiment.id,
-      name: v.name,
-      config: (v.config ?? {}) as import("@/lib/supabase/types").Json,
-      weight: v.weight ?? 1,
-    })
-  );
+  const variantRows = variants.map((v) => ({
+    experiment_id: experiment.id,
+    name: v.name,
+    config: (v.config ?? {}) as import("@/lib/supabase/types").Json,
+    weight: v.weight ?? 1,
+  }));
 
   const { data: createdVariants, error: varError } = await supabase
     .from("experiment_variants")
@@ -127,6 +120,7 @@ export async function POST(request: NextRequest) {
   if (varError) {
     // Clean up the experiment on variant creation failure
     await supabase.from("experiments").delete().eq("id", experiment.id);
+    logRouteError(varError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -134,4 +128,4 @@ export async function POST(request: NextRequest) {
     { experiment: { ...experiment, variants: createdVariants } },
     { status: 201 }
   );
-}
+});

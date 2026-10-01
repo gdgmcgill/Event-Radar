@@ -91,9 +91,9 @@ test.describe("a user whose suspension has expired", () => {
 test.describe("the mid-onboarding student (F-089, DEC-34)", () => {
   test.use({ storageState: storageStateFor("mid_onboarding_student") });
 
-  test("is sent to onboarding from the home page", async ({ page }) => {
+  test("P1-02 can browse home before completing student onboarding", async ({ page }) => {
     await page.goto("/");
-    expect(new URL(page.url()).pathname).toBe("/onboarding");
+    expect(new URL(page.url()).pathname).toBe("/");
   });
 
   test("is still sent to onboarding with the needs_onboarding cookie deleted (database truth)", async ({ page }) => {
@@ -116,10 +116,10 @@ test.describe("the mid-onboarding student (F-089, DEC-34)", () => {
     expect(res.status()).toBe(200);
   });
 
-  test("can still complete onboarding (exempt from the onboarding guard)", async ({ page }) => {
+  test("P1-02 cookie clearing does not complete an unfinished profile", async ({ page }) => {
     const res = await page.request.post("/api/onboarding/complete");
-    expect(res.status()).toBe(200);
-    expect(await res.json()).toEqual({ success: true });
+    expect(res.status()).toBe(400);
+    expect(await res.json()).toEqual({ error: "Complete your profile first" });
   });
 });
 

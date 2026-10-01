@@ -11,7 +11,11 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import type { TrackInteractionPayload } from "@/types";
+import { parseBody } from "@/server/body";
+import { InteractionBody } from "@/contracts/interactions";
+import { withRoute } from "@/server/route";
+import { getElevatedClient } from "@/server/db/elevated";
+import { log } from "@/server/log";
 
 /**
  * @swagger
@@ -52,7 +56,7 @@ import type { TrackInteractionPayload } from "@/types";
  *       500:
  *         description: Internal server error
  */
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "record interaction" }, async (request: NextRequest) => {
   try {
     // Anonymous tracking stays open (DEC-34): the guards apply only when a
     // user is present.
@@ -66,33 +70,13 @@ export async function POST(request: NextRequest) {
     const user = ctx.user;
     const supabase = ctx.supabase;
 
-    const body: TrackInteractionPayload = await request.json();
-
-    // Validate required fields
-    if (!body.event_id || !body.interaction_type) {
-      return NextResponse.json(
-        { error: "event_id and interaction_type are required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate interaction_type
-    const validTypes = ['view', 'click', 'save', 'unsave', 'share', 'calendar_add'];
-    if (!validTypes.includes(body.interaction_type)) {
-      return NextResponse.json(
-        { error: `Invalid interaction_type. Must be one of: ${validTypes.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // Validate source if provided (must match user_interactions.source CHECK constraint)
-    const validSources = ['home', 'search', 'recommendation', 'calendar', 'direct', 'modal', 'my-events'];
-    if (body.source && !validSources.includes(body.source)) {
-      return NextResponse.json(
-        { error: `Invalid source. Must be one of: ${validSources.join(', ')}` },
-        { status: 400 }
-      );
-    }
+    // The contract carries today's three 400s in today's order: presence of
+    // event_id and interaction_type, the interaction_type list, then the
+    // source list (user_interactions.source CHECK constraint). A body that is
+    // not a JSON object answers 400 instead of 500 (F-094).
+    const parsed = await parseBody(request, InteractionBody);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
 
     // Verify the event exists
     const { data: eventExists, error: eventError } = await supabase
@@ -103,7 +87,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (eventError) {
-      console.error("Error verifying event:", eventError);
+      log.error("Error verifying event", { error: eventError });
       return NextResponse.json(
         { error: "Failed to verify event" },
         { status: 500 }
@@ -117,8 +101,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insert the interaction
-    // Using type assertion since the new tables aren't in generated types yet
+    // F-009/F-010: only the server may insert interactions or update popularity.
+    // The cookie lookup above preserves event visibility; identity is bound to
+    // the authenticated session, never a request field. The existing invoker
+    // trigger recomputes popularity with this same service-role capability.
     const interactionData = {
       user_id: user?.id || null,
       event_id: body.event_id,
@@ -128,14 +114,14 @@ export async function POST(request: NextRequest) {
       metadata: body.metadata || {},
     };
 
-    const { data: interaction, error: insertError } = await supabase
+    const { data: interaction, error: insertError } = await getElevatedClient()
       .from("user_interactions")
       .insert(interactionData as never)
       .select("id, created_at")
       .single();
 
     if (insertError) {
-      console.error("Error recording interaction:", insertError);
+      log.error("Error recording interaction", { error: insertError });
       return NextResponse.json(
         { error: "Failed to record interaction" },
         { status: 500 }
@@ -153,10 +139,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Unexpected error recording interaction:", error);
+    log.error("Unexpected error recording interaction", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

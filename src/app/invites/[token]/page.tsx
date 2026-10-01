@@ -55,6 +55,11 @@ export default async function InvitePage({ params }: PageProps) {
     redirect(`/?signin=required&next=/invites/${token}`);
   }
 
+  // P1-02: any domain is eligible, but only a verified recipient may accept.
+  if (!user.email_confirmed_at) {
+    return <ErrorCard icon={AlertTriangle} title="Verify Your Email" message="Sign in with Google or verify an email code before accepting this invitation." />;
+  }
+
   // Look up invitation with club details
   const { data: invitation, error: inviteError } = await supabase
     .from("club_invitations")

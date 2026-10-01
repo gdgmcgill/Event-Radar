@@ -1,10 +1,12 @@
-import { isMcGillEmail } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { requireClubRole } from "@/server/authz/requireClubRole";
+import { parseBody } from "@/server/body";
+import { ClubInviteBody } from "@/contracts/clubs";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -14,10 +16,10 @@ interface RouteParams {
  * GET /api/clubs/[id]/invites
  * List pending invitations for a club. Owner-only.
  */
-export async function GET(
+export const GET = withRoute({ cache: "private", action: "fetch invitations" }, async (
   _request: NextRequest,
   { params }: RouteParams
-) {
+) => {
   try {
     const { id: clubId } = await params;
     const ctx = await createRequestContext();
@@ -42,6 +44,7 @@ export async function GET(
       .order("created_at", { ascending: false });
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to fetch invitations" },
         { status: 500 }
@@ -49,19 +52,20 @@ export async function GET(
     }
 
     return NextResponse.json(invites);
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch invitations" },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/clubs/[id]/invites
- * Create an invitation for a McGill email. Owner-only.
+ * Create an invitation for an email address. Owner-only; acceptance requires the verified recipient session.
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export const POST = withRoute({ cache: "private", action: "create invitation" }, async (request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -83,24 +87,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
     if (!gate.ok) return gate.response;
 
-    const body = await request.json();
-    const { email } = body as { email: string };
-
-    if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" },
-        { status: 400 }
-      );
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!isMcGillEmail(normalizedEmail)) {
-      return NextResponse.json(
-        { error: "Must be a McGill email" },
-        { status: 400 }
-      );
-    }
+    // "Email is required", then (trimmed and lower-cased) "Must be a McGill
+    // email"; the output is the normalized address.
+    const parsed = await parseBody(request, ClubInviteBody);
+    if (!parsed.ok) return parsed.response;
+    const normalizedEmail = parsed.data.email;
 
     // Check if already a member (look up user by email, then check membership)
     const { data: existingUser } = await supabase
@@ -153,6 +144,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .single();
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to create invitation" },
         { status: 500 }
@@ -160,10 +152,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     return NextResponse.json({ invite: { token: invite.token } }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to create invitation" },
       { status: 500 }
     );
   }
-}
+});

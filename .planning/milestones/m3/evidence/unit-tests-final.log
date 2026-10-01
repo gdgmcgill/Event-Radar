@@ -1,0 +1,477 @@
+
+> uni-verse@0.1.0 test:ci
+> jest --ci --runInBand
+
+PASS jsdom src/components/moderation/opportunity-editor.test.tsx
+PASS jsdom src/components/moderation/__tests__/resource-editor.test.tsx
+PASS jsdom src/hooks/useEvents.test.ts
+PASS node src/__tests__/api/events/get-events.test.ts
+  ● Console
+
+    console.error
+      {"ts":"2026-09-29T22:40:18.621Z","level":"error","msg":"Fuzzy search RPC error","requestId":"b8d31a3d-0072-4aa0-885c-2093228c6eee","route":"/api/events","error":{"message":"RPC unavailable"}}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at src/app/api/events/route.ts:320:13
+      at src/server/route.ts:131:55
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:287:5)
+
+    console.error
+      {"ts":"2026-09-29T22:40:18.872Z","level":"error","msg":"Supabase error fetching events","requestId":"bdc0271b-e9c0-41f5-9c76-05f6f848f5ed","route":"/api/events","error":{"message":"Database connection failed"}}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at src/app/api/events/route.ts:439:11
+      at src/server/route.ts:131:55
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:384:17)
+
+    console.error
+      {"ts":"2026-09-29T22:40:18.911Z","level":"error","msg":"Supabase error fetching events","requestId":"6370d1e7-e86a-4957-b60f-6a47b253be55","route":"/api/events","error":{"message":"relation \"events\" does not exist"}}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at src/app/api/events/route.ts:439:11
+      at src/server/route.ts:131:55
+      at Object.<anonymous> (src/__tests__/api/events/get-events.test.ts:400:17)
+
+    console.error
+      {"ts":"2026-09-29T22:40:18.944Z","level":"error","msg":"Error fetching events","requestId":"9b2b888f-f99f-4c26-971c-54db05b204b9","route":"/api/events","error":{"name":"Error","message":"Unexpected crash"}}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at src/app/api/events/route.ts:494:9
+      at src/server/route.ts:131:55
+
+PASS node src/__tests__/api/health/health.test.ts
+PASS node src/__tests__/api/events/date-validation.test.ts
+PASS node src/__tests__/api/events/rsvp.test.ts
+  ● Console
+
+    console.error
+      {"ts":"2026-09-29T22:40:20.931Z","level":"error","msg":"Error looking up event","requestId":"f4569ff7-691e-45e3-b7f6-f031e48eb4a2","route":"/api/events/test-event-id/rsvp","error":{"message":"DB error"}}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at src/app/api/events/[id]/rsvp/route.ts:86:11
+      at src/server/route.ts:131:55
+      at Object.<anonymous> (src/__tests__/api/events/rsvp.test.ts:137:17)
+
+PASS node src/__tests__/scripts/check-server-console.test.ts
+PASS node src/__tests__/api/events/friends-defect.test.ts
+PASS node src/__tests__/scripts/check-contracts.test.ts
+PASS node src/__tests__/config/csp-defect.test.ts
+PASS node src/app/auth/callback/route.test.ts
+PASS jsdom src/hooks/contract-dev-check.test.ts
+PASS jsdom src/components/intake/__tests__/intake-forms.test.tsx
+PASS jsdom src/__tests__/app/home-switch.test.tsx
+PASS jsdom src/components/events/EventDetailView.test.tsx
+PASS node src/app/auth/callback/route-defect.test.ts
+PASS node src/__tests__/api/ingestion-admin.test.ts
+PASS node src/__tests__/seed/certification.test.ts
+PASS node src/contracts/__tests__/admin.test.ts
+PASS node src/__tests__/api/clubs/analytics.test.ts
+  ● Console
+
+    console.error
+      {"ts":"2026-09-29T22:40:25.136Z","level":"error","msg":"handled route error","requestId":"6ae208aa-28aa-4ee4-9b34-0e65ecd9cf63","route":"/api/clubs/club-123/analytics","error":{"message":"unavailable"}}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at logRouteError (src/server/route.ts:105:7)
+      at src/app/api/clubs/[id]/analytics/route.ts:322:18
+      at src/server/route.ts:131:55
+      at src/__tests__/api/clubs/analytics.test.ts:216:22
+
+    console.error
+      {"ts":"2026-09-29T22:40:25.175Z","level":"error","msg":"handled route error","requestId":"e6b5d096-77c7-408f-8296-1caed5d6645d","route":"/api/clubs/club-123/analytics","error":{"message":"unavailable"}}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at logRouteError (src/server/route.ts:105:7)
+      at src/app/api/clubs/[id]/analytics/route.ts:322:18
+      at src/server/route.ts:131:55
+      at src/__tests__/api/clubs/analytics.test.ts:216:22
+
+PASS jsdom src/components/moderation/__tests__/ingestion-panel.test.tsx
+PASS node src/__tests__/contracts/bad-request-characterization.test.ts
+PASS node src/__tests__/scripts/check-rls-coverage.test.ts
+PASS jsdom src/components/onboarding/OnboardingWizard.test.tsx
+PASS node src/contracts/__tests__/events.test.ts
+PASS jsdom src/components/discovery/save-state.test.tsx
+PASS node src/__tests__/api/events/analytics.test.ts
+  ● Console
+
+    console.error
+      {"ts":"2026-09-29T22:40:26.293Z","level":"error","msg":"handled route error","requestId":"a6160579-229c-4346-8ab2-5a2c719dc435","route":"/api/events/event-123/analytics","error":{"message":"unavailable"}}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at logRouteError (src/server/route.ts:105:7)
+      at src/app/api/events/[id]/analytics/route.ts:105:18
+      at src/server/route.ts:131:55
+      at Object.<anonymous> (src/__tests__/api/events/analytics.test.ts:204:22)
+
+PASS node src/__tests__/api/cache-headers-defect.test.ts
+PASS jsdom src/__tests__/pages/experiments-create.test.tsx
+PASS node src/__tests__/api/review05/fanout-after.test.ts
+PASS node src/server/__tests__/sentry.test.ts
+PASS node src/__tests__/api/resources.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+PASS node src/__tests__/api/uncaught-throw-defect.test.ts
+PASS node src/__tests__/api/m2-route-boundaries.test.ts
+PASS node src/__tests__/contracts/malformed-input-defect.test.ts
+PASS node src/server/ingestion/__tests__/safeImageFetch.test.ts
+PASS node src/__tests__/api/review05/notifications-door.test.ts
+PASS node src/__tests__/api/m1-accounts.test.ts
+PASS node src/lib/ingest/__tests__/staleness.test.ts
+PASS node src/__tests__/api/clubs/club-gates-characterization.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/__tests__/api/error-text-defect.test.ts
+PASS node src/proxy.test.ts
+PASS jsdom src/components/events/EventFilters.test.tsx
+PASS jsdom src/components/auth/SignInButton.test.tsx
+PASS node src/__tests__/api/admin/admin-guard-characterization.test.ts
+PASS node src/__tests__/api/review05/json-body.test.ts
+PASS node src/__tests__/api/recommendations/m0-recommendations-hardening.test.ts
+PASS node src/proxy-characterization.test.ts
+  ● Console
+
+    console.error
+      {"ts":"2026-09-29T22:40:28.178Z","level":"warn","msg":"Upstash not configured; using the in-memory store (not shared across instances)","requestId":"c7aff03c-4591-4260-95e3-dbeb89ae2516","route":"/my-events","scope":"RateLimit"}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.warn (src/server/log.ts:193:52)
+      at select (src/server/ratelimit/index.ts:74:11)
+      at getRateLimitStore (src/server/ratelimit/index.ts:87:10)
+      at ring (src/proxy.ts:120:72)
+      at src/proxy.ts:89:11
+      at runWithRequest (src/server/log.ts:53:18)
+      at proxy (src/proxy.ts:87:40)
+      at src/proxy-characterization.test.ts:239:32
+
+PASS node src/__tests__/api/admin/admin-guard-defect.test.ts
+PASS node src/__tests__/api/service-role-routing.test.ts
+PASS node src/instrumentation.test.ts
+PASS node src/server/ratelimit/policy.test.ts
+  ● Console
+
+    console.error
+      {"ts":"2026-09-29T22:40:28.388Z","level":"warn","msg":"Upstash not configured; using the in-memory store (not shared across instances)","scope":"RateLimit"}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.warn (src/server/log.ts:193:52)
+      at select (src/server/ratelimit/index.ts:74:11)
+      at getRateLimitStore (src/server/ratelimit/index.ts:87:10)
+      at Object.<anonymous> (src/server/ratelimit/policy.test.ts:227:36)
+
+PASS node src/__tests__/api/intake.test.ts
+PASS jsdom src/__tests__/pages/experiment-detail.test.tsx
+PASS node src/__tests__/api/events/calendar-events-characterization.test.ts
+PASS node src/__tests__/api/events/discovery-duplicate-errors.test.ts
+PASS node src/__tests__/api/review05/club-links.test.ts
+PASS node src/__tests__/api/events/events-detail-characterization.test.ts
+PASS node src/__tests__/api/intake-admin.test.ts
+PASS node src/__tests__/api/review05/admin-edits-whitelist.test.ts
+PASS node src/__tests__/api/events/events-list-characterization.test.ts
+PASS node src/app/api/events/route.test.ts
+PASS node src/__tests__/api/review05/club-member-role.test.ts
+  ● Console
+
+    console.error
+      {"ts":"2026-09-29T22:40:29.012Z","level":"error","msg":"handled route error","requestId":"4674f071-0b0d-4094-adee-0f0d84758bfd","route":"/api/clubs/5eed0000-0000-4000-8000-0f05000000c1/members/role","error":{"message":"boom","code":"XX000"}}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at logRouteError (src/server/route.ts:105:7)
+      at src/app/api/clubs/[id]/members/role/route.ts:91:18
+      at src/server/route.ts:131:55
+      at Object.<anonymous> (src/__tests__/api/review05/club-member-role.test.ts:91:15)
+
+PASS node src/__tests__/api/recommendations/recommendations-family-characterization.test.ts
+PASS node src/__tests__/api/review05/admin-reban.test.ts
+PASS node src/__tests__/api/admin/admin-users-patch-defect.test.ts
+PASS node src/proxy-request-id.test.ts
+PASS node src/__tests__/api/review05/club-transfer.test.ts
+PASS node src/__tests__/api/events/reviews.test.ts
+  ● Console
+
+    console.error
+      {"ts":"2026-09-29T22:40:29.299Z","level":"error","msg":"unhandled route error","requestId":"88c16f60-d733-443b-80eb-6e19339261ad","route":"/api/events/event-1/reviews","error":{"name":"Error","message":"backend unavailable"},"method":"GET"}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.error (src/server/log.ts:194:53)
+      at src/server/route.ts:134:13
+      at Object.<anonymous> (src/__tests__/api/events/reviews.test.ts:59:20)
+
+PASS node src/__tests__/api/events/pagination-contract-defect.test.ts
+PASS node src/__tests__/api/admin/admin-reports-defect.test.ts
+PASS node src/app/api/events/export/route.test.ts
+PASS node src/__tests__/api/review05/admin-review-once.test.ts
+PASS node src/__tests__/api/events/rsvp-characterization.test.ts
+PASS node src/contracts/__tests__/users.test.ts
+PASS node src/__tests__/api/m0-deferred-reads.test.ts
+PASS node src/__tests__/api/interactions/m0-interaction-write-boundary.test.ts
+PASS node src/__tests__/api/interactions/interactions-feedback-characterization.test.ts
+PASS node src/__tests__/api/events/ban-asymmetry-defect.test.ts
+PASS node src/contracts/__tests__/clubs.test.ts
+PASS node src/app/api/admin/analytics/users/route.test.ts
+PASS node src/lib/ingest/__tests__/instagramProducer.test.ts
+PASS node src/__tests__/api/review05/club-links-defect.test.ts
+PASS node src/__tests__/api/recommendations/recommendations-characterization.test.ts
+PASS node src/__tests__/api/recommendations/experiment-assignment-defect.test.ts
+PASS node src/__tests__/api/events/saved-events-characterization.test.ts
+PASS node src/__tests__/api/events/club-fabrication-defect.test.ts
+PASS node src/__tests__/api/clubs/club-owner-writes-defect.test.ts
+PASS node src/__tests__/api/cache-headers-census.test.ts
+PASS jsdom src/__tests__/pages/public-profile-defect.test.tsx
+PASS node src/__tests__/api/events/save-characterization.test.ts
+PASS node src/__tests__/api/slice6-malformed-input-defect.test.ts
+PASS node src/__tests__/api/review05/admin-event-notification.test.ts
+PASS node src/__tests__/api/events/search-escaping-defect.test.ts
+PASS node src/__tests__/api/notifications/notifications-characterization.test.ts
+PASS node src/__tests__/api/events/pending-edits-defect.test.ts
+PASS node src/__tests__/api/events/rsvp-count-defect.test.ts
+PASS node src/__tests__/api/m0-appeal-privacy.test.ts
+PASS node src/__tests__/api/events/saved-events-time-floor-defect.test.ts
+PASS jsdom src/components/discovery/__tests__/listing-facts.test.tsx
+PASS node src/__tests__/api/recommendations/batch-error-text-defect.test.ts
+(node:72168) [UNDICI-FETCH-patch] Warning: Using `patch` is highly likely to result in a `405 Method Not Allowed`. `PATCH` is much more likely to succeed.
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS node src/server/__tests__/csrf.test.ts
+  ● Console
+
+    console.error
+      {"ts":"2026-09-29T22:40:30.888Z","level":"warn","msg":"Upstash not configured; using the in-memory store (not shared across instances)","requestId":"21e83b0b-82f4-4ea5-9f7c-695af5343f60","route":"/api/events/e1/save","scope":"RateLimit"}
+
+      184 |     });
+      185 |   }
+    > 186 |   sink(line);
+          |   ^
+      187 | }
+      188 |
+      189 | /** The logger. Each call writes one redacted JSON line. */
+
+      at emit (src/server/log.ts:186:3)
+      at Object.warn (src/server/log.ts:193:52)
+      at select (src/server/ratelimit/index.ts:74:11)
+      at getRateLimitStore (src/server/ratelimit/index.ts:87:10)
+      at ring (src/proxy.ts:120:72)
+      at src/proxy.ts:89:11
+      at runWithRequest (src/server/log.ts:53:18)
+      at proxy (src/proxy.ts:87:40)
+      at src/server/__tests__/csrf.test.ts:256:28
+
+PASS node src/proxy-defect.test.ts
+PASS jsdom src/components/events/FilterSidebar.test.tsx
+PASS jsdom src/components/home/EditorialHome.test.tsx
+PASS jsdom src/components/ErrorBoundary.test.tsx
+PASS node src/__tests__/api/notifications/notifications-count-defect.test.ts
+PASS node src/__tests__/api/health/health-defect.test.ts
+PASS node src/lib/features.test.ts
+PASS node src/proxy-ratelimit-failopen.test.ts
+PASS node src/contracts/__tests__/m0-input-bounds.test.ts
+PASS node src/__tests__/webhook/webhook-handler.test.ts
+PASS node src/__tests__/api/events/anonymous-personalized-defect.test.ts
+PASS node src/server/ratelimit/selection.test.ts
+PASS node src/__tests__/moderation/audit-shape.test.ts
+PASS node src/__tests__/seed/certification-functional.test.ts
+PASS node src/server/__tests__/body.test.ts
+PASS jsdom src/components/ui/__tests__/fallback-image.test.tsx
+PASS jsdom src/components/about/EditorialAbout.test.tsx
+PASS node src/contracts/__tests__/m0-deferred-inputs.test.ts
+PASS node src/__tests__/api/m0-read-failures.test.ts
+PASS jsdom src/lib/markdown/__tests__/SafeMarkdown.test.tsx
+PASS node src/__tests__/webhook/webhook-contract.test.ts
+PASS node src/contracts/__tests__/slice-6-contracts.test.ts
+PASS node src/__tests__/api/m0-local-chaos.test.ts
+PASS node src/contracts/__tests__/intake.test.ts
+PASS jsdom src/hooks/useLegacyReviewHistory.test.ts
+PASS node src/lib/__tests__/env-assertions-defect.test.ts
+PASS node src/server/__tests__/route.test.ts
+PASS node src/__tests__/pages/docs-gate-defect.test.ts
+PASS node src/lib/env.test.ts
+PASS node src/contracts/__tests__/resources.test.ts
+PASS node src/server/ratelimit/upstashStore.test.ts
+PASS node src/server/discovery/__tests__/cursor.test.ts
+PASS node src/__tests__/api/admin/admin-arm-tree-defect.test.ts
+PASS node src/__tests__/lib/tag-coercion-defect.test.ts
+PASS node src/lib/eventTags.test.ts
+PASS node src/server/__tests__/getsession-gate.test.ts
+PASS node src/__tests__/seed/guard.test.ts
+PASS node src/__tests__/contracts/discovery.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/server/ingestion/__tests__/persistImages.test.ts
+PASS node src/__tests__/api/auth-ring/write-arm-tree-defect.test.ts
+PASS node src/server/__tests__/requireAdminPage.test.ts
+PASS node src/__tests__/webhook/content-hash-parity.test.ts
+PASS node src/lib/experiments.test.ts
+PASS node src/lib/observability/scrub.test.ts
+PASS node src/lib/__tests__/ban.test.ts
+PASS node src/server/__tests__/log.test.ts
+PASS node src/server/__tests__/context.test.ts
+PASS node src/lib/exportUtils.test.ts
+PASS node src/server/__tests__/requireActiveUser.test.ts
+PASS node src/__tests__/e2e/request-document.test.ts
+PASS node src/lib/sanitize.test.ts
+PASS node src/server/intake/__tests__/clientHash.test.ts
+PASS node src/lib/__tests__/recommendations.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/server/__tests__/requireOnboarded.test.ts
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/server/__tests__/image-signature.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/errors.test.ts
+PASS node src/__tests__/config/vercel-json-defect.test.ts
+PASS node src/lib/eventCursor.test.ts
+PASS node src/lib/dateValidation.test.ts
+PASS node src/lib/classifier.test.ts
+PASS node src/store/useAuthStore.test.ts
+  ● Console
+
+    console.log
+      [AuthStore] onAuthStateChange: SIGNED_IN hasSession: true hasUser: true
+
+      at src/store/useAuthStore.ts:161:15
+
+    console.log
+      [AuthStore] onAuthStateChange: SIGNED_IN hasSession: true hasUser: true
+
+      at src/store/useAuthStore.ts:161:15
+
+    console.log
+      [AuthStore] onAuthStateChange: SIGNED_IN hasSession: true hasUser: true
+
+      at src/store/useAuthStore.ts:161:15
+
+    console.log
+      [AuthStore] onAuthStateChange: SIGNED_OUT hasSession: false hasUser: false
+
+      at src/store/useAuthStore.ts:161:15
+
+    console.log
+      [AuthStore] onAuthStateChange: SIGNED_IN hasSession: true hasUser: true
+
+      at src/store/useAuthStore.ts:161:15
+
+    console.log
+      [AuthStore] onAuthStateChange: SIGNED_IN hasSession: true hasUser: true
+
+      at src/store/useAuthStore.ts:161:15
+
+PASS node src/server/__tests__/elevated.test.ts
+PASS node src/__tests__/webhook/verify-signature.test.ts
+PASS node src/lib/searchFilter.test.ts
+PASS node src/lib/markdown/__tests__/parse.test.ts
+PASS node src/server/ingestion/__tests__/summary.test.ts
+PASS node src/server/home/__tests__/sections.test.ts
+PASS node src/components/layout/__tests__/product-navigation.test.ts
+PASS node src/server/ratelimit/memoryStore.test.ts
+PASS node src/__tests__/seed/env-override.test.ts
+PASS node src/__tests__/app/sitemap.test.ts
+PASS node src/lib/imageSniff.test.ts
+PASS node src/lib/diversity.test.ts
+PASS node src/__tests__/app/layout-metadata.test.ts
+
+Test Suites: 1 skipped, 184 passed, 184 of 185 total
+Tests:       1 skipped, 4395 passed, 4396 total
+Snapshots:   0 total
+Time:        17.182 s, estimated 19 s
+Ran all test suites in 2 projects.

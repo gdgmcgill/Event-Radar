@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Uni-Verse** is a campus event discovery platform for McGill University. Students can discover, filter, and save events happening on campus.
+**Uni-Verse** is becoming an opportunity platform for Montreal students. The confirmed Phase 1 scope is expanded §47 Build Now. M0 is owner-closed for M1–M2 implementation; historical hosted certification gaps remain documented. See `.planning/milestones/m1-m2/DECISIONS.md`. Deployment remains deferred until requested.
 
 ## Tech Stack
 
@@ -37,7 +37,7 @@ The project has three distinct Supabase client factories — using the wrong one
 |--------|------|----------|
 | `createClient()` | `lib/supabase/client.ts` | Client components, React hooks (browser) |
 | `createClient()` | `lib/supabase/server.ts` | Server Components, API routes (async, reads cookies) |
-| `createServiceClient()` | `lib/supabase/service.ts` | Admin/cron routes that bypass RLS (uses service role key) |
+| `createServiceClient()` | `lib/supabase/service.ts` | Never imported by a route: the only importer is the elevated door `getElevatedClient()` in `src/server/db/elevated/`, each use registered in its `REGISTRY.md` (bypasses RLS; service role key). There are no cron routes: pg_cron runs the jobs in Postgres |
 
 All three are typed with `Database` from `lib/supabase/types.ts`.
 
@@ -88,6 +88,10 @@ All three are typed with `Database` from `lib/supabase/types.ts`.
 
 - **Path alias**: `@/` maps to `src/`
 - **API routes**: Return `NextResponse`; admin endpoints use `requireActiveUser` + `requireRole(ctx, "admin")` from `src/server/authz/`; state-changing user endpoints use `requireActiveUser` + `requireOnboarded`
+- **Route wrapper**: every export in `src/app/**/route.ts` is `export const VERB = withRoute({ cache, action }, handler)` (`src/server/route.ts`). The cache class (`CACHE_CLASSES` in `src/server/http.ts`) sets Cache-Control; personalized and auth-gated routes are `private` (`private, no-store`) and public reads opt in with a named `public-*` class. `vercel.json` sets no headers. An uncaught throw answers `{ "error": "Failed to <action>" }` 500
+- **Input contracts**: handlers read input only through zod schemas in `src/contracts/` via `parseBody`, `parseQuery`, `readQuery`, `parseForm` or `parseWith` in `src/server/body.ts`; CI's "Contracts census" (`scripts/check-contracts.mjs`) fails on a raw `request.json()`, `.formData()` or route-file `searchParams` read. Client callers type their bodies from the same contracts (`--client` mode)
+- **Logging and errors**: server code logs through `log` from `src/server/log.ts` (one redacted JSON line with `requestId`), never `console.*` (CI's "Server console census"). The proxy mints `x-request-id` and every response carries it. A caught error's message never goes into a response body. Sentry (`@sentry/nextjs`) is disabled unless `SENTRY_DSN` is set; see `docs/observability.md`
+- **Health**: `/api/health` answers `{ status, version }` to anyone; the documented report (`docs/health.md`) needs an active admin or a `HEALTH_TOKEN` bearer
 - **Event status flow**: `pending` → `approved` | `rejected` (moderation pipeline)
 - **Club status flow**: Same as events — clubs must be approved before becoming visible
 - **Tags**: Use the `EventTag` enum from `src/types/index.ts`, not raw strings
@@ -118,10 +122,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
+Optional, used in deployed environments (see `docs/observability.md` and `docs/health.md`): `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`, `HEALTH_TOKEN` (at least 32 characters).
+
 ## Important Notes
 
 - Never modify `.env.local` — contains actual Supabase credentials
-- McGill email validation is required for authentication
+- Admit any verified email; never delete accounts because of their domain. School affiliation never grants roles. Retain active-user, ban, role, and student-write onboarding guards.
+- Legacy reviews are private owner/admin history. Do not restore public ratings or aggregates.
+- Release switches in `src/lib/features.ts` are server-authoritative and default off. Preserve legacy event storage, URLs, and saves.
 - Types in `src/types/index.ts` define all data structures — keep them in sync with the DB schema
 - Test files (`*.test.ts`, `*.test.tsx`) are type-checked by the main tsconfig (`npx tsc --noEmit` and the `next build` type-check both cover them) and run by Jest's two projects (`node` and `jsdom`). Type a dynamically imported route handler as the handler's own type, e.g. `(typeof import("@/app/api/.../route"))["GET"]`, and call it with a request and a `{ params: Promise<...> }` context; never widen a route signature to make a test compile
 

@@ -4,6 +4,8 @@ import type { EventAnalytics } from "@/types";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
+import { getElevatedClient } from "@/server/db/elevated";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -14,7 +16,7 @@ interface RouteParams {
  * Returns club-level analytics: follower growth, total attendees, popular tags, per-event metrics.
  * Requires authentication and club membership.
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "fetch club analytics" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const { id: clubId } = await params;
     const ctx = await createRequestContext();
@@ -140,10 +142,13 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       }
 
       // Bulk fetch saved_events counts
-      const { data: saved } = await supabase
+      // Own-row RLS hides other attendees' saves. Scope this aggregate read
+      // to events loaded from the authorized club, and never select identities.
+      const { data: saved, error: savedError } = await getElevatedClient()
         .from("saved_events")
         .select("event_id")
         .in("event_id", eventIds);
+      if (savedError) throw savedError;
 
       for (const s of saved ?? []) {
         const sv = s as { event_id: string };
@@ -193,11 +198,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     if (eventIds.length > 0) {
       // Fetch interactions for club events in last 30 days
-      const { data: interactions } = await supabase
+      // The response contains day/hour buckets only. This membership-gated
+      // read includes all attendees rather than just the caller's own activity.
+      const { data: interactions, error: interactionsError } = await getElevatedClient()
         .from("user_interactions")
         .select("created_at")
         .in("event_id", eventIds)
         .gte("created_at", thirtyDaysAgo.toISOString());
+      if (interactionsError) throw interactionsError;
 
       if (interactions && interactions.length > 0) {
         // Engagement trend: group by day
@@ -310,10 +318,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       peak_days: peakDays,
       best_event_type: bestEventType,
     });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

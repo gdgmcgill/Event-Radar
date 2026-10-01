@@ -1,0 +1,9 @@
+# Discovery time semantics retained in M0
+
+The positive integration cases in [m0-discovery-filters.spec.ts](../e2e/specs/m0-discovery-filters.spec.ts) follow the existing date convention documented in [timezone.ts](../src/lib/timezone.ts): Eastern wall-clock values are encoded with a `Z` offset. For example, its `2036-06-02T09:00:00Z` fixture denotes an encoded Monday morning, rather than claiming that 09:00 UTC is 09:00 in Toronto.
+
+This convention was explicitly preserved by Phase6 decision DEC-80 and the [F-085 resolution](../.planning/audit/FOUNDATION_AUDIT.md#f-085--apiuserssaved-events-floors-upcoming-on-true-utc-while-apievents-floors-on-eastern-wall-clock-so-an-event-can-be-upcoming-on-one-and-past-on-the-other-for-up-to-five-hours-a-day). M0 does not silently reinterpret existing rows by adding `AT TIME ZONE 'America/Toronto'` to the filter function. Such a conversion would shift already encoded Eastern values again.
+
+The new tests assert exact IDs and counts for successful tag, inclusive date-range, time-of-day, weekday/weekend, and composed filters. Pending and deleted matching fixtures remain absent. They run anonymously against the real route and local database in an isolated namespace. Execution results belong in the M0 evidence report.
+
+A remaining limitation is the inconsistent treatment of true instants and encoded wall-clock dates across producer inputs, display formatting, reminder comparisons, and discovery floors. The separate adversarial DST display tests establish how true UTC instants render; they do not establish that existing stored event rows all follow that representation. Resolving this requires an explicit canonical timestamp decision, an inventory of producer/legacy formats, and a reviewed data migration with DST-boundary evidence. No timezone migration or claim of end-to-end temporal consistency is part of these filter tests.

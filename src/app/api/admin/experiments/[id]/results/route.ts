@@ -3,7 +3,9 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { getElevatedClient } from "@/server/db/elevated";
 import { chiSquaredTest } from "@/lib/experiments";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -18,7 +20,7 @@ type VariantRow = {
 type AssignmentRow = { variant_id: string };
 type FeedbackRow = { action: string; experiment_variant_id: string | null };
 
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "fetch experiment results" }, async (_request: NextRequest, { params }: RouteParams) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -46,6 +48,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     .eq("experiment_id", id);
 
   if (varError) {
+    logRouteError(varError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -58,16 +61,20 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       .from("experiment_assignments")
       .select("variant_id")
       .in("variant_id", variantIds),
-    supabase
+    // Own-row RLS hides every participant except the admin. Only this
+    // cross-user read uses the elevated door, after both authorization guards.
+    getElevatedClient()
       .from("recommendation_feedback")
       .select("action, experiment_variant_id")
       .in("experiment_variant_id", variantIds),
   ]);
 
   if (assignmentsResult.error) {
+    logRouteError(assignmentsResult.error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
   if (feedbackResult.error) {
+    logRouteError(feedbackResult.error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -148,4 +155,4 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     variant_metrics: variantMetrics,
     significance,
   });
-}
+});

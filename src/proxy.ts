@@ -18,12 +18,29 @@
  * IT FAILS CLOSED ON ITS OWN ERRORS
  *   - A missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY
  *     throws MissingEnvError inside the try (F-003).
- *   - A rejected `auth.getUser()` or a failed users read (any error other than
- *     PGRST116, or no data) throws too (F-088).
- *   Every throw reaches the catch, which logs `[Middleware] Error:` and
- *   answers 500: `{"error":"Failed to process request"}` as JSON under
- *   `/api/`, plain-text `Internal Server Error` otherwise. It never passes the
- *   request through.
+ *   - A failed users read (any error other than PGRST116, or no data) throws
+ *     too (F-088), and so does anything that makes `auth.getUser()` reject.
+ *   `auth.getUser()` does not normally reject on an auth or network failure:
+ *   it RETURNS `{ data: { user: null }, error }` (DI-70, REVIEW-05 IN-20). Such
+ *   a request takes the anonymous path, which still fails closed: a protected
+ *   page redirects to sign-in, and every handler re-decides the caller and
+ *   answers 401.
+ *   Every throw reaches the catch, which logs one error line (scope
+ *   "Middleware"), reports the error to Sentry tagged with the request id
+ *   (`captureServerError`, plan 06-16; a no-op with no DSN) and answers 500:
+ *   `{"error":"Failed to process request"}` as JSON under `/api/`, plain-text
+ *   `Internal Server Error` otherwise. It never passes the request through.
+ *
+ * ONE REQUEST ID PER REQUEST (plan 06-12, DEC-74, research C19)
+ *   The first statement of `proxy()` mints a UUID and sets it as
+ *   `x-request-id` on the REQUEST headers, overwriting whatever the client
+ *   sent: a client-chosen id is never trusted. `NextResponse.next({ request })`
+ *   forwards request headers as `x-middleware-request-*`, so the handler
+ *   receives the id whether or not `setAll` rebuilt the response. The rest of
+ *   the ring runs inside `runWithRequest`, so its log lines carry the id, and
+ *   every response the proxy returns (pass-through, 429, 403, 500, redirects)
+ *   carries it as `x-request-id`. The logger writes JSON lines through the
+ *   console (`src/server/log.ts`); the proxy runs on the Node.js runtime.
  *
  * ONE USERS READ, THREE DECISIONS
  *   A signed-in request outside BAN_EXEMPT_PATHS gets exactly one read of
@@ -33,20 +50,23 @@
  *     `/?error=profile_sync_failed`, carrying the sign-out's cookies.
  *   - banned (F-062): `/api/*` gets 403 `{"error":"Account suspended"}` as
  *     JSON; a page redirects to `/banned` with its query string preserved.
- *   - not onboarded (F-089): the database value decides, not the
- *     `needs_onboarding` cookie. The callback still sets that cookie as a hint
- *     and nothing here reads it, so deleting it no longer frees an
- *     un-onboarded account and a stale one no longer traps an onboarded one.
+ *   - not onboarded (P1-02): only student authoring pages redirect. Public
+ *     browsing and recruiter paths remain available. The database decides;
+ *     the advisory `needs_onboarding` cookie never grants or removes access.
  *   The exempt paths (`/banned`, `/auth/signout`, `/auth/callback`) get no
  *   users read, so a banned user can always reach the ban page and sign out.
  */
 
 import { createServerClient } from "@supabase/ssr";
+import { getDisabledRouteFeature } from "@/lib/features";
 import { NextResponse, type NextRequest } from "next/server";
 import * as env from "@/lib/env";
 import { isBanned } from "@/lib/ban";
-import { applyRateLimit, getRateLimitStore } from "@/server/ratelimit";
+import { applyRateLimit, getRateLimitStore, DistributedStoreRequiredError } from "@/server/ratelimit";
 import { crossSiteBlocked, isCrossSiteMutation } from "@/server/csrf";
+import { log, runWithRequest } from "@/server/log";
+import { REQUEST_ID_HEADER } from "@/server/route";
+import { captureServerError } from "@/server/observability/sentry";
 
 /** PostgREST's code when `.single()` finds no row. */
 const NO_PROFILE_ROW = "PGRST116";
@@ -58,7 +78,37 @@ type RingProfile = {
   onboarding_completed: boolean | null;
 };
 
-export async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest): Promise<Response> {
+  // Stamp the request id before any other work (DEC-74). It overwrites a
+  // client-supplied value: only this id is ever forwarded or logged.
+  const requestId = crypto.randomUUID();
+  request.headers.set(REQUEST_ID_HEADER, requestId);
+
+  const response = await runWithRequest(
+    { requestId, route: request.nextUrl.pathname },
+    () => ring(request)
+  );
+  return stampRequestId(response, requestId);
+}
+
+/**
+ * Sets `x-request-id` on a response the proxy returns. Every response here is
+ * built by NextResponse, whose headers are mutable; should one ever not be,
+ * the response is returned unchanged rather than failing the request.
+ */
+function stampRequestId(response: Response, requestId: string): Response {
+  try {
+    response.headers.set(REQUEST_ID_HEADER, requestId);
+    // M0 matrix: proxy denials and auth redirects never reach withRoute.
+    if (response.status >= 300) response.headers.set("Cache-Control", "private, no-store");
+  } catch {
+    // Immutable headers: the id is still on the forwarded request.
+  }
+  return response;
+}
+
+/** The ring itself, run inside the request store by `proxy()`. */
+async function ring(request: NextRequest) {
   // Rate limit every /api/* path, /api/admin/* included, before any auth
   // work (DEC-50). The budgets live in src/server/ratelimit/policy.ts.
   // Fail open (REVIEW-05 CR-02): rate limiting is not an authorization
@@ -69,7 +119,11 @@ export async function proxy(request: NextRequest) {
   try {
     rateLimitResponse = await applyRateLimit(request, getRateLimitStore());
   } catch (err) {
-    console.error("[Middleware] Rate limit check failed; allowing request", {
+    if (err instanceof DistributedStoreRequiredError) {
+      return NextResponse.json({ error: "Service temporarily unavailable" }, { status: 503, headers: { "Cache-Control": "private, no-store" } });
+    }
+    log.error("Rate limit check failed; allowing request", {
+      scope: "Middleware",
       error: err instanceof Error ? err.name : typeof err,
     });
   }
@@ -79,6 +133,10 @@ export async function proxy(request: NextRequest) {
   // before any env read or session work. Requests carrying neither Origin nor
   // Sec-Fetch-Site (curl, cron, server-to-server) pass.
   if (isCrossSiteMutation(request)) return crossSiteBlocked();
+
+  if (getDisabledRouteFeature(request.nextUrl.pathname, request.method)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404, headers: { "Cache-Control": "private, no-store" } });
+  }
 
   try {
   // Validated reads (DEC-37). A missing variable throws MissingEnvError into
@@ -213,18 +271,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
-  // Onboarding guard: the database value from the read above decides (F-089).
-  // The needs_onboarding cookie is a hint the callback sets; it is not read.
-  if (
-    user &&
-    profile &&
-    profile.onboarding_completed !== true &&
-    path !== "/onboarding" &&
-    !isApi &&
-    !path.startsWith("/auth/")
-  ) {
+  // P1-02: incomplete onboarding never blocks public browsing or recruiter
+  // destinations. Only student authoring pages redirect; their API mutations
+  // independently enforce requireOnboarded against the authoritative profile.
+  const STUDENT_AUTHORING_ROUTES = ["/create-event", "/my-events", "/my-clubs"];
+  if (user && profile && profile.onboarding_completed !== true && !isApi &&
+      STUDENT_AUTHORING_ROUTES.some(route => path === route || path.startsWith(route + "/"))) {
     const onboardingUrl = request.nextUrl.clone();
     onboardingUrl.pathname = "/onboarding";
+    onboardingUrl.search = "";
     return NextResponse.redirect(onboardingUrl);
   }
 
@@ -232,7 +287,12 @@ export async function proxy(request: NextRequest) {
 
   } catch (e) {
     // Fail closed: the ring's own error is never a pass-through (F-003, F-088).
-    console.error("[Middleware] Error:", e);
+    log.error("Error", { scope: "Middleware", error: e });
+    // To Sentry with the id this response carries (plan 06-16, REFAC-21).
+    captureServerError(e, {
+      requestId: request.headers.get(REQUEST_ID_HEADER) ?? undefined,
+      route: request.nextUrl.pathname,
+    });
     if (request.nextUrl.pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Failed to process request" }, { status: 500 });
     }
@@ -242,6 +302,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    // M0 DI-69: API identifiers ending in image extensions still need CSRF/limits.
+    "/api/:path*",
     /*
      * Match all request paths except for:
      * - _next/static (static files)

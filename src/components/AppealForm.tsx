@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { MessageSquare, Loader2 } from "lucide-react";
+import type { EventAppealBodyInput } from "@/contracts/events";
+import type { ClubAppealBodyInput } from "@/contracts/clubs";
 
 interface AppealFormProps {
   itemType: "event" | "club";
@@ -29,7 +31,10 @@ export function AppealForm({ itemType, itemId, onSuccess }: AppealFormProps) {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: message.trim() }),
+        // The event and club appeal routes read the same body.
+        body: JSON.stringify({
+          message: message.trim(),
+        } satisfies EventAppealBodyInput & ClubAppealBodyInput),
       });
 
       if (!res.ok) {

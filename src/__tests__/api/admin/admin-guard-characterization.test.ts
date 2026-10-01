@@ -9,7 +9,10 @@
  *   P0  the table equals the tree: `ADMIN_ARMS` holds exactly the exported
  *       verbs under `src/app/api/admin/**` plus `recommendations/analytics`
  *       GET and `recommendations/batch` POST (35 arms), and the three flag
- *       sets are exactly the measured ones;
+ *       sets are exactly the measured ones. (The comparison with the tree
+ *       read `export async function`; it moved out of PRESERVE in 06-13, when
+ *       F-058's `withRoute` changed that text, to `admin-arm-tree-defect.test.ts`
+ *       T0 with a defect-ledger row. The length and uniqueness stay here);
  *   P1  an authenticated non-admin (onboarded, roles ["user"]) gets exactly
  *       `403 {"error":"Forbidden"}` at the 32 arms that answer it today, and
  *       neither client records an insert, update, delete or rpc. The two arms
@@ -42,8 +45,6 @@
  * is the production condition (F-040).
  */
 
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
 import {
   createFakeSupabase,
   type FakeSupabase,
@@ -119,42 +120,10 @@ function noWrites(): string[] {
 
 // ─── P0: the table equals the tree ─────────────────────────────────────────
 
-const API_DIR = join(process.cwd(), "src", "app", "api");
-
-function routeFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-    entry.isDirectory()
-      ? routeFiles(join(dir, entry.name))
-      : entry.name === "route.ts"
-        ? [join(dir, entry.name)]
-        : []
-  );
-}
-
-function treeArms(): string[] {
-  const files = [
-    ...routeFiles(join(API_DIR, "admin")),
-    join(API_DIR, "recommendations", "analytics", "route.ts"),
-    join(API_DIR, "recommendations", "batch", "route.ts"),
-  ];
-  const ids: string[] = [];
-  for (const file of files) {
-    const source = readFileSync(file, "utf8");
-    const route = relative(API_DIR, file).split("\\").join("/").replace(/\/route\.ts$/, "");
-    for (const match of source.matchAll(
-      /export\s+async\s+function\s+(GET|POST|PUT|PATCH|DELETE)\b/g
-    )) {
-      ids.push(`${route} ${match[1]}`);
-    }
-  }
-  return ids.sort();
-}
-
 const ids = (arms: readonly AdminArm[]) => arms.map((arm) => arm.id).sort();
 
 describe("P0: the admin arm table equals the tree", () => {
   it("holds exactly the exported verbs of the admin family (35 arms)", () => {
-    expect(ids(ADMIN_ARMS)).toEqual(treeArms());
     expect(ADMIN_ARMS).toHaveLength(35);
     expect(new Set(ids(ADMIN_ARMS)).size).toBe(ADMIN_ARMS.length);
   });

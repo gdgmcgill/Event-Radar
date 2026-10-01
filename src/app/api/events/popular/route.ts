@@ -8,6 +8,10 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { getESTNowISO } from "@/lib/timezone";
+import { parseQuery } from "@/server/body";
+import { PopularQuery } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /** The shared event-with-club select plus this route's popularity embed. */
 const POPULAR_EVENTS_SELECT =
@@ -54,21 +58,14 @@ const POPULAR_EVENTS_SELECT =
  *       500:
  *         description: Internal server error
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "public-60-300", action: "fetch popular events" }, async (request: NextRequest) => {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const sortBy = searchParams.get("sort") || "popularity";
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10", 10), 50);
-    const offset = parseInt(searchParams.get("offset") || "0", 10);
-    const minScore = parseFloat(searchParams.get("min_score") || "0");
-
-    // Validate sort parameter
-    if (sortBy !== "popularity" && sortBy !== "trending") {
-      return NextResponse.json(
-        { error: "sort must be 'popularity' or 'trending'" },
-        { status: 400 }
-      );
-    }
+    // The query contract (plan 06-08, REFAC-15): sort (default popularity)
+    // is the one 400; limit is capped at 50 and offset and min_score keep
+    // today's parse-with-default, never refused.
+    const query = parseQuery(request.nextUrl.searchParams, PopularQuery);
+    if (!query.ok) return query.response;
+    const { sort: sortBy, limit, offset, min_score: minScore } = query.data;
 
     const supabase = await createClient();
 
@@ -107,7 +104,7 @@ export async function GET(request: NextRequest) {
       .order("start_date", { ascending: true });
 
     if (eventsError) {
-      console.error("Error fetching events:", eventsError);
+      log.error("Error fetching events", { error: eventsError });
       return NextResponse.json(
         { error: "Failed to fetch events" },
         { status: 500 }
@@ -159,10 +156,10 @@ export async function GET(request: NextRequest) {
       sort: sortBy,
     });
   } catch (error) {
-    console.error("Unexpected error fetching popular events:", error);
+    log.error("Unexpected error fetching popular events", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

@@ -7,6 +7,7 @@ import { Calendar, Users, LayoutGrid, Heart } from "lucide-react";
 import { ClubInitials } from "@/components/clubs/ClubInitials";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useFollowedClubIds } from "@/hooks/useClubs";
+import type { ClubFollowRequestInit } from "@/contracts/clubs";
 
 interface ClubDiscoveryCardProps {
   club: {
@@ -53,7 +54,7 @@ export function ClubDiscoveryCard({ club, initialFollowing = false }: ClubDiscov
     try {
       const res = await fetch(`/api/clubs/${club.id}/follow`, {
         method: wasFollowing ? "DELETE" : "POST",
-      });
+      } satisfies ClubFollowRequestInit);
       if (!res.ok) throw new Error("Failed to toggle follow");
     } catch {
       setIsFollowing(wasFollowing);

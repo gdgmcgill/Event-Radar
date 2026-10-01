@@ -18,6 +18,7 @@ import {
 import { useAuthStore } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
 import { HERO_FRIENDS_IMAGE } from "@/lib/constants";
+import type { UserFollowRequestInit } from "@/contracts/users";
 import dynamic from "next/dynamic";
 import { FriendsActivitySection } from "@/components/events/FriendsActivitySection";
 import { FriendsOrganizingSection } from "@/components/events/FriendsOrganizingSection";
@@ -576,7 +577,9 @@ function FollowButton({
     }
 
     try {
-      const res = await fetch(`/api/users/${userId}/follow`, { method });
+      const res = await fetch(`/api/users/${userId}/follow`, {
+        method,
+      } satisfies UserFollowRequestInit);
       const data = await res.json();
       if (!res.ok) {
         setFollowing(prevFollowing);
@@ -789,7 +792,7 @@ function RequestCard({
     try {
       const res = await fetch(`/api/users/${person.id}/follow`, {
         method: "POST",
-      });
+      } satisfies UserFollowRequestInit);
       if (res.ok) {
         onFollowBack(person.id);
       }

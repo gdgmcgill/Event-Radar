@@ -15,7 +15,7 @@
  *     `Sec-Fetch-Site: cross-site`, writes no row. Until 05-17 both were
  *     accepted and the event was saved (the DEFECT pins 05-12 wrote; the
  *     move is a row in `evidence/defect-ledger.md`).
- *   - PRESERVE: a same-origin POST (`Origin: http://127.0.0.1:3000`, the
+ *   - PRESERVE: a same-origin POST (`Origin: http://localhost:3000`, the
  *     harness's own origin) and a POST carrying neither header (curl, cron,
  *     server-to-server) are accepted. DEC-52 keeps both.
  *
@@ -105,8 +105,8 @@ test.describe("an onboarded student's session, same site or no browser", () => {
     page,
     baseURL,
   }) => {
-    expect(baseURL).toBe("http://127.0.0.1:3000");
-    await postAndExpectSaved(page.request, { Origin: "http://127.0.0.1:3000" });
+    expect(baseURL).toBe("http://localhost:3000");
+    await postAndExpectSaved(page.request, { Origin: "http://localhost:3000" });
   });
 
   test("PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted", async ({

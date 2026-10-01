@@ -1,0 +1,150 @@
+events-webhook — plan 06-03 Task 3 (F-039, DEC-64, threats T-06-03-02, T-06-03-03)
+Recorded 2026-09-27T00:48:33Z · node v24.16.0 · pre-task HEAD=db839a72ff0d43dba78a9ef9ddfef9b4c3ceee3f
+
+What changed: the function's request logic moved to supabase/functions/_shared/webhook-handler.ts
+(handleWebhook(req, deps), no Deno global, the insert injected); index.ts is a thin Deno adapter;
+content_hash is populated from a byte-identical copy of src/lib/contentHash.ts at
+supabase/functions/_shared/contentHash.ts; a 23505 from idx_events_content_hash is reported per
+event as "duplicate"; deno.json maps "zod" to npm:zod@4.6.5.
+
+=== 1. Deno ===
+$ command -v deno
+(none) — exit=1
+supabase/functions/tests/webhook.test.ts is the owner's Deno integration suite. Its expectations were
+updated for the two changed rows (the wrong-length test, a new right-length test, a new replay test,
+content_hash on the success row). It is NOT run here: Deno is absent and the edge runtime is not
+served. Note: its pre-existing 'Invalid signature returns 401' test sent a 23-character signature, so
+against the deployed function it received 500 — it was failing before this plan.
+
+=== 2. Parity copy ===
+$ cmp src/lib/contentHash.ts supabase/functions/_shared/contentHash.ts && shasum -a 256 both
+BYTE-IDENTICAL
+6a8a1b43130283054e888eda54877f17d880263428fb95c167853e7fe6356cb5  src/lib/contentHash.ts
+6a8a1b43130283054e888eda54877f17d880263428fb95c167853e7fe6356cb5  supabase/functions/_shared/contentHash.ts
+
+=== 3. RED (handleWebhook absent) ===
+$ npx jest --ci src/__tests__/webhook/webhook-handler.test.ts src/__tests__/webhook/content-hash-parity.test.ts
+PASS node src/__tests__/webhook/content-hash-parity.test.ts
+FAIL node src/__tests__/webhook/webhook-handler.test.ts
+    Cannot find module '../../../supabase/functions/_shared/webhook-handler' from 'src/__tests__/webhook/webhook-handler.test.ts'
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       11 passed, 11 total
+exit=1
+(The parity suite is a drift guard over a copy made first, so it is green from the start; the
+handler suite is the TDD target and fails because the module does not exist.)
+
+=== 4. GREEN ===
+$ npx jest --ci src/__tests__/webhook
+PASS node src/__tests__/webhook/content-hash-parity.test.ts
+PASS node src/__tests__/webhook/verify-signature.test.ts
+PASS node src/__tests__/webhook/webhook-contract.test.ts
+PASS node src/__tests__/webhook/webhook-handler.test.ts
+Test Suites: 4 passed, 4 total
+Tests:       118 passed, 118 total
+exit=0
+
+=== 5. tsc and the .ts import extensions (Rule 3 deviation) ===
+webhook-handler.ts imports its siblings as ./x.ts so the Deno runtime resolves them. The root
+program type-checks it through the test's import graph, and without the flag tsc refuses:
+$ npx tsc --noEmit   # before the tsconfig change
+supabase/functions/_shared/webhook-handler.ts(29,41): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+supabase/functions/_shared/webhook-handler.ts(30,57): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+supabase/functions/_shared/webhook-handler.ts(31,33): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+exit=2
+Fix: "allowImportingTsExtensions": true in tsconfig.json (valid because noEmit is already true).
+$ npx tsc --noEmit   # after
+exit=0
+$ npm run build   # the tsconfig also feeds next build's type-check
+✓ Compiled successfully in 3.2s
+  Finished TypeScript in 5.0s ...
+  Generating static pages using 9 workers (0/98) ...
+  Generating static pages using 9 workers (24/98) 
+  Generating static pages using 9 workers (48/98) 
+  Generating static pages using 9 workers (73/98) 
+✓ Generating static pages using 9 workers (98/98) in 366ms
+exit=0
+$ cmp tsconfig.json <copy before build>   # next build did not rewrite it
+identical
+
+=== 6. Mutation checks (the fix must be what makes the rows green) ===
+--- M1: remove the byte-length check from verifySignature (the pre-fix comparison) ---
+    ✕ x-signature: abc -> 401 Invalid signature (was 500 Internal server error)
+    ✕ x-signature: invalid-signature-12345 -> 401 Invalid signature (was 500 Internal server error)
+    ✕ x-signature: 6ebd04b70928c38de865e0de33707b75c1d7be38c3d1f5d5ce4a6140efa7fa7300 -> 401 Invalid signature (was 500 Internal server error)
+    ✕ x-signature: bd04b70928c38de865e0de33707b75c1d7be38c3d1f5d5ce4a6140efa7fa73 -> 401 Invalid signature (was 500 Internal server error)
+    ✕ x-webhook-signature: éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé -> 401 Invalid signature (was 500 Internal server error)
+    ✕ x-hub-signature-256: sha256=abc -> 401 Invalid signature (was 500 Internal server error)
+Tests:       6 failed, 42 passed, 48 total
+exit=1
+restored: cmp identical
+(The two sha256=-prefixed rows on x-signature / x-webhook-signature stay green under M1: the handler
+refuses a selected signature still carrying the prefix before verifySignature runs.)
+--- M2: drop content_hash from the mapped row (the pre-fix row shape; the fake index is partial) ---
+    ✕ two events -> two stored rows, each with content_hash and status pending (1 ms)
+    ✕ maps each event as today's mapEventToDatabase did, plus content_hash (2 ms)
+    ✕ the same signed body sent twice: both events are duplicate the second time, one row each
+    ✕ a replay under a different accepted header is still duplicate (1 ms)
+    ✕ a payload mixing a replayed event with a new one -> 207, the old one duplicate
+    ✕ the dedupe key is title, date and organizer: an edited description is still duplicate (T-06-03-04, accepted) (1 ms)
+Tests:       6 failed, 42 passed, 48 total
+exit=1
+restored: cmp identical
+
+=== 7. The table (slice-6-characterization.txt § 3) through handleWebhook ===
+| #  | Condition                                              | Before (deployed)                       | After (handleWebhook)                    | Suite rows                          |
+|----|--------------------------------------------------------|-----------------------------------------|------------------------------------------|-------------------------------------|
+| 1  | OPTIONS                                                | 204, CORS headers, no body              | same                                     | row 1                               |
+| 2  | env missing (URL/key/secret)                           | 500 Server configuration error          | same                                     | row 2 (3 cases)                     |
+| 3  | no signature / all empty / bare "sha256=" hub          | 401 Missing signature header            | same                                     | row 3 (3 cases)                     |
+| 4  | right length, wrong (incl. upper-case, other secret)   | 401 Invalid signature                   | same                                     | row 4 (3 cases + precedence)        |
+| 5  | WRONG LENGTH (abc, +00, prefix on x-signature, ...)    | 500 Internal server error               | 401 Invalid signature  INTENTIONAL       | row 5 (8 cases)                     |
+| 6  | not JSON                                               | 400 Invalid JSON payload                | same                                     | row 6                               |
+| 7  | JSON null                                              | 500 Internal server error               | same (preserved, F-094 share)            | row 7                               |
+| 8  | structure                                              | 400 Invalid payload structure...        | same                                     | row 8 (5 cases)                     |
+| 9  | count mismatch                                         | 400 event_count (N) does not match...   | same                                     | row 9                               |
+| 10 | invalid event                                          | 400 Invalid events found + details      | same, messages in validateEvent order    | row 10 (3 cases)                    |
+| 11 | null element                                           | 500 Internal server error               | same (preserved, F-094 share)            | row 11 (+ primitive element -> 400) |
+| 12 | non-string tag                                         | 500 Internal server error               | same (preserved, F-094 share)            | row 12                              |
+| 13 | all insert                                             | 200 Successfully processed N event(s)   | same; rows carry content_hash            | row 13 (3 cases)                    |
+| 14 | some fail (mapping or insert error)                    | 207 Processed N with K error(s)         | same; non-23505 message echoed           | row 14 (2 cases)                    |
+| 15 | none insert                                            | 400 Failed to process all events        | same                                     | row 15                              |
+| 16 | REPLAY of a signed body                                | 200 again, a second set of rows         | each event "duplicate"; no new row       | row 16 (4 cases) INTENTIONAL        |
+|    |                                                        |                                         | (all replayed -> 400 by today's rule)    |                                     |
+| 17 | anything thrown after the env check                    | 500 Internal server error               | same                                     | row 17                              |
+
+Decision recorded here (the characterization left it to 06-03): rows 7, 11 and 12 stay 500. The plan
+names exactly two intentional changes; turning those three into 400s is the webhook's share of
+F-094 and is left to the plan that owns F-094's 400 moves. The zod contract would make it a one-line
+change in the handler.
+
+=== 8. Full suite, type-check and lint on the final tree ===
+$ npx jest --ci
+Test Suites: 1 skipped, 99 passed, 99 of 100 total
+Tests:       1 skipped, 1887 passed, 1888 total
+exit=0
+$ npx jest --ci src/__tests__/webhook && npx tsc --noEmit && npm run lint   # plan <verify>
+PASS node src/__tests__/webhook/webhook-handler.test.ts
+PASS node src/__tests__/webhook/webhook-contract.test.ts
+PASS node src/__tests__/webhook/content-hash-parity.test.ts
+PASS node src/__tests__/webhook/verify-signature.test.ts
+Test Suites: 4 passed, 4 total
+Tests:       118 passed, 118 total
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+verify exit=0
+
+$ grep -c 'handleWebhook(' index.ts; grep -c 'Deno.serve' index.ts; grep -c timingSafeEqual index.ts; grep -c 'npm:zod@4.6.5' deno.json
+1
+1
+0
+1
+
+=== 9. Owner actions carried forward ===
+- DI-81: the changes take effect only when the owner redeploys events-webhook (from CI, not from a
+  laptop) and confirms WEBHOOK_SECRET is set in the function's environment. Nothing was deployed here:
+  no supabase functions deploy, no --linked, no production read or write.
+- DI-78: a signed-timestamp window (reject a validly signed body older than N minutes) is not built.
+  content_hash dedupe refuses a replay only while the original row exists in public.events; once a
+  row is hard-deleted, the same signed body inserts again. A timestamp window would bound replay
+  independently of the table. DI-78 owns that.
+- F-039 stays Open at "08" for its deployment-record clause (DEC-64).

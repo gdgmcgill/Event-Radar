@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -17,12 +18,19 @@ import {
   ScrollText,
   BarChart3,
   Flag,
+  BookOpen,
+  Inbox,
+  RadioTower,
 } from "lucide-react";
 
 const contentItems = [
   { name: "Dashboard", path: "/moderation", icon: LayoutDashboard },
   { name: "Pending Review", path: "/moderation/pending", icon: ClipboardCheck },
   { name: "Event Queue", path: "/moderation/events", icon: CalendarClock },
+  { name: "Opportunities", path: "/moderation/opportunities", icon: Star },
+  { name: "Resources", path: "/moderation/resources", icon: BookOpen },
+  { name: "Submissions", path: "/moderation/submissions", icon: Inbox },
+  { name: "Ingestion", path: "/moderation/ingestion", icon: RadioTower },
   { name: "Club Approvals", path: "/moderation/clubs", icon: Building2 },
   { name: "Appeals", path: "/moderation/appeals", icon: MessageSquare },
   { name: "Reports", path: "/moderation/reports", icon: Flag },
@@ -85,9 +93,10 @@ function NavSection({
 
 export function ModerationNav() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-card/90 backdrop-blur-2xl border-r border-border p-4">
+    <aside className="flex w-full flex-col border-b border-border bg-card/90 p-4 backdrop-blur-2xl lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:w-60 lg:border-b-0 lg:border-r">
       {/* Brand */}
       <Link
         href="/"
@@ -111,15 +120,16 @@ export function ModerationNav() {
         </div>
       </Link>
 
+      <button type="button" className="rounded-lg border border-border px-3 py-2 text-sm lg:hidden" aria-expanded={open} aria-controls="moderation-navigation" onClick={() => setOpen(!open)}>{open ? "Close moderation menu" : "Moderation menu"}</button>
       {/* Nav groups */}
-      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto">
+      <nav id="moderation-navigation" onClick={() => setOpen(false)} className={`${open ? "flex" : "hidden"} flex-1 flex-col gap-4 overflow-y-auto lg:flex`}>
         <NavSection label="Content" items={contentItems} pathname={pathname} />
         <NavSection label="Users" items={userItems} pathname={pathname} />
         <NavSection label="System" items={systemItems} pathname={pathname} />
       </nav>
 
       {/* Status footer */}
-      <div className="px-4 py-4 border-t border-border mt-2">
+      <div className="hidden px-4 py-4 border-t border-border mt-2 lg:block">
         <div className="flex items-center gap-2">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />

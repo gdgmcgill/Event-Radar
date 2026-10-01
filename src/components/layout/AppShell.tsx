@@ -6,8 +6,9 @@ import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { SignInButton } from "@/components/auth/SignInButton";
 import { useAuthStore } from "@/store/useAuthStore";
+import { EditorialShell } from "./EditorialShell";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, discovery = { enabled: false, preview: false } }: { children: React.ReactNode; discovery?: { enabled: boolean; preview: boolean } }) {
   const pathname = usePathname();
   const { user } = useAuthStore();
   const isAuthenticated = !!user;
@@ -35,6 +36,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  if (discovery.enabled) return <EditorialShell preview={discovery.preview}>{children}</EditorialShell>;
 
   return (
     <div className="flex min-h-screen">

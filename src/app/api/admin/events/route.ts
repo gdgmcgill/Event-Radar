@@ -1,11 +1,15 @@
+import { isEventDuplicateReviewRequired, EVENT_DUPLICATE_REVIEW_MESSAGE } from "@/server/discovery/eventDuplicate";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { sanitizeText } from "@/lib/sanitize";
 import { logAdminAction } from "@/lib/audit";
+import { parseBody, readQuery } from "@/server/body";
+import { AdminEventCreateBody, AdminEventsQuery } from "@/contracts/admin";
 import { computeEventContentHash } from "@/lib/contentHash";
+import { logRouteError, withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 type MetricsSortField = "popularity_score" | "trending_score" | "view_count" | "click_count" | "save_count";
 const METRICS_SORT_FIELDS = new Set<string>(["popularity_score", "trending_score", "view_count", "click_count", "save_count"]);
@@ -21,7 +25,7 @@ interface PopularityScores {
   unique_viewers: number;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch admin events" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -29,16 +33,17 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const supabase = ctx.supabase;
 
-  const searchParams = request.nextUrl.searchParams;
-  const status = searchParams.get("status");
-  const search = searchParams.get("search");
-  const sortBy = searchParams.get("sort") || "created_at";
-  const sortDir = searchParams.get("direction") || "desc";
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
-
-  // Support viewing deleted events for audit
-  const includeDeleted = searchParams.get("includeDeleted") === "true";
+  // Today's defaults and silent coercion (NaN kept), never a 400; deleted
+  // events are included for audit only on includeDeleted=true.
+  const {
+    status,
+    search,
+    sort: sortBy,
+    direction: sortDir,
+    limit,
+    offset,
+    includeDeleted,
+  } = readQuery(request.nextUrl.searchParams, AdminEventsQuery);
 
   const sortByMetric = METRICS_SORT_FIELDS.has(sortBy);
 
@@ -67,6 +72,7 @@ export async function GET(request: NextRequest) {
   const { data, error, count } = await query;
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -110,9 +116,9 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ events, total: count ?? 0 });
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create event" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -121,20 +127,21 @@ export async function POST(request: NextRequest) {
   const user = auth.user;
   const supabase = ctx.supabase;
 
-  const body = await request.json();
-  const { start_date, end_date, organizer, tags, image_url, category } = body;
-
-  // Sanitize text inputs to prevent XSS
-  const title = sanitizeText(body.title ?? "");
-  const description = sanitizeText(body.description ?? "");
-  const location = sanitizeText(body.location ?? "");
-
-  if (!title || !start_date || !end_date) {
-    return NextResponse.json(
-      { error: "title, start_date, and end_date are required" },
-      { status: 400 }
-    );
-  }
+  // title, description and location arrive sanitized (to prevent XSS), the
+  // required rule already applied (src/contracts/admin.ts).
+  const parsed = await parseBody(request, AdminEventCreateBody);
+  if (!parsed.ok) return parsed.response;
+  const {
+    title,
+    description,
+    location,
+    start_date,
+    end_date,
+    organizer,
+    tags,
+    image_url,
+    category,
+  } = parsed.data;
 
   // Compute content hash for duplicate detection
   const contentHash = await computeEventContentHash(title, start_date, organizer || "");
@@ -173,6 +180,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
+    if (isEventDuplicateReviewRequired(error)) return NextResponse.json({ error: EVENT_DUPLICATE_REVIEW_MESSAGE }, { status: 400 });
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -187,8 +196,8 @@ export async function POST(request: NextRequest) {
       metadata: { title },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   return NextResponse.json({ event: data }, { status: 201 });
-}
+});

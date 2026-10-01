@@ -1,0 +1,454 @@
+Sentry wiring and the transport proof — plan 06-16 Task 2 (REFAC-21, DEC-76, threats T-06-16-01..04)
+Recorded 2026-09-27 · node v24.16.0 · @sentry/nextjs 10.75.3 (Task 1, commit 0013c08)
+
+=== 0. What this task put in the tree ===
+
+- src/lib/env.ts: usableSentryDsn(value), sentryDsn(), sentryDsnProblem(). Lazy, never throw; a DSN is
+  usable only when it parses, is https, has a public key (username) and a project id (path).
+- src/lib/observability/scrub.ts: redactEmails(), scrubEventFields() — isomorphic (no Node imports,
+  only an SDK type). Deletes request.cookies/data/query_string/env, cuts the query and fragment from
+  request.url, contexts.nextjs.request_path and breadcrumb url/from/to, deletes cookie, set-cookie,
+  authorization, proxy-authorization and every client-address header, and replaces every
+  email-shaped substring anywhere in the event with "[email]".
+- src/server/observability/sentry.ts: hashUserId() (node:crypto SHA-256, hex), scrubEvent()
+  (= scrubEventFields + user reduced to { id: hash } or removed), captureServerError(error,
+  { requestId, route }) (withScope → tags request_id, route → captureException; never throws).
+- src/sentry.server.config.ts: sentryServerOptions(dsn) and initSentryServer():
+  { dsn, enabled: dsn !== null, sendDefaultPii: false, environment: VERCEL_ENV ?? "development",
+    release: VERCEL_GIT_COMMIT_SHA, tracesSampleRate: 0, beforeSend: scrubEvent }.
+  With no usable DSN: init with enabled false and ONE info line
+  {"level":"info","msg":"Sentry disabled","scope":"Sentry","reason":"SENTRY_DSN is not set"}
+  (the reason names the variable, never its value). A throwing init: one warn line, boot continues.
+- src/instrumentation.ts: register() imports and runs initSentryServer() on the nodejs branch, after the
+  NEXT_RUNTIME and NEXT_PHASE guards and BEFORE the boot checks, which are unchanged. A boot refusal
+  is still the one logged line and the rethrow: it is logged, not captured (the module comment was
+  corrected on resume to say so). onRequestError is exported: Sentry's captureRequestError inside a
+  scope tagged request_id when the request carries a UUID-shaped x-request-id.
+- src/instrumentation-client.ts (NEW on resume): browser Sentry.init with the literal
+  process.env.NEXT_PUBLIC_SENTRY_DSN checked by usableSentryDsn, enabled from it, sendDefaultPii
+  false, tracesSampleRate 0, beforeSend = scrubEventFields with the user deleted; exports
+  onRouterTransitionStart = Sentry.captureRouterTransitionStart. Wrapped in try/catch.
+- src/server/route.ts (on resume): the wrapper's catch calls captureServerError(error, { requestId,
+  route }) after its log line; the response is unchanged (JSON 500 + x-request-id).
+- src/proxy.ts (on resume): the ring's outer catch calls captureServerError(e, { requestId: the id the
+  proxy stamped on the request, route: pathname }) after its log line; the 500 is unchanged.
+- next.config.js (on resume): module.exports = withSentryConfig(nextConfig, { org: SENTRY_ORG,
+  project: SENTRY_PROJECT, authToken: SENTRY_AUTH_TOKEN, silent: !CI, telemetry: false,
+  sourcemaps: { disable: !SENTRY_AUTH_TOKEN } }), required from "@sentry/nextjs/config" (the root
+  export prints a v11 deprecation notice). No tunnel option:
+    $ grep -c 'tunnelRoute' next.config.js
+    0
+  telemetry: false is an addition to the plan's option list (Rule 2): the plugin's own telemetry
+  would otherwise send build data to Sentry from every build, including CI's.
+
+=== 1. Which transport proof was used ===
+
+A3, the REAL SDK. src/server/__tests__/sentry.test.ts initializes @sentry/nextjs 10.75.3 inside Jest's
+node project with the exact production options from sentryServerOptions(TEST_DSN) and one
+substitution: an in-memory transport built with the SDK's own Sentry.createTransport, which parses
+every envelope instead of sending it. The DSN host is under .invalid (RFC 2606). The default
+integrations are narrowed to InboundFilters, FunctionToString, LinkedErrors, RequestData, Dedupe
+(no process handlers, no http patching in the worker). The jest.mock fallback was NOT needed.
+A positive control records the event as beforeSend receives it: it carries cookies, the body, the
+query string, the email and the raw user id, so the "absent after scrubbing" rows are meaningful.
+The proxy row drives the real proxy() with NEXT_PUBLIC_SUPABASE_URL unset (MissingEnvError in the
+ring) and asserts one event tagged with the 500's x-request-id and route "/events".
+
+=== 2. RED (the previous executor's run, before any implementation; verbatim summary) ===
+
+$ npx jest --ci src/lib/observability src/server/__tests__/sentry.test.ts src/lib/env.test.ts src/instrumentation.test.ts
+  FAIL node src/server/__tests__/sentry.test.ts — Test suite failed to run:
+    Could not locate module @/server/observability/sentry
+  FAIL (scrub.test.ts) — Test suite failed to run (./scrub not found)
+  17 failing rows in env.test.ts and instrumentation.test.ts (sentryDsn is not a function; register()
+  and Sentry; onRequestError), e.g.
+    ● sentryDsn() and sentryDsnProblem() (optional, DEC-76) › usableSentryDsn() applies the same rule ...
+      TypeError: usableSentryDsn is not a function
+Test Suites: 4 failed, 4 total
+Tests:       17 failed, 67 passed, 84 total
+exit=1
+
+=== 3. RESUME state (module code present, wrapper and proxy hooks not yet wired) ===
+
+$ npx jest --ci src/lib/observability src/server/__tests__/sentry.test.ts src/instrumentation.test.ts src/lib/env.test.ts
+PASS node src/instrumentation.test.ts
+PASS node src/lib/env.test.ts
+FAIL node src/server/__tests__/sentry.test.ts
+PASS node src/lib/observability/scrub.test.ts
+Test Suites: 1 failed, 3 passed, 4 total
+Tests:       7 failed, 107 passed, 114 total
+exit=1
+(the 7 failing rows are exactly the withRoute and proxy transport-proof rows, which need the hooks)
+
+=== 4. GREEN (after the wrapper, proxy, client-init and config edits; verbose) ===
+
+$ npx jest --ci src/lib/observability src/server/__tests__/sentry.test.ts src/lib/env.test.ts src/instrumentation.test.ts
+PASS node src/server/__tests__/sentry.test.ts
+PASS node src/instrumentation.test.ts
+PASS node src/lib/env.test.ts
+PASS node src/lib/observability/scrub.test.ts
+Test Suites: 4 passed, 4 total
+Tests:       114 passed, 114 total
+Snapshots:   0 total
+Time:        0.525 s, estimated 1 s
+Ran all test suites matching src/lib/observability|src/server/__tests__/sentry.test.ts|src/lib/env.test.ts|src/instrumentation.test.ts.
+exit=0
+
+tsc on the first green found two type errors in the TEST file only (Transport is not exported by
+@sentry/nextjs; the probe handler was declared zero-argument but called with a request). Fixed in the
+test (ReturnType<typeof Sentry.createTransport>; the probe handler takes (_request: Request)); no route
+signature was widened. Suite re-run after the fix: Tests: 17 passed, 17 total.
+
+=== 5. The task's <verify> command, verbatim ===
+
+$ npx jest --ci src/lib/observability src/server/__tests__/sentry.test.ts src/lib/env.test.ts src/instrumentation.test.ts && npx tsc --noEmit && node scripts/check-server-console.mjs
+PASS node src/server/__tests__/sentry.test.ts
+PASS node src/instrumentation.test.ts
+PASS node src/lib/env.test.ts
+PASS node src/lib/observability/scrub.test.ts
+Test Suites: 4 passed, 4 total
+Tests:       114 passed, 114 total
+Snapshots:   0 total
+Time:        0.74 s, estimated 1 s
+Ran all test suites matching src/lib/observability|src/server/__tests__/sentry.test.ts|src/lib/env.test.ts|src/instrumentation.test.ts.
+committed=11 live=11 delta=0
+PASS: the live census is within the committed allow-list
+exit=0
+
+=== 6. Gates ===
+
+$ npx jest --ci
+Test Suites: 1 skipped, 127 passed, 127 of 128 total
+Tests:       1 skipped, 3389 passed, 3390 total
+exit=0
+(06-15 close: 125 passed suites / 3340 passed tests; +2 suites scrub.test.ts and sentry.test.ts, +49 tests)
+$ npx tsc --noEmit
+exit=0
+$ npm run lint
+✖ 17 problems (0 errors, 17 warnings)
+exit=0
+(17 warnings, identical to the 06-14 gate; 0 errors)
+$ node scripts/check-server-console.mjs
+committed=11 live=11 delta=0
+PASS: the live census is within the committed allow-list
+exit=0
+$ node scripts/check-contracts.mjs
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+exit=0
+
+=== 7. The captured event, as the in-memory transport received it (scrubbed; verbatim) ===
+
+Produced by a throwaway copy of sentry.test.ts with one extra row that wrote the first sent event and
+the response's x-request-id to a scratch file; the copy was deleted after the run (not committed).
+Note: tags.request_id == x_request_id; user.id is the SHA-256 of the fixture id; request has no
+cookies, data, query_string, cookie/authorization/x-forwarded-for headers; the email in the thrown
+message is [email]. server_name is the host name the SDK reports (on Vercel, the function host).
+
+{
+  "x_request_id": "3f0c2b1a-9d8e-4f7a-8b6c-5d4e3f2a1b0c",
+  "event": {
+    "exception": {
+      "values": [
+        {
+          "type": "Error",
+          "value": "insert failed for [email]",
+          "stacktrace": {
+            "frames": [
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-runner/build/index.js",
+                "module": "jest-runner.build:index",
+                "function": "runTest",
+                "lineno": 343,
+                "colno": 7,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-runner/build/index.js",
+                "module": "jest-runner.build:index",
+                "function": "runTestInternal",
+                "lineno": 275,
+                "colno": 16,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/runner.js",
+                "module": "jest-circus.build:runner",
+                "function": "jestAdapter",
+                "lineno": 101,
+                "colno": 19,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/jestAdapterInit.js",
+                "module": "jest-circus.build:jestAdapterInit",
+                "function": "runAndTransformResultsToJestFormat",
+                "lineno": 1918,
+                "colno": 21,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/jestAdapterInit.js",
+                "module": "jest-circus.build:jestAdapterInit",
+                "function": "run",
+                "lineno": 761,
+                "colno": 3,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/jestAdapterInit.js",
+                "module": "jest-circus.build:jestAdapterInit",
+                "function": "_runTestsForDescribeBlock",
+                "lineno": 857,
+                "colno": 11,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/jestAdapterInit.js",
+                "module": "jest-circus.build:jestAdapterInit",
+                "function": "_runTestsForDescribeBlock",
+                "lineno": 862,
+                "colno": 11,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/jestAdapterInit.js",
+                "module": "jest-circus.build:jestAdapterInit",
+                "function": "?",
+                "lineno": 849,
+                "colno": 7,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/jestAdapterInit.js",
+                "module": "jest-circus.build:jestAdapterInit",
+                "function": "_runTest",
+                "lineno": 947,
+                "colno": 3,
+                "in_app": false
+              },
+              {
+                "filename": "node:internal/process/task_queues",
+                "module": "task_queues",
+                "function": "processTicksAndRejections",
+                "lineno": 104,
+                "colno": 5,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/jestAdapterInit.js",
+                "module": "jest-circus.build:jestAdapterInit",
+                "function": "_callCircusTest",
+                "lineno": 1007,
+                "colno": 40,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/jestAdapterInit.js",
+                "module": "jest-circus.build:jestAdapterInit",
+                "function": "callAsyncCircusFn",
+                "lineno": 1497,
+                "colno": 10,
+                "in_app": false
+              },
+              {
+                "filename": "<anonymous>",
+                "module": "<anonymous>",
+                "function": "new Promise",
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/jest-circus/build/jestAdapterInit.js",
+                "module": "jest-circus.build:jestAdapterInit",
+                "function": "Promise.finally.completed",
+                "lineno": 1557,
+                "colno": 28,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/src/server/__tests__/zz-dump.test.ts",
+                "module": "zz-dump.test.ts",
+                "function": "Object.?",
+                "lineno": 303,
+                "colno": 28,
+                "in_app": true
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/src/server/__tests__/zz-dump.test.ts",
+                "module": "zz-dump.test.ts",
+                "function": "throwThroughTheWrapper",
+                "lineno": 216,
+                "colno": 19,
+                "in_app": true
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@sentry/core/src/currentScopes.ts",
+                "module": "@sentry.core.src:currentScopes.ts",
+                "function": "Object.withIsolationScope",
+                "lineno": 139,
+                "colno": 14,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@sentry/opentelemetry/src/asyncContextStrategy.ts",
+                "module": "@sentry.opentelemetry.src:asyncContextStrategy.ts",
+                "function": "Object.withIsolationScope",
+                "lineno": 77,
+                "colno": 24,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@opentelemetry/api/src/api/context.ts",
+                "module": "@opentelemetry.api.src.api:context.ts",
+                "function": "ContextAPI.with",
+                "lineno": 68,
+                "colno": 42,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@sentry/opentelemetry/src/asyncLocalStorageContextManager.ts",
+                "module": "@sentry.opentelemetry.src:asyncLocalStorageContextManager.ts",
+                "function": "SentryAsyncLocalStorageContextManager.with",
+                "lineno": 74,
+                "colno": 36,
+                "in_app": false
+              },
+              {
+                "filename": "node:internal/async_local_storage/async_context_frame",
+                "module": "async_context_frame",
+                "function": "AsyncLocalStorage.run",
+                "lineno": 63,
+                "colno": 14,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/node_modules/@sentry/opentelemetry/src/asyncContextStrategy.ts",
+                "module": "@sentry.opentelemetry.src:asyncContextStrategy.ts",
+                "function": "?",
+                "lineno": 91,
+                "colno": 14,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/src/server/__tests__/zz-dump.test.ts",
+                "module": "zz-dump.test.ts",
+                "function": "?",
+                "lineno": 234,
+                "colno": 30,
+                "in_app": true
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/src/server/route.ts",
+                "module": "route.ts",
+                "function": "?",
+                "lineno": 105,
+                "colno": 26,
+                "in_app": true
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/src/server/log.ts",
+                "module": "log.ts",
+                "function": "runWithRequest",
+                "lineno": 53,
+                "colno": 18,
+                "in_app": true
+              },
+              {
+                "filename": "node:internal/async_local_storage/async_context_frame",
+                "module": "async_context_frame",
+                "function": "AsyncLocalStorage.run",
+                "lineno": 63,
+                "colno": 14,
+                "in_app": false
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/src/server/route.ts",
+                "module": "route.ts",
+                "function": "?",
+                "lineno": 108,
+                "colno": 26,
+                "in_app": true
+              },
+              {
+                "filename": "/Users/adyan/Documents/GitHub/Event-Radar/src/server/__tests__/zz-dump.test.ts",
+                "module": "zz-dump.test.ts",
+                "function": "?",
+                "lineno": 198,
+                "colno": 13,
+                "in_app": true
+              }
+            ]
+          },
+          "mechanism": {
+            "type": "generic",
+            "handled": true
+          }
+        }
+      ]
+    },
+    "event_id": "fecea647c24449f08294864daf8baad7",
+    "level": "error",
+    "platform": "node",
+    "contexts": {
+      "trace": {
+        "trace_id": "afc950d032254af89b27855b2a674531",
+        "span_id": "a1336cfb019784b2"
+      },
+      "runtime": {
+        "name": "node",
+        "version": "v24.16.0"
+      }
+    },
+    "server_name": "adyans-MBP-3",
+    "timestamp": 1790521077.301,
+    "environment": "preview",
+    "release": "0123456789abcdef0123456789abcdef01234567",
+    "sdk": {
+      "integrations": [
+        "InboundFilters",
+        "FunctionToString",
+        "LinkedErrors",
+        "RequestData"
+      ],
+      "name": "sentry.javascript.nextjs",
+      "version": "10.75.3",
+      "packages": [
+        {
+          "name": "npm:@sentry/nextjs",
+          "version": "10.75.3"
+        },
+        {
+          "name": "npm:@sentry/node",
+          "version": "10.75.3"
+        }
+      ]
+    },
+    "tags": {
+      "request_id": "3f0c2b1a-9d8e-4f7a-8b6c-5d4e3f2a1b0c",
+      "route": "/api/probe"
+    },
+    "user": {
+      "id": "6316e01c9e1d33dec091e5469b8fe3f63ae270f7471846f380d926c3454b4027"
+    },
+    "request": {
+      "headers": {
+        "x-request-id": "3f0c2b1a-9d8e-4f7a-8b6c-5d4e3f2a1b0c",
+        "user-agent": "jest"
+      },
+      "method": "POST",
+      "url": "http://127.0.0.1:3000/api/probe"
+    }
+  }
+}
+=== 8. Build notes (full output in build-ci-env.txt) ===
+
+CI-env build (no SENTRY_* values, CI=true): exit 0. Sentry's only line:
+[@sentry/nextjs - After Production Compile] Warning: No auth token provided. Will not create release. Please set the `authToken` option. You can find information on how to generate a Sentry auth token here: https://docs.sentry.io/api/auth/
+Default npm run build: exit 0, no Sentry output (silent outside CI).
+The browser init is in the client bundle (grep sendDefaultPii .next/static/chunks → 1 chunk).
+
+=== 9. Human-check (PENDING owner action, DI-81; recorded for PHASE-6-COMPLETION.md § owner actions) ===
+
+With a real DSN on a preview deploy, the owner triggers an error through a wrapped route and confirms
+the Sentry event carries tag request_id equal to the response's x-request-id. Not performed: no DSN
+exists and this plan creates no Sentry project (prohibition).

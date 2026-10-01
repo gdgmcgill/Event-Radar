@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Image from "next/image";
+import { FallbackImage } from "@/components/ui/FallbackImage";
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 import { getESTNowISO } from "@/lib/timezone";
+import { staleFilter } from "@/lib/ingest/staleness";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -25,6 +27,11 @@ import { RejectionModal } from "@/components/moderation/RejectionModal";
 import { AppealBadge } from "@/components/moderation/AppealBadge";
 import { ReviewThread } from "@/components/moderation/ReviewThread";
 import type { RejectionCategory } from "@/types";
+import type {
+  AdminEventPutBodyInput,
+  EventEditsDecisionBodyInput,
+  EventStatusBodyInput,
+} from "@/contracts/admin";
 
 interface PendingEvent {
   id: string;
@@ -54,6 +61,9 @@ export default function ModerationPendingEventsPage() {
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
   const [editRejectEventId, setEditRejectEventId] = useState<string | null>(null);
   const [editRejectReason, setEditRejectReason] = useState("");
+  const [editRejectSnapshot, setEditRejectSnapshot] = useState<PendingEvent["pending_edits"]>(null);
+  const [editReviewError, setEditReviewError] = useState<string | null>(null);
+  const [stalePending, setStalePending] = useState(0);
 
   const fetchPending = useCallback(async () => {
     setConfirmAction(null);
@@ -68,6 +78,18 @@ export default function ModerationPendingEventsPage() {
 
     setEvents((data ?? []) as PendingEvent[]);
     setLoading(false);
+
+    // M3 P1-07: past-dated pending events are hidden above; count the stale
+    // ones (past, or waiting over 72 hours) so moderators can find them.
+    const { count } = await supabase
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .is("deleted_at", null)
+      // DEC-80: start_date is Toronto wall-clock labelled UTC; staleFilter
+      // compares it with the wall-clock now, as the query above does.
+      .or(staleFilter());
+    setStalePending(count ?? 0);
   }, []);
 
   useEffect(() => {
@@ -81,7 +103,7 @@ export default function ModerationPendingEventsPage() {
       const res = await fetch(`/api/admin/events/${eventId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status } satisfies EventStatusBodyInput),
       });
 
       if (res.ok) {
@@ -99,7 +121,11 @@ export default function ModerationPendingEventsPage() {
       const res = await fetch(`/api/admin/events/${rejectingEvent.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rejected", category, message }),
+        body: JSON.stringify({
+          status: "rejected",
+          category,
+          message,
+        } satisfies EventStatusBodyInput),
       });
       if (res.ok) {
         setEvents((prev) => prev.filter((e) => e.id !== rejectingEvent.id));
@@ -129,7 +155,7 @@ export default function ModerationPendingEventsPage() {
       const res = await fetch(`/api/admin/events/${editingEvent.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(editForm satisfies AdminEventPutBodyInput),
       });
       if (res.ok) {
         setEvents((prev) =>
@@ -151,12 +177,12 @@ export default function ModerationPendingEventsPage() {
       await fetch(`/api/admin/events/${editingEvent.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(editForm satisfies AdminEventPutBodyInput),
       });
       const res = await fetch(`/api/admin/events/${editingEvent.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
+        body: JSON.stringify({ status: "approved" } satisfies EventStatusBodyInput),
       });
       if (res.ok) {
         setEvents((prev) => prev.filter((e) => e.id !== editingEvent.id));
@@ -168,15 +194,25 @@ export default function ModerationPendingEventsPage() {
   };
 
   const handleApproveEdits = async (eventId: string) => {
+    const reviewed = events.find((event) => event.id === eventId)?.pending_edits;
+    if (!reviewed) return;
+    setEditReviewError(null);
     setActionLoading(eventId);
     try {
       const res = await fetch(`/api/admin/events/${eventId}/edits`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "approve" }),
+        body: JSON.stringify({
+          action: "approve",
+          expected_pending_edits: reviewed,
+        } satisfies EventEditsDecisionBodyInput),
       });
       if (res.ok) {
-        fetchPending();
+        await fetchPending();
+      } else {
+        const result = await res.json();
+        setEditReviewError(result.error || "Unable to review these edits. Please try again.");
+        if (res.status === 409) await fetchPending();
       }
     } finally {
       setActionLoading(null);
@@ -185,15 +221,26 @@ export default function ModerationPendingEventsPage() {
 
   const handleRejectEdits = async () => {
     if (!editRejectEventId || !editRejectReason.trim()) return;
+    const reviewed = editRejectSnapshot;
+    if (!reviewed) return;
+    setEditReviewError(null);
     setActionLoading(editRejectEventId);
     try {
       const res = await fetch(`/api/admin/events/${editRejectEventId}/edits`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "reject", reason: editRejectReason.trim() }),
+        body: JSON.stringify({
+          action: "reject",
+          reason: editRejectReason.trim(),
+          expected_pending_edits: reviewed,
+        } satisfies EventEditsDecisionBodyInput),
       });
       if (res.ok) {
-        fetchPending();
+        await fetchPending();
+      } else {
+        const result = await res.json();
+        setEditReviewError(result.error || "Unable to review these edits. Please try again.");
+        if (res.status === 409) await fetchPending();
       }
     } finally {
       setActionLoading(null);
@@ -251,6 +298,14 @@ export default function ModerationPendingEventsPage() {
         </Badge>
       </div>
 
+      {stalePending > 0 && (
+        <p role="status" data-testid="pending-stale-banner" className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+          {stalePending} pending event{stalePending === 1 ? " is" : "s are"} stale (past their date or waiting over 72 hours).{" "}
+          <Link href="/moderation/ingestion" className="font-medium underline">Review them on the Ingestion page</Link>.
+        </p>
+      )}
+      {editReviewError && <p role="alert" className="text-sm text-red-600">{editReviewError}</p>}
+
       {events.length === 0 ? (
         <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex flex-col items-center justify-center py-16 text-zinc-400 dark:text-zinc-500">
@@ -273,8 +328,8 @@ export default function ModerationPendingEventsPage() {
               <div className="flex">
               {/* Image */}
               <div className="relative w-48 shrink-0">
-                <Image
-                  src={event.image_url || "/placeholder-event.png"}
+                <FallbackImage
+                  src={event.image_url ?? ""}
                   alt={event.title}
                   fill
                   className="object-cover"
@@ -401,7 +456,7 @@ export default function ModerationPendingEventsPage() {
                         Approve Edits
                       </button>
                       <button
-                        onClick={() => setEditRejectEventId(event.id)}
+                        onClick={() => { setEditRejectEventId(event.id); setEditRejectSnapshot(event.pending_edits); }}
                         disabled={actionLoading === event.id}
                         className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-md bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
                       >

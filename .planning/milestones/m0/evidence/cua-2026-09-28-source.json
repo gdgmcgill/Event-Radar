@@ -1,0 +1,22 @@
+{
+  "baseline_commit": "d3ea080",
+  "recorded_at": "2026-09-28T23:57:59.799180+00:00",
+  "sha256": {
+    "src/app/docs/page.tsx": "3b038eb3a91393bd18eca33b2a4a679407aee34cfc11e955797b249cde5f4937",
+    "src/app/clubs/page.tsx": "b8c34d0857e7c4a7b6366da7b19702203d75831ecdb57015d9da2fb8bbb8816e",
+    "src/app/admin/experiments/page.tsx": "eeb1a08bbb82396aa0914a861b55450ddbb7ece18a15cef95a70d8c75f648828",
+    "src/app/admin/experiments/[id]/page.tsx": "9191a4b8800c047df31ebf06b136bf845b43dddae32bf1a148209e7a277454a9",
+    "src/__tests__/pages/experiments-create.test.tsx": "a668eef53a68ea264975872c14a10b8d24699f40746860f3059c44824855d26b"
+  },
+  "tests": {
+    "passed": 20,
+    "suites": 3,
+    "exit_code": 0
+  },
+  "typecheck_exit_code": 0,
+  "changed_file_lint_exit_code": 0,
+  "client_contract_guard_exit_code": 0,
+  "production_build_exit_code": 0,
+  "verification_environment": "local Next production build; local Event-Radar Supabase; Chrome computer use",
+  "deployed": false
+}

@@ -13,6 +13,10 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { CONTACT_EMAILS } from "@/lib/contact";
 import type { EventTag } from "@/types";
+import type {
+  ProfileImageFileField,
+  UserUpdateBodyInput,
+} from "@/contracts/users";
 import {
   User,
   Settings,
@@ -61,6 +65,9 @@ interface ProfileData {
   year: string | null;
   faculty: string | null;
   visibility: string;
+  university_id?: string | null;
+  other_university?: string | null;
+  program?: string | null;
   created_at: string;
 }
 
@@ -106,8 +113,17 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
   const [pronouns, setPronouns] = useState(profile.pronouns ?? "");
   const [year, setYear] = useState(profile.year ?? "");
   const [faculty, setFaculty] = useState(profile.faculty ?? "");
+  const [university, setUniversity] = useState(profile.university_id ?? (profile.other_university ? "other" : ""));
+  const [otherUniversity, setOtherUniversity] = useState(profile.other_university ?? "");
+  const [program, setProgram] = useState(profile.program ?? "");
+  const [universities, setUniversities] = useState<Array<{ id: string; name: string }>>([]);
+  useEffect(() => { fetch("/api/universities").then(r => r.ok ? r.json() : null).then(data => { if (data) setUniversities(data.universities); }).catch(() => {}); }, []);
   const [tags, setTags] = useState<string[]>(profile.interest_tags);
-  const [visibility, setVisibility] = useState(profile.visibility);
+  // DI-91: a stale invalid value fails closed while the migration normalizes
+  // persisted values; the form can still save an otherwise valid profile.
+  const [visibility, setVisibility] = useState<NonNullable<UserUpdateBodyInput["visibility"]>>(
+    profile.visibility === "public" ? "public" : "private"
+  );
 
   // Avatar upload (shared hook)
   const avatar = useAvatarUpload(profile.avatar_url);
@@ -128,7 +144,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
     setBannerError(null);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file" satisfies ProfileImageFileField, file);
       const res = await fetch("/api/profile/banner", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");
@@ -149,7 +165,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
       const res = await fetch(`/api/users/${profile.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ banner_url: null }),
+        body: JSON.stringify({ banner_url: null } satisfies UserUpdateBodyInput),
       });
       if (!res.ok) throw new Error("Failed to remove banner");
       setBannerUrl(null);
@@ -184,9 +200,6 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
   };
 
   // Notification prefs (local)
-  const [emailReminders, setEmailReminders] = useState(true);
-  const [newEventAlerts, setNewEventAlerts] = useState(true);
-  const [clubUpdates, setClubUpdates] = useState(true);
 
   // Save state
   const [saving, setSaving] = useState(false);
@@ -200,6 +213,9 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
     setError(null);
     setSaved(false);
     try {
+      const school = university && university !== "other" ? university : null;
+      const otherSchool = university === "other" ? otherUniversity.trim() || "Other" : null;
+      const affiliationChanged = school !== (profile.university_id ?? null) || otherSchool !== (profile.other_university ?? null);
       const res = await fetch(`/api/users/${profile.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -209,13 +225,19 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
           pronouns: pronouns || null,
           year: year || null,
           faculty: faculty || null,
+          ...(affiliationChanged ? { university_id: school, other_university: otherSchool } : {}),
+          program: program.trim() || null,
           visibility,
-        }),
+        } satisfies UserUpdateBodyInput),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to save");
       setSaved(true);
       updateUser({
+        university_id: school,
+        other_university: otherSchool,
+        program: program.trim() || null,
+        ...(affiliationChanged ? { affiliation_source: "self_declared" as const } : {}),
         name: name.trim(),
         interest_tags: tags,
         pronouns: pronouns || null,
@@ -241,7 +263,6 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
   const selectClass =
     "flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-foreground";
   const isProfileValid = name.trim().length >= 2;
-  const isInterestsValid = tags.length >= 3;
 
   const switchToSettings = () => {
     setActiveTab("settings");
@@ -770,6 +791,14 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                             className={name.trim().length > 0 && name.trim().length < 2 ? "border-destructive focus-visible:ring-destructive" : ""} />
                           {name.trim().length > 0 && name.trim().length < 2 && <p className="text-xs text-destructive mt-1">At least 2 characters required.</p>}
                         </FieldGroup>
+                        <FieldGroup label="University (self-declared)">
+                          <select aria-label="University" value={university} onChange={e => setUniversity(e.target.value)} className="w-full rounded-md border bg-background p-2">
+                            <option value="">Not specified</option>{universities.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}<option value="other">Other / prefer not to specify</option>
+                          </select>
+                          {university === "other" && <Input aria-label="Other university" value={otherUniversity} onChange={e => setOtherUniversity(e.target.value)} placeholder="Other or prefer not to specify" maxLength={120} />}
+                          <p className="text-xs text-muted-foreground">You can correct your affiliation here. It does not verify enrollment or grant organizer access.</p>
+                        </FieldGroup>
+                        <FieldGroup label="Program (optional)"><Input value={program} onChange={e => setProgram(e.target.value)} maxLength={120} /></FieldGroup>
                       </div>
                     </div>
                   </SettingsCard>
@@ -812,7 +841,7 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
                       <p className="text-xs text-muted-foreground">Recommended: 1500x500px. Max 8MB. JPEG, PNG, or WebP.</p>
                     </div>
                   </SettingsCard>
-                  <SettingsCard icon={GraduationCap} title="McGill Details" description="Helps connect you with relevant events and people">
+                  <SettingsCard icon={GraduationCap} title="Academic details" description="Optional information for your profile">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FieldGroup label="Email">
                         <div className="flex items-center gap-2 h-10 px-3 rounded-lg border border-input bg-muted/50 text-sm text-muted-foreground">
@@ -845,11 +874,10 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
 
               {settingsSection === "interests" && (
                 <div className="space-y-6">
-                  <SettingsCard icon={Sparkles} title="Interest Tags" description="Select 3–6 to personalise your event feed and recommendations">
-                    <InterestTagSelector selected={tags} onChange={setTags} min={3} />
-                    {tags.length > 0 && tags.length < 3 && <p className="text-xs text-destructive mt-4">Pick at least 3 interests.</p>}
+                  <SettingsCard icon={Sparkles} title="Interest Tags" description="Choose interests to personalise discovery, or leave them empty">
+                    <InterestTagSelector selected={tags} onChange={setTags} min={0} />
                   </SettingsCard>
-                  <SaveBar onSave={handleSave} saving={saving} saved={saved} error={error} disabled={!isInterestsValid} />
+                  <SaveBar onSave={handleSave} saving={saving} saved={saved} error={error} disabled={false} />
                 </div>
               )}
 
@@ -877,14 +905,10 @@ export default function ProfileClient({ data }: { data: ProfileViewData }) {
 
               {settingsSection === "notifications" && (
                 <div className="space-y-6">
-                  <SettingsCard icon={Bell} title="Notification Preferences" description="Choose what you'd like to be notified about">
-                    <div className="divide-y divide-border">
-                      <ToggleRow label="Event Reminders" description="Before events you've saved or RSVP'd to" checked={emailReminders} onChange={setEmailReminders} />
-                      <ToggleRow label="New Event Alerts" description="Events matching your interests" checked={newEventAlerts} onChange={setNewEventAlerts} />
-                      <ToggleRow label="Club Updates" description="News from clubs you follow" checked={clubUpdates} onChange={setClubUpdates} />
-                    </div>
+                  <SettingsCard icon={Bell} title="Notifications" description="Event reminders and updates appear in UNI-VERSE.">
+                    <p className="text-sm text-muted-foreground">You can filter notifications and mark them as read. Delivery preferences and email reminders are not available yet.</p>
+                    <Link href="/notifications" className="inline-block mt-4 text-sm font-medium text-primary hover:underline">Open notifications</Link>
                   </SettingsCard>
-                  <p className="text-xs text-muted-foreground text-center">Notification preferences are saved locally. Email controls coming soon.</p>
                 </div>
               )}
 
@@ -996,17 +1020,5 @@ function CardOption({ icon: Icon, title, desc, selected, onClick }: { icon: type
       <div><p className="font-semibold text-foreground text-sm">{title}</p><p className="text-xs text-muted-foreground mt-0.5">{desc}</p></div>
       {selected && <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white"><Check className="h-3 w-3" /></div>}
     </button>
-  );
-}
-
-function ToggleRow({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-      <div className="pr-4"><p className="text-sm font-medium text-foreground">{label}</p><p className="text-xs text-muted-foreground mt-0.5">{description}</p></div>
-      <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)}
-        className={cn("relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200", checked ? "bg-primary" : "bg-muted-foreground/25")}>
-        <span className={cn("pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200", checked ? "translate-x-5" : "translate-x-0")} />
-      </button>
-    </div>
   );
 }

@@ -1,7 +1,6 @@
+import { isEventDuplicateReviewRequired, EVENT_DUPLICATE_REVIEW_MESSAGE } from "@/server/discovery/eventDuplicate";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { validateEventDates } from "@/lib/dateValidation";
-import { sanitizeText } from "@/lib/sanitize";
 import { computeEventContentHash } from "@/lib/contentHash";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
@@ -10,8 +9,15 @@ import { CLUB_ROLES, requireClubRole } from "@/server/authz/requireClubRole";
 import { hasRole } from "@/lib/roles";
 import { getElevatedClient } from "@/server/db/elevated";
 import { runAfterResponse } from "@/server/afterResponse";
+import { parseBody } from "@/server/body";
+import {
+  CREATE_EVENT_FIELD_KEYS,
+  CreateEventBody,
+} from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create event" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
 
@@ -30,57 +36,28 @@ export async function POST(request: NextRequest) {
     const user = active.user;
     const supabase = ctx.supabase;
 
-    const body = await request.json();
-    const { start_date, end_date, tags, image_url, category, is_free, price, rsvp_link } = body;
-
-    // Sanitize text inputs to prevent XSS
-    const title = sanitizeText(body.title ?? "");
-    const description = sanitizeText(body.description ?? "");
-    const location = sanitizeText(body.location ?? "");
-
-    // Validate required fields
-    if (!title) {
-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
-    }
-    if (!description) {
-      return NextResponse.json({ error: "Description is required" }, { status: 400 });
-    }
-    if (!start_date) {
-      return NextResponse.json({ error: "Start date is required", field: "start_date" }, { status: 400 });
-    }
-    if (!location) {
-      return NextResponse.json({ error: "Location is required" }, { status: 400 });
-    }
-    if (!tags || !Array.isArray(tags) || tags.length === 0) {
-      return NextResponse.json(
-        { error: "At least one tag is required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate price and rsvp_link lengths
-    if (price && typeof price === "string" && price.length > 20) {
-      return NextResponse.json({ error: "Price must be 20 characters or less" }, { status: 400 });
-    }
-    if (rsvp_link && typeof rsvp_link === "string") {
-      if (rsvp_link.length > 500) {
-        return NextResponse.json({ error: "Registration link is too long" }, { status: 400 });
-      }
-      try {
-        const url = new URL(rsvp_link);
-        if (!["http:", "https:"].includes(url.protocol)) {
-          return NextResponse.json({ error: "Registration link must use http or https" }, { status: 400 });
-        }
-      } catch {
-        return NextResponse.json({ error: "Registration link must be a valid URL" }, { status: 400 });
-      }
-    }
-
-    // Validate date fields (strict ISO 8601 + future constraint)
-    const dateError = validateEventDates(start_date, end_date);
-    if (dateError) {
-      return NextResponse.json({ error: dateError.message, field: dateError.field }, { status: 400 });
-    }
+    // The contract (plan 06-08, REFAC-15): today's texts in today's order,
+    // title/description/location sanitized, the date rules last, field only
+    // for start_date and end_date. F-094: a non-JSON, non-object or
+    // non-string-text body is a 400 (INTENTIONAL BEHAVIOUR CHANGE).
+    const parsed = await parseBody(request, CreateEventBody, {
+      fieldFor: CREATE_EVENT_FIELD_KEYS,
+    });
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
+    const {
+      title,
+      description,
+      location,
+      start_date,
+      end_date,
+      tags,
+      image_url,
+      category,
+      is_free,
+      price,
+      rsvp_link,
+    } = body;
 
     // Get user profile with roles
     const { data: profile } = await supabase
@@ -192,8 +169,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Error creating event:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      if (isEventDuplicateReviewRequired(error)) return NextResponse.json({ error: EVENT_DUPLICATE_REVIEW_MESSAGE }, { status: 400 });
+      log.error("Error creating event", { error });
+      return NextResponse.json({ error: "Failed to create event" }, { status: 500 });
     }
 
     const message = status === "approved"
@@ -234,11 +212,11 @@ export async function POST(request: NextRequest) {
                 }))
               );
             if (notifyError) {
-              console.error("Notification fanout insert failed:", notifyError);
+              log.error("Notification fanout insert failed", { error: notifyError });
             }
           }
         } catch (err) {
-          console.error("Notification fanout error:", err);
+          log.error("Notification fanout error", { error: err });
         }
       };
       // Scheduled with after() so the platform keeps the instance alive for
@@ -252,10 +230,10 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error in create event:", error);
+    log.error("Error in create event", { error });
     return NextResponse.json(
       { error: "Failed to create event" },
       { status: 500 }
     );
   }
-}
+});

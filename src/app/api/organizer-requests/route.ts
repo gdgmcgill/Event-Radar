@@ -4,9 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { OrganizerRequestBody } from "@/contracts/clubs";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create organizer request" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -15,17 +18,10 @@ export async function POST(request: NextRequest) {
   const user = active.user;
   const supabase = ctx.supabase;
 
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { club_id, message } = body;
-
-  if (!club_id) {
-    return NextResponse.json(
-      { error: "club_id is required" },
-      { status: 400 }
-    );
-  }
+  // club_id is required (its existence is the lookup below); message as sent.
+  const parsed = await parseBody(request, OrganizerRequestBody);
+  if (!parsed.ok) return parsed.response;
+  const { club_id, message } = parsed.data;
 
   // Verify the club exists
   const { data: club, error: clubError } = await supabase
@@ -56,13 +52,17 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    log.error("Failed to create organizer request", { clubId: club_id, error });
+    return NextResponse.json(
+      { error: "Failed to create organizer request" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ request: data }, { status: 201 });
-}
+});
 
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch organizer requests" }, async () => {
   const supabase = await createClient();
 
   const {
@@ -81,8 +81,12 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    log.error("Failed to fetch organizer requests", { error });
+    return NextResponse.json(
+      { error: "Failed to fetch organizer requests" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ requests: data });
-}
+});

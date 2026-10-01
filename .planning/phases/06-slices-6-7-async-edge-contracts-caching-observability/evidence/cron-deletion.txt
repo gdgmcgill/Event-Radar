@@ -1,0 +1,506 @@
+Plan 06-03 Task 1 — delete the dead cron handlers (F-002, F-037, C14, DEC-63)
+Recorded 2026-09-26T00:28:03Z
+pre=574e474d5b083aef6309bdcf5b93795c0b710ade
+
+=== 1. Caller census (re-run before deletion; T-06-03-01) ===
+
+$ git grep -n 'api/cron'
+.claude/CLAUDE.md:353:- Location: `src/app/api/cron/send-reminders/route.ts`
+.planning/REQUIREMENTS.md:25:- [x] **AUDIT-11**: Cron and webhook inventory covers pg_cron jobs from `cron.job`, `/api/cron/*` handlers and what (if anything) triggers them, `vercel.json` crons, the Supabase edge function, the Apify/Instagram webhook, and Supabase auth hooks
+.planning/STATE.md:167:- [Phase 01]: The two /api/cron/* handlers are redundant dead code, not a broken schedule: pg_cron runs in-database reimplementations of both every 15 and 30 minutes — cron.job shows send_event_reminders and send_feedback_requests active and succeeding; the handlers have no trigger from any of the six sources and email_reminder_log has 0 rows. Remediation is deletion or a fail-closed guard, never scheduling them - the two implementations diverge on notification type strings and dedup store, so activating both would duplicate user-visible notifications.
+.planning/STATE.md:322:- `/api/cron/*` trigger status is unknown (`vercel.json` has no `crons` key) while email reminders are a Validated requirement — AUDIT-11 must resolve this.
+.planning/audit/BLOCKING-INPUTS.md:78:`vercel.json` has **no `crons` key** (verified), both `/api/cron/*` handlers export only `POST`, and neither is referenced from any other route. Email reminders are a **Validated** requirement in PROJECT.md, so "nothing triggers them" is a High finding, not a footnote — which means the answer has to come from outside the repo.
+.planning/audit/FOUNDATION_AUDIT.md:178:**Recommended fix.** Invert the gate so an absent key fails closed: `if (!expectedKey) return NextResponse.json({error:'Server misconfiguration'},{status:500})` before any comparison, matching the shape already used in src/app/api/cron/send-feedback-requests/route.ts:8-12. Then replace the shared-secret gate with verifyAdmin(), since this path lives under /api/admin. Delete createAdminClient() and use the shared factory so the uses_service_client detector can see the callsite.
+.planning/audit/FOUNDATION_AUDIT.md:288:- `src/app/api/cron/send-reminders/route.ts` lines 6-13
+.planning/audit/FOUNDATION_AUDIT.md:294:1. Read src/app/api/cron/send-reminders/route.ts:9 — the comparison target is a template literal over process.env.CRON_SECRET.
+.planning/audit/FOUNDATION_AUDIT.md:296:3. Send `curl -H 'Authorization: Bearer undefined' https://<host>/api/cron/send-reminders`; the comparison succeeds and line 13 constructs a service-role client.
+.planning/audit/FOUNDATION_AUDIT.md:298:**Recommended fix.** Copy the fail-closed shape from src/app/api/cron/send-feedback-requests/route.ts:8-12 — a separate presence check that returns 500 before any comparison, then a constant-time comparison of the supplied token. Do not fold the presence check into the comparison; folding them is precisely how F-001 fails. If the handler is to be deleted instead (see F-037), delete it rather than guarding it.
+.planning/audit/FOUNDATION_AUDIT.md:300:**Validation criterion.** A test asserting that with CRON_SECRET unset the route returns 500 for every caller, and with it set returns 401 for a wrong token and 200 only for the correct one. A grep asserting no `Bearer ${` template literal appears in any comparison under src/app/api/cron/.
+.planning/audit/FOUNDATION_AUDIT.md:575:3. Read src/app/api/cron/send-reminders/route.ts and confirm the same.
+.planning/audit/FOUNDATION_AUDIT.md:623:- `src/app/api/cron/send-reminders/route.ts` lines 9
+.planning/audit/FOUNDATION_AUDIT.md:1212:- `src/app/api/cron/send-reminders/route.ts` lines whole handler — no trigger from any of six sources
+.planning/audit/FOUNDATION_AUDIT.md:1213:- `src/app/api/cron/send-feedback-requests/route.ts` lines whole handler — returns 500 to every caller
+.planning/audit/FOUNDATION_AUDIT.md:1227:**Validation criterion.** A grep asserting src/app/api/cron/ is empty or contains only handlers with a confirmed trigger, plus a check that the pg_cron run history continues to show zero failures after the deletion.
+.planning/audit/async/cron-webhook-inventory.md:39:- **The work is done in-database, not by the application.** `send_event_reminders()` and `send_feedback_requests()` are `SECURITY DEFINER` PL/pgSQL functions that loop over `saved_events`/`rsvps` joined to `events`, deduplicate, and insert rows into `notifications` (and, for feedback, into `feedback_request_log`). They are complete reimplementations of the two `/api/cron/*` handlers. This is the fact § 2 turns on.
+.planning/audit/async/cron-webhook-inventory.md:78:## 2. Source two — the two `/api/cron/*` route handlers
+.planning/audit/async/cron-webhook-inventory.md:80:Two handlers, `src/app/api/cron/send-reminders/route.ts` and `src/app/api/cron/send-feedback-requests/route.ts`. Both export **`POST` and nothing else** — verified by `grep -oE "export async function [A-Z]+"` on each file — so no `GET` exists and no browser visit, uptime pinger, or link preview can reach either.
+.planning/audit/async/cron-webhook-inventory.md:82:### 2.1 `/api/cron/send-reminders`
+.planning/audit/async/cron-webhook-inventory.md:93:### 2.2 `/api/cron/send-feedback-requests`
+.planning/audit/async/cron-webhook-inventory.md:110:- **FO-02 is live.** `/api/cron/send-reminders` in production compares the incoming header against the literal string `Bearer undefined`. Any anonymous caller sending `Authorization: Bearer undefined` passes the gate and reaches a service-role client. This is no longer a conditional defect awaiting a configuration check; it is the current state of a deployed endpoint. The register's severity of High stands, and its evidence is now empirical rather than conditional.
+.planning/audit/async/cron-webhook-inventory.md:111:- **FO-04's fail-closed behaviour is also live, with a consequence the register did not need to draw.** `/api/cron/send-feedback-requests` returns HTTP 500 to **every** caller in production, unconditionally, because its presence guard trips on every request. The handler is not merely untriggered — **it cannot execute at all.** Failing closed is the correct behaviour and remains the right pattern; the point here is that it makes the route provably dead code rather than dormant code.
+.planning/audit/async/cron-webhook-inventory.md:119:| 3 | **Repository.** `git grep -n "api/cron" -- ':(exclude).planning' ':(exclude)docs'` returns **no matches**; `.github/workflows/ci.yml` is the only workflow, triggers on `push` and `pull_request` only — **no `schedule:` key** — and contains no `curl` and no `wget`. | no trigger |
+.planning/audit/async/cron-webhook-inventory.md:121:And an external scheduler outside all three is bounded to near-zero by three further facts, of which the last is direct database-side proof: an external caller would need a `CRON_SECRET` value that was never configured; the feedback handler has been returning 500 to any such caller for its whole life; and **`email_reminder_log` has 0 rows in production** (`../raw/prod/row-counts.json`), while `/api/cron/send-reminders` writes a row to that table on every reminder it sends. A zero row count is empirical evidence that **this handler has never completed a send in production, from any caller, ever.**
+.planning/audit/async/cron-webhook-inventory.md:144:**Verdict — source two: both handlers exist, both are reachable anonymously over HTTP, and nothing whatsoever invokes either one.** `/api/cron/send-reminders` is a dead route with a credential check that is open in production (`Bearer undefined`) in front of a service-role client; `/api/cron/send-feedback-requests` is a dead route that fails closed and returns 500 to every caller. Both are **redundant** — the behaviour they implement is already running as `pg_cron` jobs — and the two implementations diverge. The correct remediation is to delete the handlers or fail them closed, **not** to schedule them.
+.planning/audit/async/cron-webhook-inventory.md:252:| `CRON_SECRET` | 2 files, 3 reads — both `/api/cron/*` handlers | **NO** | **The finding of § 2.3.** `/api/cron/send-reminders` compares against `Bearer undefined` and admits anyone who sends it (FO-02, High, now observed rather than conditional). `/api/cron/send-feedback-requests` returns 500 to every caller (FO-04, fail-closed, provably dead). |
+.planning/audit/async/cron-webhook-inventory.md:269:| `/api/cron/send-reminders` | nothing — all three sources negative, and `email_reminder_log` is empty | **no — nothing invokes it** | `CRON_SECRET` (**not configured**) | **no** — compares against `Bearer undefined`; any anonymous caller sending that string reaches a service-role client | **High** (FO-02) |
+.planning/audit/async/cron-webhook-inventory.md:270:| `/api/cron/send-feedback-requests` | nothing — same three negatives | **no — nothing invokes it** | `CRON_SECRET` (**not configured**) | **yes** — HTTP 500 before the comparison, so it 500s on every request in production | Low (dead route) |
+.planning/audit/async/cron-webhook-inventory.md:287:- **CW-01 — High.** `/api/cron/send-reminders` has no confirmed trigger from any of the six sources **and** its credential check is open in production. The Validated workflow it nominally implements — PROJECT.md line 29, *"In-app notifications and email reminders"* — is **not** broken by the absence of a trigger, because `pg_cron` runs an in-database reimplementation every 15 minutes (§ 1). The severity therefore comes from the register, not from the dead trigger: an anonymously reachable service-role write surface behind the guessable literal `Bearer undefined` (FO-02). The remediation is **deletion or a fail-closed guard, not a schedule** — scheduling it would activate the four divergences in § 2.5 and produce duplicate notifications to real users.
+.planning/audit/async/cron-webhook-inventory.md:304:git grep -n "api/cron" -- ':(exclude).planning' ':(exclude)docs'                                   # no matches
+.planning/audit/async/cron-webhook-inventory.md:305:command grep -nE "curl|wget|schedule|api/cron" .github/workflows/ci.yml                            # no matches
+.planning/audit/async/vercel-crons.md:89:| N2 | Nothing in the repository calls either path | `git grep -n "api/cron" -- ':(exclude).planning' ':(exclude)docs'` | **no matches.** The only things naming these paths are the handlers' own directories. |
+.planning/audit/async/vercel-crons.md:90:| N3 | The only CI workflow does not invoke them | `ls .github/workflows/` then `grep -nE "curl\|wget\|cron\|schedule\|api/cron" .github/workflows/ci.yml` | `ci.yml` is the only workflow. It triggers on `push` and `pull_request` to `main` only — **there is no `schedule:` trigger** — and it contains no `curl`, no `wget`, and no reference to either path. Its steps are checkout, setup-node, `npm ci`, lint, `tsc --noEmit`, build. |
+.planning/audit/async/vercel-crons.md:104:2. **`/api/cron/send-feedback-requests` fails closed when that variable is unset** — it returns
+.planning/audit/async/vercel-crons.md:108:   `/api/cron/send-reminders` writes a row to that table on every reminder it sends. A zero row count is
+.planning/audit/authz/fail-open-register.md:38:#   src/app/api/cron/send-reminders/route.ts:9           -> FO-02
+.planning/audit/authz/fail-open-register.md:39:#   src/app/api/cron/send-feedback-requests/route.ts:12  -> FO-04, guarded, fails closed
+.planning/audit/authz/fail-open-register.md:56:#   CRON_SECRET   -> /api/cron/send-feedback-requests, /api/cron/send-reminders
+.planning/audit/authz/fail-open-register.md:72:| FO-02 | `src/app/api/cron/send-reminders/route.ts` | 6-13 (gate line 9) | `CRON_SECRET` | `/api/cron/send-reminders` | the check still runs but compares against the fixed literal `Bearer undefined` — guessable, not absent | **yes** — `createServiceClient()` line 13 | **High** |
+.planning/audit/authz/fail-open-register.md:74:| FO-04 | `src/app/api/cron/send-feedback-requests/route.ts` | 6-14 (guard 8-10, gate 12) | `CRON_SECRET` | `/api/cron/send-feedback-requests` | **fails closed** — 500 "Server misconfiguration" before the comparison | yes — `createServiceClient()` line 16 | **none — this is the positive control** |
+.planning/audit/authz/fail-open-register.md:141:### FO-02 — `/api/cron/send-reminders`: the gate becomes a guessable constant. **High.**
+.planning/audit/authz/fail-open-register.md:160:- **Reachability.** Anonymous, requiring one guessed header value. `/api/cron/*` is not in
+.planning/audit/authz/fail-open-register.md:218:### FO-04 — `/api/cron/send-feedback-requests`: the positive control. **No severity.**
+.planning/audit/authz/service-role-register.json:184:    "file": "src/app/api/cron/send-feedback-requests/route.ts",
+.planning/audit/authz/service-role-register.json:185:    "route": "/api/cron/send-feedback-requests",
+.planning/audit/authz/service-role-register.json:199:    "file": "src/app/api/cron/send-reminders/route.ts",
+.planning/audit/authz/service-role-register.json:200:    "route": "/api/cron/send-reminders",
+.planning/audit/authz/service-role-register.md:84:| src/app/api/cron/send-feedback-requests/route.ts | /api/cron/send-feedback-requests | 16 | justified |
+.planning/audit/authz/service-role-register.md:85:| src/app/api/cron/send-reminders/route.ts | /api/cron/send-reminders | 13 | needs-decision |
+.planning/audit/authz/service-role-register.md:225:### src/app/api/cron/send-feedback-requests/route.ts — `/api/cron/send-feedback-requests`
+.planning/audit/authz/service-role-register.md:235:### src/app/api/cron/send-reminders/route.ts — `/api/cron/send-reminders`
+.planning/audit/authz/service-role-register.md:400:| `src/app/api/cron/send-reminders/route.ts` | 13 | needs-decision | Cross-referenced to authz/fail-open-register. |
+.planning/audit/baseline/build.txt:75:├ ƒ /api/cron/send-feedback-requests
+.planning/audit/baseline/build.txt:76:├ ƒ /api/cron/send-reminders
+.planning/audit/cache/cache-matrix.csv:60:/api/cron/send-feedback-requests,POST,false,,true,,,,,,true,,false,static (vercel.json path rule + probed path samples on the same prefix),safe-by-design,,"Method POST: the shared cache does not store responses to non-GET requests, so the blanket directive cannot expose this representation."
+.planning/audit/cache/cache-matrix.csv:61:/api/cron/send-reminders,POST,false,,true,,,,,,true,,false,static (vercel.json path rule + probed path samples on the same prefix),safe-by-design,,"Method POST: the shared cache does not store responses to non-GET requests, so the blanket directive cannot expose this representation."
+.planning/audit/cache/cache-matrix.json:1530:    "route": "/api/cron/send-feedback-requests",
+.planning/audit/cache/cache-matrix.json:1554:    "route": "/api/cron/send-reminders",
+.planning/audit/findings.json:20:    "recommended_fix": "Invert the gate so an absent key fails closed: `if (!expectedKey) return NextResponse.json({error:'Server misconfiguration'},{status:500})` before any comparison, matching the shape already used in src/app/api/cron/send-feedback-requests/route.ts:8-12. Then replace the shared-secret gate with verifyAdmin(), since this path lives under /api/admin. Delete createAdminClient() and use the shared factory so the uses_service_client detector can see the callsite.",
+.planning/audit/findings.json:35:      { "path": "src/app/api/cron/send-reminders/route.ts", "lines": "6-13" }
+.planning/audit/findings.json:39:      "Read src/app/api/cron/send-reminders/route.ts:9 — the comparison target is a template literal over process.env.CRON_SECRET.",
+.planning/audit/findings.json:41:      "Send `curl -H 'Authorization: Bearer undefined' https://<host>/api/cron/send-reminders`; the comparison succeeds and line 13 constructs a service-role client."
+.planning/audit/findings.json:43:    "recommended_fix": "Copy the fail-closed shape from src/app/api/cron/send-feedback-requests/route.ts:8-12 — a separate presence check that returns 500 before any comparison, then a constant-time comparison of the supplied token. Do not fold the presence check into the comparison; folding them is precisely how F-001 fails. If the handler is to be deleted instead (see F-037), delete it rather than guarding it.",
+.planning/audit/findings.json:44:    "validation_criterion": "A test asserting that with CRON_SECRET unset the route returns 500 for every caller, and with it set returns 401 for a wrong token and 200 only for the correct one. A grep asserting no `Bearer ${` template literal appears in any comparison under src/app/api/cron/.",
+.planning/audit/findings.json:833:      { "path": "src/app/api/cron/send-reminders/route.ts", "lines": "whole handler — no trigger from any of six sources" },
+.planning/audit/findings.json:834:      { "path": "src/app/api/cron/send-feedback-requests/route.ts", "lines": "whole handler — returns 500 to every caller" },
+.planning/audit/findings.json:845:    "validation_criterion": "A grep asserting src/app/api/cron/ is empty or contains only handlers with a confirmed trigger, plus a check that the pg_cron run history continues to show zero failures after the deletion.",
+.planning/audit/findings.json:866:      "Read src/app/api/cron/send-reminders/route.ts and confirm the same.",
+.planning/audit/findings.json:908:      { "path": "src/app/api/cron/send-reminders/route.ts", "lines": "9" }
+.planning/audit/inventory/build-routes.txt:50:├ ƒ /api/cron/send-feedback-requests
+.planning/audit/inventory/build-routes.txt:51:├ ƒ /api/cron/send-reminders
+.planning/audit/inventory/classification-rules.md:58:  variable. Two rows: both `/api/cron/*` (`CRON_SECRET`). `/api/admin/calculate-popularity`
+.planning/audit/inventory/classification-rules.md:211:the tree were found by plan 01-10 against the live `pg_cron` catalog: both `/api/cron/*` routes
+.planning/audit/inventory/classification-rules.md:279:| invalid credential | **401** | `/api/admin/calculate-popularity`: **200** (gate skipped, FO-01; fixed in 05-14, the route is no longer a machine route). `/api/cron/send-reminders`: 401 unless the attacker sends the literal `Bearer undefined`, which succeeds (FO-02). `/api/cron/send-feedback-requests`: 500 before the comparison (FO-04, fail-closed) |
+.planning/audit/inventory/classification-rules.md:353:| **D-2** | Same, weaker form | `/api/cron/send-reminders` | 401 | compares against the fixed literal `Bearer undefined`; a caller who sends that string is admitted to a service-role write | FO-02 |
+.planning/audit/inventory/classification-rules.md:354:| **D-3** | Same, fail-closed | `/api/cron/send-feedback-requests` | 401 | **500 to every caller**, unconditionally — the route cannot execute at all | FO-04 |
+.planning/audit/inventory/classification-rules.md:361:| **D-10** | **Both `/api/cron/*` handlers duplicate live `pg_cron` functions and diverge from them on four points**, three of which would double-notify real users if the handlers were ever scheduled. | 2 | route deleted | dead but reachable | `async/cron-webhook-inventory.md` § 2.5 |
+.planning/audit/inventory/endpoints.csv:44:api.cron.send-feedback-requests,/api/cron/send-feedback-requests,POST,src/app/api/cron/send-feedback-requests/route.ts,110,machine,"machine secret CRON_SECRET, guarded by a presence check that 500s first",bypassed,false,none,false,true,"s-maxage=60, stale-while-revalidate=300",no-store,false,true,false,false,false,false,false,false,false,false,false,,CRON_SECRET,true,0,1,0,events;rsvps;feedback_request_log;notifications,true
+.planning/audit/inventory/endpoints.csv:45:api.cron.send-reminders,/api/cron/send-reminders,POST,src/app/api/cron/send-reminders/route.ts,165,machine,machine secret CRON_SECRET (Authorization: Bearer ${CRON_SECRET}),bypassed,false,none,false,true,"s-maxage=60, stale-while-revalidate=300",no-store,false,true,false,false,false,false,false,false,false,false,false,,CRON_SECRET,true,0,1,0,events;saved_events;email_reminder_log;notifications,true
+.planning/audit/inventory/endpoints.json:2601:    "file": "src/app/api/cron/send-feedback-requests/route.ts",
+.planning/audit/inventory/endpoints.json:2602:    "route": "/api/cron/send-feedback-requests",
+.planning/audit/inventory/endpoints.json:2665:    "file": "src/app/api/cron/send-reminders/route.ts",
+.planning/audit/inventory/endpoints.json:2666:    "route": "/api/cron/send-reminders",
+.planning/audit/quality/depcruise.out.json:464:        "src/app/api/cron/send-feedback-requests/route.ts",
+.planning/audit/quality/depcruise.out.json:465:        "src/app/api/cron/send-reminders/route.ts",
+.planning/audit/quality/depcruise.out.json:1634:        "src/app/api/cron/send-feedback-requests/route.ts",
+.planning/audit/quality/depcruise.out.json:1635:        "src/app/api/cron/send-reminders/route.ts",
+.planning/audit/quality/depcruise.out.json:3105:      "source": "src/app/api/cron/send-feedback-requests/route.ts",
+.planning/audit/quality/depcruise.out.json:3147:      "source": "src/app/api/cron/send-reminders/route.ts",
+.planning/audit/quality/phase-06-slice-defects.md:29:  handler `src/app/api/cron/send-reminders/route.ts` did filter, but nothing calls it (F-037 divergence 3);
+.planning/audit/redaction/01-10.md:34:- **No write of any kind reached the database, the storage buckets, or the deployment platform.** This plan issued no SQL, uploaded/downloaded/listed/deleted no storage object, and ran no `supabase` or `vercel` CLI command. **No production HTTP endpoint was contacted** — in particular neither `/api/cron/*` handler was probed, because probing an authorization gate to see whether it is open is itself an unauthenticated write attempt against production. Their credential posture in `async/cron-webhook-inventory.md` is read from source and cross-referenced to `authz/fail-open-register.md`, which is the only sound way to answer that question in a read-only phase.
+.planning/audit/redaction/01-10.md:165:| Live probes of `/api/cron/*` | all artifacts | See § 1. A probe is a write attempt, and its response would have to be recorded. |
+.planning/audit/security/threat-model-anonymous.md:58:- **`/api/cron/send-feedback-requests` fails closed** — it returns 500 before the comparison when its secret is absent. It is the positive control proving the fail-open shape is a defect, not a house style (`authz/fail-open-register.md:74`).
+.planning/audit/security/threat-model-escalation.md:56:- **`/api/cron/send-feedback-requests` is the fail-closed positive control** and is named as the fix shape for E-6 (`authz/fail-open-register.md:74`).
+.planning/audit/tools/validate.mjs:585:        ['api-cron-handlers', '/api/cron/'],
+.planning/codebase/ARCHITECTURE.md:171:- Location: `src/app/api/cron/send-reminders/route.ts`
+.planning/codebase/INTEGRATIONS.md:145:- Event reminder notifications: `src/app/api/cron/send-reminders/route.ts`
+.planning/phases/01-read-only-foundation-audit/01-07-PLAN.md:119:    - `src/app/api/cron/send-reminders/route.ts` and `src/app/api/cron/send-feedback-requests/route.ts` — the contrasting fail-open and fail-closed cron shapes
+.planning/phases/01-read-only-foundation-audit/01-07-PLAN.md:216:| T-01-07-02 | Spoofing | `src/app/api/cron/send-reminders/route.ts` comparing against an interpolated template when the secret is unset | mitigate | Banked as a guessable-open High candidate with the fail-closed sibling route named as the recommended fix |
+.planning/phases/01-read-only-foundation-audit/01-07-SUMMARY.md:84:- **AUDIT-10 — four fail-open shapes, where the specified detector finds one.** FO-01 `/api/admin/calculate-popularity` GET+POST (`ADMIN_API_KEY`, **Critical**, anonymous, service-role, no compensating control); FO-02 `/api/cron/send-reminders` (`CRON_SECRET`, **High**, guessable-open against `Bearer undefined`); FO-03 `src/middleware.ts:10-16` (the entire auth ring is env-conditional, **Medium**); FO-05 `/auth/callback` `ADMIN_EMAILS` role grant (fails closed, **Low**, registered so a future edit to line 22 is recognised as privilege-escalation). FO-04 `/api/cron/send-feedback-requests` is registered as the fail-closed positive control and named as FO-02's fix.
+.planning/phases/01-read-only-foundation-audit/01-10-PLAN.md:168:    - `src/app/api/cron/send-reminders/route.ts` and `src/app/api/cron/send-feedback-requests/route.ts`
+.planning/phases/01-read-only-foundation-audit/01-10-PLAN.md:226:| T-01-10-01 | Spoofing | `src/app/api/cron/send-reminders/route.ts` and its sibling | mitigate | Task 3 records the required credential, the unset-credential behavior cross-referenced to the fail-open register, and whether any of the six sources confirms a trigger |
+.planning/phases/01-read-only-foundation-audit/01-10-SUMMARY.md:21:  - "CW-01: /api/cron/send-reminders has no trigger and an open credential check in production (High)"
+.planning/phases/01-read-only-foundation-audit/01-10-SUMMARY.md:51:  - "The two /api/cron/* handlers are redundant dead code, not a broken schedule — pg_cron runs in-database reimplementations of both, so the remediation is deletion or a fail-closed guard, never scheduling them"
+.planning/phases/01-read-only-foundation-audit/01-10-SUMMARY.md:90:- **Confirmed FO-01 (Critical) and FO-02 (High) are live, not conditional.** `../raw/vercel/env-names.json` shows exactly three variables configured in production. `CRON_SECRET` and `ADMIN_API_KEY` are not among them, so `/api/cron/send-reminders` really does compare against `Bearer undefined`, and `/api/admin/calculate-popularity`'s admin gate really is skipped entirely — both in front of service-role clients. Plan 01-07 had to hedge on exactly this.
+.planning/phases/01-read-only-foundation-audit/01-10-SUMMARY.md:180:- **AUDIT-11** — all six named sources have an explicitly headed section with a verdict: `pg_cron` jobs from `cron.job` (3, captured live), the two `/api/cron/*` handlers and what triggers them (nothing, proved three ways), `vercel.json` crons (none, and the project's definitions list is empty and causal), the Supabase edge function (trigger, secret, and verification order recorded), the Apify/Instagram webhook (does not exist; the real path is an operator-run script pipeline), and auth hooks (none configured, with the evidence for the negative).
+.planning/phases/01-read-only-foundation-audit/01-11-SUMMARY.md:102:- **3 rows** a signals-only pass calls `anonymous` and are really `machine` — both `/api/cron/*` and `/api/admin/calculate-popularity`. The signals cannot see a bearer-secret comparison.
+.planning/phases/01-read-only-foundation-audit/01-11-SUMMARY.md:124:- `dead_or_duplicate`: the two `/api/cron/*` handlers, on 01-10's `pg_cron` evidence. knip flagged no handler because it treats every `route.ts` as an entry point and structurally cannot.
+.planning/phases/01-read-only-foundation-audit/01-11-SUMMARY.md:155:- **D-2 High** — `/api/cron/send-reminders` compares against the fixed literal `Bearer undefined`, which anyone can send.
+.planning/phases/01-read-only-foundation-audit/01-11-SUMMARY.md:156:- **D-3** — `/api/cron/send-feedback-requests` returns **500 to every caller**, unconditionally. Fail-closed, and therefore provably dead rather than dormant.
+.planning/phases/01-read-only-foundation-audit/01-RESEARCH.md:76:| AUDIT-10 | Env-var-conditional (fail-open) authorization checks | Verified today: `src/app/api/admin/calculate-popularity/route.ts` **GET and POST both** use `if (expectedKey && ...)` — fail-open on a service-role client. `/api/cron/send-reminders` compares to `` `Bearer ${undefined}` `` when `CRON_SECRET` is unset (guessable-open); `/api/cron/send-feedback-requests` fails closed with 500. |
+.planning/phases/01-read-only-foundation-audit/01-RESEARCH.md:77:| AUDIT-11 | Cron + webhook inventory | `vercel.json` verified to have **no `crons` key**; 2 `/api/cron/*` handlers exist; pg_cron schedule exists only as a commented line in `20260313000002_recommendation_engine.sql`; edge function `supabase/functions/events-webhook/` reads `WEBHOOK_SECRET`. |
+.planning/phases/01-read-only-foundation-audit/01-RESEARCH.md:441:| **Live service config** | Vercel project settings (env vars, Node version, cron jobs) live in the Vercel dashboard, not git. `vercel.json` has **no `crons` key** — so whether `/api/cron/send-reminders` and `/api/cron/send-feedback-requests` fire at all is unanswerable from the repo. Supabase Auth provider config, auth hooks, and any dashboard-edited RLS policy are likewise invisible. | AUDIT-11 must be answered from the Vercel dashboard / `vercel` CLI and the Supabase dashboard, and the answer recorded as an artifact. If neither schedules them, that is a **finding** (email reminders are a Validated requirement). |
+.planning/phases/01-read-only-foundation-audit/01-RESEARCH.md:988:3. **Are `/api/cron/send-reminders` and `/api/cron/send-feedback-requests` triggered at all?**
+.planning/phases/01-read-only-foundation-audit/01-RESEARCH.md:1067:| AUDIT-11 | Inventory answers all six named sources (pg_cron, `/api/cron/*`, `vercel.json`, edge function, Apify webhook, auth hooks) with an explicit verdict each | content | `validate.mjs --check cron` | ❌ Wave 0 |
+.planning/phases/01-read-only-foundation-audit/01-RESEARCH.md:1164:- Direct file reads: `src/middleware.ts` (8 protected routes; fail-open `catch`; matcher), `src/middlewareRateLimit.ts`, `src/lib/supabase/{server,service}.ts`, `src/lib/admin.ts`, `src/app/{admin,moderation}/layout.tsx` (server-side admin guards), `src/app/api/admin/calculate-popularity/route.ts` (fail-open GET+POST), `src/app/api/cron/*`, `src/app/docs/page.tsx`, `src/components/redoc/RedocUI.tsx`, `package.json`, `vercel.json`, `next.config.js`, `tsconfig.json`, `jest.config.js`, `.github/workflows/ci.yml`, `supabase/config.toml`
+.planning/phases/01-read-only-foundation-audit/01-SECURITY.md:146:| T-01-07-02 | Spoofing | `api/cron/send-reminders` comparing an interpolated template | mitigate | FO-02 (High, threat ID cited) → **F-002** High, lines 6-13, fail-closed sibling route named as the recommended fix | closed |
+.planning/phases/01-read-only-foundation-audit/01-SECURITY.md:180:| T-01-10-01 | Spoofing | `api/cron/send-reminders` and its sibling | mitigate | `async/cron-webhook-inventory.md` § 2.1–2.4: required credential (`CRON_SECRET`) recorded, unset-credential behavior cross-referenced to the fail-open register (§ 2.3), and **none** of the six sources confirms a trigger (§ 2.4, established three independent ways) → **F-002**, **F-038**, **F-040** | closed |
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-00-build.txt:75:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-00-build.txt:76:├ ƒ /api/cron/send-reminders
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-01-build.txt:75:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-01-build.txt:76:├ ƒ /api/cron/send-reminders
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-02-build.txt:81:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-02-build.txt:82:├ ƒ /api/cron/send-reminders
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-03-build.txt:75:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-03-build.txt:76:├ ƒ /api/cron/send-reminders
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-04-build.txt:72:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-04-build.txt:73:├ ƒ /api/cron/send-reminders
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-05-build.txt:72:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-05-build.txt:73:├ ƒ /api/cron/send-reminders
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-06-build.txt:72:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/batch-06-build.txt:73:├ ƒ /api/cron/send-reminders
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/cleanroom-interim.txt:139:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/cleanroom-interim.txt:140:├ ƒ /api/cron/send-reminders
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/cleanroom-npm-ci.txt:157:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/02-dependency-and-runtime-stabilization/evidence/cleanroom-npm-ci.txt:158:├ ƒ /api/cron/send-reminders
+.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/deferred-items.md:526:redundant `/api/cron/*` handlers.
+.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/elevated-callsite-census.txt:24:src/app/api/cron/send-feedback-requests/route.ts
+.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/elevated-callsite-census.txt:25:src/app/api/cron/send-reminders/route.ts
+.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/playwright-run.review-fix.txt:110:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/playwright-run.review-fix.txt:111:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/PHASE-4-COMPLETION.md:154:| 13 | In-app notifications and email reminders (F-038 caveat) | No: `src/app/api/notifications/`, `src/app/api/cron/` absent | Untouched per the diff. **No automated test covers it**, before or after |
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/boundary-widening.txt:225:  src/app/api/cron/send-feedback-requests/route.ts
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/boundary-widening.txt:226:  src/app/api/cron/send-reminders/route.ts
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/floor.before.txt:447:PASS cron :: covers-api-cron-handlers :: /api/cron/
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/floor.phase-after.txt:465:PASS cron :: covers-api-cron-handlers :: /api/cron/
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/floor.slice-1-after.txt:464:PASS cron :: covers-api-cron-handlers :: /api/cron/
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.club-embed.txt:106:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.club-embed.txt:107:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.escaping.txt:105:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.escaping.txt:106:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.pagination.run1-flake.txt:105:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.pagination.run1-flake.txt:106:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.pagination.txt:106:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.pagination.txt:107:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.phase-after.run1-flake.txt:103:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.phase-after.run1-flake.txt:104:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.phase-after.txt:106:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.phase-after.txt:107:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.slice-1-after.txt:106:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.slice-1-after.txt:107:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.slice-1-before.txt:107:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.slice-1-before.txt:108:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.slice-2-before.txt:107:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/playwright.slice-2-before.txt:108:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/04-slices-1-2-saved-events-rsvp-and-the-event-read-path/evidence/slice-1-close.md:68:| 13 | In-app notifications and email reminders (F-038 caveat) | No: `src/app/api/notifications/**`, `src/app/api/cron/**` and `src/app/notifications/**` are absent from the diff | Untouched per the diff. No automated test covers this workflow either before or after; it is not re-confirmed by a test |
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/05-03-PLAN.md:102:**Enumerate from the tree.** With a node one-liner, list every `export async function POST|PUT|PATCH|DELETE` in `src/app/api/**/route.ts` excluding `src/app/api/admin/`, `src/app/api/cron/` and `src/app/api/recommendations/batch/` (admin-gated), and record it in `evidence/slice-3-characterization-handlers.txt`. The expected result is 39 arms in 30 files: clubs/[id]/appeal POST, clubs/[id]/follow POST and DELETE, clubs/[id]/invites POST, clubs/[id]/members/role PATCH, clubs/[id]/members DELETE, clubs/[id] PATCH and DELETE, clubs/[id]/transfer POST, clubs/banner POST, clubs/logo POST, clubs POST, events/[id]/appeal POST, events/[id]/invite POST, events/[id]/report POST, events/[id]/reviews POST, events/[id] PATCH and DELETE, events/[id]/rsvp POST and DELETE, events/[id]/save POST and DELETE, events/create POST, events/upload-image POST, feedback POST, interactions POST, notifications/[id] PATCH, notifications POST, onboarding/complete POST, organizer-requests POST, profile/avatar POST, profile/banner POST, profile/inferred-tags DELETE, profile/interests PUT, recommendations/feedback POST, user/engagement POST, users/[id]/follow POST and DELETE, users/[id] PATCH. If the tree disagrees, the tree wins and the difference is recorded.
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/05-15-PLAN.md:50:      contains: "src/app/api/cron/send-reminders/route.ts"
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/05-15-PLAN.md:185:**Allow-list.** Run `node scripts/check-elevated-ratchet.mjs --write`, then `node scripts/check-elevated-ratchet.mjs` → `committed=2 live=2 delta=0`; `git diff eslint.elevated-allowlist.mjs` shows only removals and the list is exactly `src/app/api/cron/send-feedback-requests/route.ts` and `src/app/api/cron/send-reminders/route.ts`; update the generated header's note only through the script if it writes one. Record the before/after lists, the diff, `npm run lint` (0 errors) and `command grep -rln "@/lib/supabase/service" src --include='*.ts' --include='*.tsx'` filtered of tests (only src/lib/supabase, src/server/db/elevated and the two cron routes) in `evidence/allowlist-shrink.txt`. Commit `fix(05-15): public profiles read through a narrowed door with one visibility gate; allow-list shrinks to the two cron routes (F-005)` with an `INTENTIONAL BEHAVIOUR CHANGE` body (anonymous visitors get 404 for private profiles; email is never read for a profile page).
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/05-CONTEXT.md:74:- The positive control for fail-closed env gates: `src/app/api/cron/send-feedback-requests/route.ts:8-14` (presence check before comparison).
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/05-RESEARCH.md:369:Non-`!` conditional reads that also go: `src/proxy.ts:10-16` (the F-003 pass-through), `admin/calculate-popularity/route.ts:16-17,58,168` (FO-01 plus `ADMIN_API_KEY`), `auth/callback/route.ts:22,162` (`ADMIN_EMAILS`, the key-presence branch). Out of scope: `api/health` (REFAC-22), `api/cron/*` (Phase 6).
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/05-RESEARCH.md:492:At phase exit, `node scripts/check-elevated-ratchet.mjs --write` regenerates the allowlist to exactly `src/app/api/cron/send-feedback-requests/route.ts` and `src/app/api/cron/send-reminders/route.ts`. This is a sanctioned shrink; record the diff in evidence.
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/05-VERIFICATION.md:9:  - truth: "Every fail-open endpoint fails closed (FO-02: src/app/api/cron/send-reminders/route.ts still compares against the literal 'Bearer undefined' when CRON_SECRET is unset, and both cron routes still import createServiceClient directly instead of going through the elevated door)"
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md:85:| Every fail-open endpoint fails closed | PARTIAL | `.planning/audit/authz/fail-open-register.md` lists FO-01..FO-05. **Closed:** FO-01, calculate-popularity (`4cf4928`, F-001 Fixed); FO-03, the env-conditional auth ring (`e2d6d3a`, F-003 Fixed in 05-08); FO-05, the callback's profile sync (`077a081`). FO-04 was the positive control. **Open:** FO-02, `src/app/api/cron/send-reminders/route.ts:9`, still compares against the literal `Bearer undefined` when `CRON_SECRET` is unset (F-002, High, Phase 6 REFAC-14) |
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/PHASE-5-COMPLETION.md:87:| Every remaining service-role use goes through `src/server/db/elevated/` with a registered justification | PARTIAL | Every non-cron use goes through `getElevatedClient()` with a row in `src/server/db/elevated/REGISTRY.md` (05-05, 05-10, 05-14, 05-15). The allow-list shrank from 25 entries to 2 (`evidence/allowlist-shrink.txt`; ratchet `committed=2 live=2`, block 5). **Not met:** `src/app/api/cron/send-feedback-requests/route.ts` and `src/app/api/cron/send-reminders/route.ts` still import `createServiceClient` directly (block 23). Phase 6 owns them (REFAC-14, the cron credential gates) |
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/allowlist-shrink.txt:149:  src/app/api/cron/send-feedback-requests/route.ts
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/allowlist-shrink.txt:150:  src/app/api/cron/send-reminders/route.ts
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/allowlist-shrink.txt:176:  src/app/api/cron/send-feedback-requests/route.ts
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/allowlist-shrink.txt:177:  src/app/api/cron/send-reminders/route.ts
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/allowlist-shrink.txt:210:   "src/app/api/cron/send-feedback-requests/route.ts",
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/allowlist-shrink.txt:211:   "src/app/api/cron/send-reminders/route.ts",
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/allowlist-shrink.txt:237:src/app/api/cron/send-feedback-requests/route.ts
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/allowlist-shrink.txt:238:src/app/api/cron/send-reminders/route.ts
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/build-ci-env.txt:103:├ ƒ /api/cron/send-feedback-requests
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/build-ci-env.txt:104:├ ƒ /api/cron/send-reminders
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/csrf-assessment.md:148:| Header-less machine callers pass | POST, PUT, PATCH, DELETE to a user route and to `/api/cron/send-reminders` → false |
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.phase-after.txt:410:src/app/api/cron/send-feedback-requests/route.ts:3:import { createServiceClient } from "@/lib/supabase/service";
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.phase-after.txt:411:src/app/api/cron/send-reminders/route.ts:3:import { createServiceClient } from "@/lib/supabase/service";
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/floor.slice-4-after.txt:390:PASS cron :: covers-api-cron-handlers :: /api/cron/
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/phase-05-decisions.md:373:(`src/app/api/cron/send-feedback-requests/route.ts`, `src/app/api/cron/send-reminders/route.ts`).
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/review-fix-verification.txt:524:[WebServer] ├ ƒ /api/cron/send-feedback-requests
+.planning/phases/05-slices-3-5-auth-club-authorization-admin-containment/evidence/review-fix-verification.txt:525:[WebServer] ├ ƒ /api/cron/send-reminders
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-01-PLAN.md:300:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-02-PLAN.md:184:    - src/app/api/cron/send-reminders/route.ts and src/app/api/cron/send-feedback-requests/route.ts — what is being deleted
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-02-PLAN.md:192:**Cron caller census:** `git grep -n 'api/cron'` over the tree (expected: docs, the allow-list, one CSRF unit test fixture string), `node -p "require('./vercel.json').crons"` (undefined), and `command grep -rn 'CRON_SECRET' src` (the two routes only).
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-02-PLAN.md:251:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:8:  - src/app/api/cron/send-reminders/route.ts
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:9:  - src/app/api/cron/send-feedback-requests/route.ts
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:37:    - "Cron routes require credentials and fail closed by no longer existing: nothing called /api/cron/send-reminders or /api/cron/send-feedback-requests, both are deleted, and the ESLint boundary and the elevated ratchet still run with an empty allow-list (committed=0 live=0) — F-002, F-037 (DEC-63)"
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:95:Green when `test ! -e src/app/api/cron`, `npm run lint` exits 0, `node scripts/check-elevated-ratchet.mjs` prints `committed=0 live=0`, `npx jest --ci src/__tests__/webhook` passes including the wrong-length and replay rows, and `node -p "require('./node_modules/zod/package.json').version"` prints `4.6.5`.
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:119:  <files>src/app/api/cron/send-reminders/route.ts, src/app/api/cron/send-feedback-requests/route.ts, eslint.config.mjs, eslint.elevated-allowlist.mjs, scripts/check-elevated-ratchet.mjs, .planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/cron-deletion.txt</files>
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:130:Record `pre=<git rev-parse HEAD>` at the top of `evidence/cron-deletion.txt`, then re-run the caller census: `git grep -n 'api/cron'`, `git grep -n 'send-reminders\|send-feedback-requests' -- src e2e scripts .github`, `node -p "require('./vercel.json').crons"`, and `command grep -rnE 'CRON_SECRET|ADMIN_API_KEY|ADMIN_EMAILS' src`. If any caller exists outside the two route files, the allow-list, the CSRF fixture string and documentation, stop and record it (CONTEXT's fallback shape then needs an owner decision).
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:134:Prove, appending each command with its output and exit code: `npm run lint` exits 0; the boundary still bites — write a scratch route file under `src/app/api/` that imports the service module, run `npx eslint <that file>` and see the boundary error, then delete it and show `git status --porcelain -- src/app/api` clean; `node scripts/check-elevated-ratchet.mjs`; `test ! -e src/app/api/cron`; `command grep -rnE 'CRON_SECRET|ADMIN_API_KEY|ADMIN_EMAILS' src` prints nothing (F-040's last reader gone); `npx tsc --noEmit` (if it fails only on `.next/types` entries for the deleted routes, regenerate route types with `npx next typegen` when the installed Next documents it under `node_modules/next/dist/docs/`, otherwise `npm run build`, and record which); `npx jest --ci`. State in the evidence that `.planning/audit/inventory/endpoints.json` is not touched here: its cron rows are retained by the classifier as DEC-55 retained api.auth-debug and are flagged in 06-15.
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:136:Commit `refactor(06-03): delete the dead cron handlers (F-002, F-037)` staging the two deletions, the three config and script files and the evidence, with the body line `INTENTIONAL BEHAVIOUR CHANGE: POST /api/cron/send-reminders and /api/cron/send-feedback-requests now answer 404; nothing called them (research § Inventory A); pg_cron runs the live implementations.`
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:139:    <automated>test ! -e src/app/api/cron && npm run lint && node scripts/check-elevated-ratchet.mjs && npx tsc --noEmit</automated>
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:142:    - `test ! -e src/app/api/cron` exits 0
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:256:- `test ! -e src/app/api/cron`; ratchet `committed=0 live=0`; `npm run lint`, `npx tsc --noEmit`, `npx jest --ci` exit 0
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:268:**Contributed by this plan:** deletion of `src/app/api/cron/send-reminders/route.ts` and `src/app/api/cron/send-feedback-requests/route.ts`; the empty `eslint.elevated-allowlist.mjs`; empty-list handling in `scripts/check-elevated-ratchet.mjs`; `zod` 4.6.5; `supabase/functions/_shared/webhook-contract.ts`, `webhook-signature.ts`, `webhook-handler.ts`, `contentHash.ts`; `src/contracts/webhook.ts`; `src/__tests__/webhook/verify-signature.test.ts`, `webhook-contract.test.ts`, `webhook-handler.test.ts`, `content-hash-parity.test.ts`; `evidence/cron-deletion.txt`, `evidence/zod-install.txt`, `evidence/webhook.txt`.
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-03-PLAN.md:278:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-04-PLAN.md:284:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-05-PLAN.md:245:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-06-PLAN.md:115:**Register**, single-field edits and resolution text only, each resolution citing its commits and `evidence/slice-6-close.md`: Fixed — F-002 (routes deleted; the criterion's grep over `src/app/api/cron/` is vacuously satisfied and the route answers 404), F-017, F-040 (no reader of the three variables; the boot check and its test), F-042 (the reset census equals production's list), F-092; F-037 Fixed only if Task 1's run-history block shows the reminder and feedback jobs with at least one run and zero failures, otherwise a resolution saying so and status Open at "06" to be re-observed at the phase close. Open with `closes_in_phase` "08" and a resolution "fixed and proven locally (migration 20260926120000, pgTAP 070 and 031, mutation check); production closes with the DI-23 repair": F-074, F-075, F-076, F-093. F-039: Open at "08", resolution naming the code half (401 on every bad signature, replay dedupe, contract) and the unmet clause (a CI deployment record, DI-81). F-028: resolution noting the count route's 401 and the two routes REFAC-19 handles in 06-14; stays at "06". Run `node .planning/audit/tools/gen-foundation-audit.mjs` and `node .planning/audit/tools/validate.mjs --check findings`.
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-06-PLAN.md:174:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-07-PLAN.md:233:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-08-PLAN.md:204:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-09-PLAN.md:210:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-10-PLAN.md:214:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-11-PLAN.md:201:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-12-PLAN.md:271:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-13-PLAN.md:185:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-14-PLAN.md:201:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-15-PLAN.md:219:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-16-PLAN.md:274:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-17-PLAN.md:233:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-18-PLAN.md:237:- Deleted: `src/app/api/cron/send-reminders/route.ts`, `src/app/api/cron/send-feedback-requests/route.ts` and the ESLint ratchet override block (06-03); the `headers` rule of `vercel.json` (06-14); the health route's session-accessor, OAuth-provider, environment and memory checks (06-17)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-CONTEXT.md:22:- **Dead cron handlers are deleted, not credentialed.** Research must confirm from `vercel.json` (no `crons` key) and the pg_cron inventory that nothing calls `/api/cron/send-reminders` and `/api/cron/send-feedback-requests`; F-037 says they duplicate live pg_cron functions with divergences and F-038 says no email is sent anywhere. Default: delete both route files (closes F-002 and F-037, empties `eslint.elevated-allowlist.mjs` to zero — record the ratchet diff). If research finds a live caller, the fallback is the FO-04 fail-closed shape through a validated optional `CRON_SECRET` reader with a constant-time compare.
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-CONTEXT.md:67:- `vercel.json` headers; `next.config.js` CSP; `src/app/api/cron/*`, `src/app/api/health/route.ts`, `src/app/api/recommendations/*`, `src/app/api/notifications/*`, `src/app/api/interactions`, `supabase/functions/events-webhook/index.ts`, `src/lib/classifier-pipeline.ts`, `supabase/config.toml`, `src/hooks/*`, `src/app/docs`.
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-RESEARCH.md:48:- **Dead cron handlers are deleted, not credentialed.** Research must confirm from `vercel.json` (no `crons` key) and the pg_cron inventory that nothing calls `/api/cron/send-reminders` and `/api/cron/send-feedback-requests`; F-037 says they duplicate live pg_cron functions with divergences and F-038 says no email is sent anywhere. Default: delete both route files (closes F-002 and F-037, empties `eslint.elevated-allowlist.mjs` to zero — record the ratchet diff). If research finds a live caller, the fallback is the FO-04 fail-closed shape through a validated optional `CRON_SECRET` reader with a constant-time compare.
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-RESEARCH.md:441:| `/api/cron/send-reminders` (164 lines), `/api/cron/send-feedback-requests` (109 lines) | POST only. Called by **nothing**: no `crons` key in `vercel.json`, and the Vercel project's `crons.definitions` is `[]`; `pg_net` is not installed, so pg_cron cannot call HTTP; no `schedule:` in CI and no `curl` in the tree; `CRON_SECRET` has never been set in production; `email_reminder_log` has **0 rows** in production | `.planning/audit/async/vercel-crons.md` § 1; `cron-webhook-inventory.md` § 2.3-2.4; `git grep api/cron` (only docs, the allow-list, a CSRF unit test) |
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-RESEARCH.md:782:| REFAC-14 | Cron routes gone; ratchet 0/0; ESLint still runs | census | `test ! -e src/app/api/cron && node scripts/check-elevated-ratchet.mjs && npm run lint` | ✅ (scripts) |
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/06-VALIDATION.md:49:| 6-03-01 | 03 | 3 | REFAC-14 | T-06-03-01, T-06-03-05 | Dead cron routes gone; service-role lint boundary still bites | census + lint | `test ! -e src/app/api/cron && npm run lint && node scripts/check-elevated-ratchet.mjs` | ✅ | ⬜ pending |
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.before.txt:474:src/app/api/cron/send-feedback-requests/route.ts:103:    console.error("[Cron] send-feedback-requests error:", err);
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/floor.before.txt:475:src/app/api/cron/send-reminders/route.ts:158:    console.error("[Cron] send-reminders error:", err);
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/phase-06-decisions.md:103:**Decision.** Delete `src/app/api/cron/send-reminders/route.ts` and
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/phase-06-decisions.md:104:`src/app/api/cron/send-feedback-requests/route.ts`. In the same commit remove the ESLint override block
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:262:$ git grep -n 'api/cron' -- ':(exclude).planning'
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:263:.claude/CLAUDE.md:353:- Location: `src/app/api/cron/send-reminders/route.ts`
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:264:docs/superpowers/plans/2026-03-15-create-event-flow.md:297:| 18 | `src/app/api/cron/send-reminders/route.ts` | 23 | None |
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:265:docs/superpowers/plans/2026-03-15-create-event-flow.md:816:For `src/app/api/cron/send-reminders/route.ts`, always filter — never send reminders for deleted events.
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:266:docs/superpowers/specs/2026-03-16-event-feedback-requests-design.md:55:### `POST /api/cron/send-feedback-requests`
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:267:eslint.elevated-allowlist.mjs:45:  "src/app/api/cron/send-feedback-requests/route.ts",
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:268:eslint.elevated-allowlist.mjs:46:  "src/app/api/cron/send-reminders/route.ts",
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:269:src/server/__tests__/csrf.test.ts:219:        isCrossSiteMutation(req("/api/cron/send-reminders", method, { authorization: "Bearer x" }))
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:272:$ git grep -l 'api/cron' -- .planning | wc -l   (planning-register mentions, counted not listed)
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:281:src/app/api/cron/send-feedback-requests/route.ts:8:  if (!process.env.CRON_SECRET) {
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:282:src/app/api/cron/send-feedback-requests/route.ts:12:  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+.planning/phases/06-slices-6-7-async-edge-contracts-caching-observability/evidence/slice-6-characterization.txt:283:src/app/api/cron/send-reminders/route.ts:9:  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+.planning/research/ARCHITECTURE.md:34:| `crons` key in `vercel.json` | **absent** — `/api/cron/send-reminders` and `/api/cron/send-feedback-requests` have **no Vercel schedule** | `grep -c crons vercel.json` → 0 |
+.planning/research/ARCHITECTURE.md:315:| `ops` | `no-store` | `/api/health`, `/api/cron/*` |
+.planning/research/ARCHITECTURE.md:447:| 6 | **Recommendations · interactions · notifications · cron · webhook** | `/api/recommendations/**`, `/api/interactions`, `/api/notifications/**`, `/api/cron/*`, `events-webhook` | The asynchronous edge: correctness is time-dependent and hardest to assert, so certify everything synchronous first. Depends on events (2) for the item model and users (3) for identity. Resolve here: the **missing `crons` key in `vercel.json`** — two cron route handlers exist with no Vercel schedule, so either they are externally triggered or they never run, and the audit must say which. Add pg_cron and scraper freshness to the ops health endpoint. | 2, 3 |
+.planning/research/ARCHITECTURE.md:568:| Vercel Cron | **Currently unconfigured** — no `crons` key in `vercel.json` despite two `/api/cron/*` handlers | Audit must determine: externally triggered, or never running? Reminder emails are a user-visible Validated requirement. |
+.planning/research/ARCHITECTURE.md:599:- Are the two `/api/cron/*` handlers scheduled externally, or dead? Email reminders are a Validated requirement.
+.planning/research/FEATURES.md:35:| **Fail-open audit: every authorization check that is conditional on an env var being present** | `api/admin/calculate-popularity` accepts any request when `ADMIN_API_KEY` is unset, on a service-role client. Any other `if (expectedKey && ...)` shape is the same bug. | LOW | Also check the cron route (`api/cron/send-reminders`) for a `CRON_SECRET` equivalent. |
+.planning/research/PITFALLS.md:273:**[repo-verified] Scope:** `createServiceClient` appears in 24 files. Beyond the expected `/api/admin/*` and `/api/cron/*`, it is used in `src/app/api/clubs/route.ts`, `src/app/api/clubs/[id]/route.ts`, `src/app/api/clubs/[id]/transfer/route.ts`, `src/app/api/users/[id]/route.ts`, `src/app/api/users/me/suggestions/route.ts`, `src/app/api/profile/avatar/route.ts`, `src/app/api/profile/banner/route.ts`, `src/app/api/recommendations/batch/route.ts`, `src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts`, and — notably — the server-rendered page `src/app/users/[id]/page.tsx`. In each of these, RLS is not a defense; the only protection is whatever check the handler remembers to perform.
+.planning/research/PITFALLS.md:422:**Also [repo-verified]:** `vercel.json` contains **no `crons` key**, yet `src/app/api/cron/send-reminders/route.ts` and `src/app/api/cron/send-feedback-requests/route.ts` exist and are documented as "likely triggered via Vercel Cron or external scheduler." Whether reminder emails are actually firing in production is currently unknown. That is a Stage 1 finding, not a Stage 3 assumption.
+.planning/research/SUMMARY.md:77:**Delivers:** `FOUNDATION_AUDIT.md` with every finding carrying a stable ID, exposure-adjusted severity, evidence, affected paths, reproduction, recommended fix, and validation criterion; the three-way schema/migration/type drift table; the 94-endpoint and 43-page classification; the RLS policy heatmap; the service-role callsite register; the cache/personalization exposure matrix *with the empirical curl proof against production*; the test-runner decision (already resolved by evidence: keep Jest); the cron/webhook inventory (including whether `/api/cron/*` actually fires, since `vercel.json` has no `crons` key).
+.planning/research/SUMMARY.md:135:- **Are the two `/api/cron/*` handlers (`send-reminders`, `send-feedback-requests`) actually triggered?** `vercel.json` has no `crons` key, confirmed by the orchestrator's environment and by grep in both ARCHITECTURE.md and PITFALLS.md. Email reminders are a Validated requirement, so determining whether they are externally scheduled or simply dead is a blocking Stage 1 question.
+docs/superpowers/plans/2026-03-15-create-event-flow.md:297:| 18 | `src/app/api/cron/send-reminders/route.ts` | 23 | None |
+docs/superpowers/plans/2026-03-15-create-event-flow.md:816:For `src/app/api/cron/send-reminders/route.ts`, always filter — never send reminders for deleted events.
+docs/superpowers/specs/2026-03-16-event-feedback-requests-design.md:55:### `POST /api/cron/send-feedback-requests`
+eslint.elevated-allowlist.mjs:45:  "src/app/api/cron/send-feedback-requests/route.ts",
+eslint.elevated-allowlist.mjs:46:  "src/app/api/cron/send-reminders/route.ts",
+src/server/__tests__/csrf.test.ts:219:        isCrossSiteMutation(req("/api/cron/send-reminders", method, { authorization: "Bearer x" }))
+exit=0
+
+$ git grep -n 'send-reminders\|send-feedback-requests' -- src e2e scripts .github
+src/app/api/cron/send-feedback-requests/route.ts:103:    console.error("[Cron] send-feedback-requests error:", err);
+src/app/api/cron/send-reminders/route.ts:158:    console.error("[Cron] send-reminders error:", err);
+src/server/__tests__/csrf.test.ts:219:        isCrossSiteMutation(req("/api/cron/send-reminders", method, { authorization: "Bearer x" }))
+exit=0
+
+$ node -p "require('./vercel.json').crons"
+undefined
+exit=0
+
+$ command grep -rnE 'CRON_SECRET|ADMIN_API_KEY|ADMIN_EMAILS' src
+src/app/auth/callback/route.test.ts:33: *   `ADMIN_EMAILS` is parsed at MODULE LOAD (route.ts:22-25), not per request.
+src/app/auth/callback/route.test.ts:34: *   Setting `process.env.ADMIN_EMAILS` inside a `beforeEach` does nothing at all
+src/app/auth/callback/route.test.ts:150: * `process.env.ADMIN_EMAILS`. See the WHY block in the file header.
+src/app/auth/callback/route.test.ts:205:    delete process.env.ADMIN_EMAILS;
+src/app/auth/callback/route-defect.test.ts:199:    delete process.env.ADMIN_EMAILS;
+src/app/auth/callback/route-defect.test.ts:254:    process.env.ADMIN_EMAILS = adminAddress;
+src/app/api/cron/send-feedback-requests/route.ts:8:  if (!process.env.CRON_SECRET) {
+src/app/api/cron/send-feedback-requests/route.ts:12:  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+src/app/api/cron/send-reminders/route.ts:9:  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+src/__tests__/api/admin/admin-guard-characterization.test.ts:41: * inline client) return the elevated fake B. `ADMIN_API_KEY` is unset, which
+src/__tests__/api/admin/admin-guard-characterization.test.ts:79:  "ADMIN_API_KEY",
+src/__tests__/api/admin/admin-guard-characterization.test.ts:97:  delete process.env.ADMIN_API_KEY;
+src/__tests__/api/admin/adminArmTable.ts:35: *   - `machineKey`: the arm gates on `ADMIN_API_KEY` alone and accepts every
+src/__tests__/api/admin/admin-guard-defect.test.ts:28: *   D3  F-001, calculate-popularity POST and GET with `ADMIN_API_KEY` unset
+src/__tests__/api/admin/admin-guard-defect.test.ts:132: * ADMIN_API_KEY gate is gone (F-001, FO-01).
+src/__tests__/api/admin/admin-guard-defect.test.ts:178:  "ADMIN_API_KEY",
+src/__tests__/api/admin/admin-guard-defect.test.ts:196:  delete process.env.ADMIN_API_KEY;
+src/__tests__/api/admin/admin-guard-defect.test.ts:281:describe("D3 (F-001): calculate-popularity with ADMIN_API_KEY unset", () => {
+exit=0
+
+Census reading (non-.planning hits of `git grep -n 'api/cron'`):
+  .claude/CLAUDE.md:353 and docs/superpowers/** — documentation only
+  eslint.elevated-allowlist.mjs:45-46 — the two allow-list rows this task removes
+  src/server/__tests__/csrf.test.ts:219 — the path as a fixture string passed to isCrossSiteMutation (kept; it names a path, not a handler)
+  src/app/api/cron/*/route.ts — the two handlers themselves
+vercel.json has no `crons` key (undefined). No caller outside the allowed set -> proceed.
+CRON_SECRET readers before deletion: the two route files only (send-feedback-requests :8,:12; send-reminders :9).
+
+=== 2. Deletion and config ===
+git rm src/app/api/cron/send-reminders/route.ts src/app/api/cron/send-feedback-requests/route.ts
+eslint.config.mjs: removed the `import { LEGACY_ELEVATED_CALLSITES }` line and the ratchet override block
+  (the object whose `files` was the legacy list, formerly :109-128). The two boundary blocks above it are
+  byte-identical (diff shows deletions only).
+scripts/check-elevated-ratchet.mjs: renderAllowlist emits `[]` for an empty list with an empty-list header
+  paragraph; the check prints `PASS: the allow-list is empty and the live census is empty` when both are empty.
+  The new-entry failure path is unchanged.
+eslint.elevated-allowlist.mjs: regenerated with `node scripts/check-elevated-ratchet.mjs --write` (0 entries);
+  a second --write is byte-identical.
+
+$ git diff --stat -- eslint.config.mjs eslint.elevated-allowlist.mjs scripts/check-elevated-ratchet.mjs
+ eslint.config.mjs                  | 21 ---------------------
+ eslint.elevated-allowlist.mjs      | 18 ++++++++++++------
+ scripts/check-elevated-ratchet.mjs | 38 +++++++++++++++++++++++++++++++++-----
+ 3 files changed, 45 insertions(+), 32 deletions(-)
+exit=0
+
+$ git diff -- eslint.config.mjs | grep -c '^+[^+]' || true
+0
+exit=0
+=== 3. Proofs ===
+
+$ npm run lint
+
+> uni-verse@0.1.0 lint
+> eslint .
+
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-onboarding.js
+  67:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/load-tests/k6-online-users.js
+  33:1  warning  Unexpected default export of anonymous function  import/no-anonymous-default-export
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/calendar/page.tsx
+  779:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/contributors/page.tsx
+  74:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/events/[id]/EventDetailClient.tsx
+  235:5  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/moderation/organizers/page.tsx
+  251:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/my-events/page.tsx
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 159) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 167) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:9  warning  The 'events' logical expression could make the dependencies of useMemo Hook (at line 181) change on every render. To fix this, wrap the initialization of 'events' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/page.tsx
+  64:17  warning  The ref value 'timerRefs.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'timerRefs.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/auth/SignOutButton.tsx
+  42:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  44:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubDiscoveryCard.tsx
+  43:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/ClubSettingsTab.tsx
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+  233:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+  256:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/clubs/FollowButton.tsx
+  39:7  warning  Do not use `window.location.href` to navigate to internal Next.js pages. Use `redirect()` in the render phase, or `useRouter().push()` in Client Components' event handlers instead. See: https://nextjs.org/docs/messages/no-location-assign-relative-destination  @next/next/no-location-assign-relative-destination
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/components/onboarding/OnboardingWizard.tsx
+  123:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+✖ 18 problems (0 errors, 18 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
+exit=0
+
+$ cat src/app/api/zz-scratch-boundary/route.ts
+import { createServiceClient } from "@/lib/supabase/service";
+
+export async function GET() {
+  return Response.json({ ok: Boolean(createServiceClient) });
+}
+exit=0
+
+$ npx eslint src/app/api/zz-scratch-boundary/route.ts
+
+/Users/adyan/Documents/GitHub/Event-Radar/src/app/api/zz-scratch-boundary/route.ts
+  1:1  error  '@/lib/supabase/service' import is restricted from being used by a pattern. Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md  @typescript-eslint/no-restricted-imports
+
+✖ 1 problem (1 error, 0 warnings)
+
+exit=1
+
+$ git status --porcelain -- src/app/api
+D  src/app/api/cron/send-feedback-requests/route.ts
+D  src/app/api/cron/send-reminders/route.ts
+exit=0
+
+$ node scripts/check-elevated-ratchet.mjs
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+exit=0
+
+$ node -e "import('./eslint.elevated-allowlist.mjs').then(m=>{console.log('length', m.LEGACY_ELEVATED_CALLSITES.length);process.exit(m.LEGACY_ELEVATED_CALLSITES.length===0?0:1)})"
+length 0
+exit=0
+
+$ test ! -e src/app/api/cron
+exit=0
+
+$ command grep -rnE 'CRON_SECRET|ADMIN_API_KEY|ADMIN_EMAILS' src
+src/app/auth/callback/route.test.ts:33: *   `ADMIN_EMAILS` is parsed at MODULE LOAD (route.ts:22-25), not per request.
+src/app/auth/callback/route.test.ts:34: *   Setting `process.env.ADMIN_EMAILS` inside a `beforeEach` does nothing at all
+src/app/auth/callback/route.test.ts:150: * `process.env.ADMIN_EMAILS`. See the WHY block in the file header.
+src/app/auth/callback/route.test.ts:205:    delete process.env.ADMIN_EMAILS;
+src/app/auth/callback/route-defect.test.ts:199:    delete process.env.ADMIN_EMAILS;
+src/app/auth/callback/route-defect.test.ts:254:    process.env.ADMIN_EMAILS = adminAddress;
+src/__tests__/api/admin/admin-guard-characterization.test.ts:41: * inline client) return the elevated fake B. `ADMIN_API_KEY` is unset, which
+src/__tests__/api/admin/admin-guard-characterization.test.ts:79:  "ADMIN_API_KEY",
+src/__tests__/api/admin/admin-guard-characterization.test.ts:97:  delete process.env.ADMIN_API_KEY;
+src/__tests__/api/admin/adminArmTable.ts:35: *   - `machineKey`: the arm gates on `ADMIN_API_KEY` alone and accepts every
+src/__tests__/api/admin/admin-guard-defect.test.ts:28: *   D3  F-001, calculate-popularity POST and GET with `ADMIN_API_KEY` unset
+src/__tests__/api/admin/admin-guard-defect.test.ts:132: * ADMIN_API_KEY gate is gone (F-001, FO-01).
+src/__tests__/api/admin/admin-guard-defect.test.ts:178:  "ADMIN_API_KEY",
+src/__tests__/api/admin/admin-guard-defect.test.ts:196:  delete process.env.ADMIN_API_KEY;
+src/__tests__/api/admin/admin-guard-defect.test.ts:281:describe("D3 (F-001): calculate-popularity with ADMIN_API_KEY unset", () => {
+exit=0
+
+$ command grep -rnE 'CRON_SECRET|ADMIN_API_KEY|ADMIN_EMAILS' src --exclude='*.test.ts' --exclude='*.test.tsx'
+src/__tests__/api/admin/adminArmTable.ts:35: *   - `machineKey`: the arm gates on `ADMIN_API_KEY` alone and accepts every
+exit=0
+
+$ npx tsc --noEmit
+.next/types/validator.ts(809,39): error TS2307: Cannot find module '../../src/app/api/cron/send-feedback-requests/route.js' or its corresponding type declarations.
+.next/types/validator.ts(818,39): error TS2307: Cannot find module '../../src/app/api/cron/send-reminders/route.js' or its corresponding type declarations.
+exit=2
+
+--- (resumed executor, 2026-09-27T00:35:15Z) ---
+
+The tsc failure above is two stale route entries in the generated
+.next/types/validator.ts, not a source error. The installed Next 16 documents
+typegen: node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md:202
+('Types are generated during next dev, next build or next typegen') and
+01-app/02-guides/upgrading/version-16.md:297. Command used: npx next typegen
+(npm run build was NOT needed).
+
+$ npx next typegen
+Generating route types...
+✓ Types generated successfully
+exit=0
+
+$ grep -c 'api/cron' .next/types/validator.ts
+0
+exit=1 (grep -c prints 0 and exits 1 when nothing matches)
+
+$ npx tsc --noEmit
+exit=0
+
+$ test ! -e src/app/api/zz-scratch-boundary   # the scratch route is gone
+exit=0
+
+$ node scripts/check-elevated-ratchet.mjs --write && cmp eslint.elevated-allowlist.mjs <copy taken before --write>
+wrote 0 entries to eslint.elevated-allowlist.mjs
+BYTE-IDENTICAL (the generated file is exactly what the ratchet's own write mode renders)
+exit=0
+
+$ npx jest --ci
+Test Suites: 1 skipped, 95 passed, 95 of 96 total
+Tests:       1 skipped, 1769 passed, 1770 total
+Snapshots:   0 total
+Time:        2.91 s
+exit=0
+
+=== 4. Notes ===
+
+- The ratchet's new-entry FAIL branch runs before the empty-list PASS branch,
+  so a live callsite with committed=0 still exits 1: the failure is not weakened.
+- 'command grep -rnE CRON_SECRET|ADMIN_API_KEY|ADMIN_EMAILS src' is not empty: every
+  remaining hit is in a characterization or defect test (process.env fixture
+  names and comments) or in the test helper src/__tests__/api/admin/adminArmTable.ts
+  (a comment). No production source reads any of the three. Those test files are
+  PRESERVE characterization and are not edited to satisfy a grep (constraint 2).
+  F-040's last clause - no production reader - holds.
+- .planning/audit/inventory/endpoints.json is NOT touched here. Its two cron rows are
+  retained by the classifier as DEC-55 retained api.auth-debug and are flagged for
+  regeneration in plan 06-15.
+- src/server/__tests__/csrf.test.ts keeps the cron path as a fixture string only (kept).
+
+$ test ! -e src/app/api/cron && npm run lint && node scripts/check-elevated-ratchet.mjs && npx tsc --noEmit   # plan <verify>
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+exit=0

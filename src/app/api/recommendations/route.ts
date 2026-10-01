@@ -22,15 +22,24 @@ import {
   type ScoreBreakdown,
 } from "@/lib/recommendations";
 import { getESTNowISO } from "@/lib/timezone";
+import { parseQuery } from "@/server/body";
+import { getElevatedClient } from "@/server/db/elevated";
+import { RecommendationsQuery } from "@/contracts/recommendations";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * GET handler - recommendations for the current user (or anonymous fallback)
  */
-export async function GET(request: NextRequest) {
+// The private class sends the `private, no-store` each 200 below set itself
+// before 06-14, and now the 500 carries it too.
+export const GET = withRoute({ cache: "private", action: "fetch recommendations" }, async (request: NextRequest) => {
   try {
     const supabase = await createClient();
-    const searchParams = request.nextUrl.searchParams;
-    const topK = parseInt(searchParams.get("top_k") || "10", 10);
+    // top_k is bounded to 1..50 before any database query or MMR work.
+    const query = parseQuery(request.nextUrl.searchParams, RecommendationsQuery);
+    if (!query.ok) return query.response;
+    const topK = query.data.top_k;
 
     // --- 1. Authenticate user (anonymous is OK) ---
     const {
@@ -41,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     // Anonymous users get popularity fallback
     if (!user) {
-      const { data: popularEvents } = await supabase
+      const { data: popularEvents, error: popularError } = await supabase
         .from("events")
         .select("*, clubs(*)")
         .eq("status", "approved")
@@ -49,6 +58,8 @@ export async function GET(request: NextRequest) {
         .gte("start_date", nowISO)
         .order("start_date", { ascending: true })
         .limit(topK);
+
+      if (popularError) throw popularError;
 
       const recommendations = (popularEvents ?? []).map((event) => ({
         event_id: event.id,
@@ -63,22 +74,22 @@ export async function GET(request: NextRequest) {
           recommendations,
           source: "anonymous" as const,
           total_events: recommendations.length,
-        },
-        { headers: { "Cache-Control": "private, no-store" } }
+        }
       );
     }
 
     // --- 2. Fetch user profile (interest_tags + inferred_tags) ---
-    const { data: userProfileData } = await supabase
+    const { data: userProfileData, error: profileError } = await supabase
       .from("users")
-      .select("interest_tags, inferred_tags, full_name")
+      .select("interest_tags, inferred_tags")
       .eq("id", user.id)
       .single();
+
+    if (profileError) throw profileError;
 
     type UserProfileRow = {
       interest_tags: string[] | null;
       inferred_tags: string[] | null;
-      full_name: string | null;
     };
     const userProfile = userProfileData as UserProfileRow | null;
     const allUserTags = [
@@ -88,12 +99,14 @@ export async function GET(request: NextRequest) {
     const expandedTags = expandTagsWithHierarchy(allUserTags);
 
     // --- 3. Query user_event_scores for precomputed scores ---
-    const { data: scoreRows } = await (supabase
+    const { data: scoreRows, error: scoresError } = await (supabase
       .from("user_event_scores" as any)
       .select("event_id, score, breakdown, events(*, clubs(*))")
       .eq("user_id", user.id)
       .order("score", { ascending: false })
       .limit(topK * 3) as any);
+
+    if (scoresError) throw scoresError;
 
     type ScoreRow = {
       event_id: string;
@@ -114,7 +127,7 @@ export async function GET(request: NextRequest) {
 
     if (!hasScores) {
       source = "popular_fallback";
-      const { data: popularEvents } = await supabase
+      const { data: popularEvents, error: popularError } = await supabase
         .from("events")
         .select("*, clubs(*)")
         .eq("status", "approved")
@@ -122,6 +135,8 @@ export async function GET(request: NextRequest) {
         .gte("start_date", nowISO)
         .order("start_date", { ascending: true })
         .limit(topK);
+
+      if (popularError) throw popularError;
 
       const recommendations = (popularEvents ?? []).map((event) => ({
         event_id: event.id,
@@ -136,8 +151,7 @@ export async function GET(request: NextRequest) {
           recommendations,
           source,
           total_events: recommendations.length,
-        },
-        { headers: { "Cache-Control": "private, no-store" } }
+        }
       );
     }
 
@@ -145,13 +159,15 @@ export async function GET(request: NextRequest) {
 
     // --- 5. Apply session boost from recent interactions (last 2 hours) ---
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-    const { data: recentInteractions } = await supabase
+    const { data: recentInteractions, error: interactionsError } = await supabase
       .from("user_interactions")
       .select("event_id, events(tags)")
       .eq("user_id", user.id)
       .gte("created_at", twoHoursAgo)
       .order("created_at", { ascending: false })
       .limit(10);
+
+    if (interactionsError) throw interactionsError;
 
     // Collect tags from recent interactions
     const sessionTags: string[] = [];
@@ -182,22 +198,34 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // --- 6. A/B experiment framework (preserved) ---
+    // --- 6. A/B experiment framework ---
+    // experiments and experiment_variants carry admin-only policies, so on the
+    // cookie client a non-admin read no running experiment and was never
+    // assigned (F-017). The three reads and the assignment insert go through
+    // the elevated door (REGISTRY.md row, DEC-68). The insert's user_id is the
+    // authenticated caller's id from getUser() above and nothing else; no
+    // request value reaches this block.
     let experimentVariantId: string | null = null;
     let experimentLambda: number | null = null;
+    const elevated = getElevatedClient();
 
-    const { data: activeExperiments } = await supabase
+    const { data: activeExperiments, error: experimentError } = await elevated
       .from("experiments")
       .select("id, name, status")
-      .eq("status", "running");
+      .eq("status", "running")
+      .order("id", { ascending: true })
+      .limit(1);
+    if (experimentError) throw experimentError;
 
     if (activeExperiments && activeExperiments.length > 0) {
       const experiment = activeExperiments[0] as { id: string; name: string };
 
-      const { data: variantRows } = await supabase
+      const { data: variantRows, error: variantsError } = await elevated
         .from("experiment_variants")
         .select("*")
         .eq("experiment_id", experiment.id);
+
+      if (variantsError) throw variantsError;
 
       type VRow = {
         id: string;
@@ -209,29 +237,45 @@ export async function GET(request: NextRequest) {
       const variants = (variantRows ?? []) as VRow[];
 
       if (variants.length >= 2) {
-        const { data: existingAssignment } = await supabase
+        const { data: existingAssignment, error: assignmentError } = await elevated
           .from("experiment_assignments")
           .select("variant_id")
           .eq("experiment_id", experiment.id)
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
+        if (assignmentError) throw assignmentError;
 
         let assignedVariant: VRow;
         if (existingAssignment) {
-          assignedVariant =
-            variants.find((v) => v.id === existingAssignment.variant_id) ??
-            variants[0];
+          const existingVariant = variants.find((v) => v.id === existingAssignment.variant_id);
+          if (!existingVariant) throw new Error("Experiment assignment variant is missing");
+          assignedVariant = existingVariant;
         } else {
           assignedVariant = pickVariant(
             user.id,
             experiment.id,
             variants
           ) as VRow;
-          await supabase.from("experiment_assignments").insert({
+          const { error: insertError } = await elevated.from("experiment_assignments").insert({
             experiment_id: experiment.id,
             variant_id: assignedVariant.id,
             user_id: user.id,
           });
+          if (insertError) {
+            if (insertError.code !== "23505") throw insertError;
+            // Two initial requests may race. Honour the committed winner
+            // instead of claiming the attempted (unpersisted) assignment.
+            const { data: winner, error: winnerError } = await elevated
+              .from("experiment_assignments")
+              .select("variant_id")
+              .eq("experiment_id", experiment.id)
+              .eq("user_id", user.id)
+              .single();
+            if (winnerError) throw winnerError;
+            const winnerVariant = variants.find((v) => v.id === winner?.variant_id);
+            if (!winnerVariant) throw new Error("Experiment assignment variant is missing");
+            assignedVariant = winnerVariant;
+          }
         }
 
         experimentVariantId = assignedVariant.id;
@@ -242,8 +286,7 @@ export async function GET(request: NextRequest) {
     }
 
     // --- 6b. MMR diversity re-ranking ---
-    const diversityParam = searchParams.get("diversity");
-    const baseLambda = diversityParam ? parseFloat(diversityParam) : 0.7;
+    const baseLambda = query.data.diversity;
     const lambda =
       experimentLambda ??
       (isNaN(baseLambda) ? 0.7 : Math.max(0, Math.min(1, baseLambda)));
@@ -308,14 +351,13 @@ export async function GET(request: NextRequest) {
         },
         experiment_variant_id: experimentVariantId,
         total_events: recommendations.length,
-      },
-      { headers: { "Cache-Control": "private, no-store" } }
+      }
     );
   } catch (error) {
-    console.error("Error fetching recommendations:", error);
+    log.error("Error fetching recommendations", { error });
     return NextResponse.json(
       { error: "Failed to fetch recommendations" },
       { status: 500 }
     );
   }
-}
+});

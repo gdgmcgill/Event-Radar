@@ -1,0 +1,378 @@
+Token-less build proof — plan 06-16 Task 2 (REFAC-21, DEC-61, threat T-06-16-03)
+Recorded 2026-09-27T15:02:22Z · HEAD=0013c0896c2ca694b0ae8f6ac7b8318dda22c7dd (Task 2 changes in the working tree, committed with this file)
+
+What this proves: with withSentryConfig wrapping next.config.js, next build succeeds with NO Sentry
+credential at all. The Phase 5 CI-env command (05-04 build-ci-env.txt) is reused and extended: every
+SENTRY_* variable and NEXT_PUBLIC_SENTRY_DSN is set to the EMPTY string, not unset, because @next/env
+never overrides an already-defined variable (research C8), so no local .env file can supply one.
+CI=true reproduces CI's non-silent plugin output; SENTRYCLI_SKIP_DOWNLOAD=1 matches ci.yml.
+sourcemaps.disable is !SENTRY_AUTH_TOKEN, so nothing is uploaded; the plugin reports it will not
+create a release, which is the expected warning.
+
+------------------------------------------------------------------------------
+1. CI-env build (verbatim)
+------------------------------------------------------------------------------
+$ CI=true SENTRYCLI_SKIP_DOWNLOAD=1 SENTRY_AUTH_TOKEN= SENTRY_DSN= NEXT_PUBLIC_SENTRY_DSN= SENTRY_ORG= SENTRY_PROJECT= SUPABASE_SERVICE_ROLE_KEY= NEXT_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=placeholder-key npm run build
+(started at the timestamp on the first line)
+2026-09-27T14:56:14Z
+
+> uni-verse@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.js took 178ms
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 4.4s
+  Running next.config.js provided runAfterProductionCompile ...
+[@sentry/nextjs - After Production Compile] Warning: No auth token provided. Will not create release. Please set the `authToken` option. You can find information on how to generate a Sentry auth token here: https://docs.sentry.io/api/auth/
+✓ Completed runAfterProductionCompile in 69ms
+  Running TypeScript ...
+  Finished TypeScript in 5.6s ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/98) ...
+  Generating static pages using 9 workers (24/98) 
+  Generating static pages using 9 workers (48/98) 
+  Generating static pages using 9 workers (73/98) 
+(node:95852) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✓ Generating static pages using 9 workers (98/98) in 362ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /admin-login
+├ ƒ /admin/experiments
+├ ƒ /admin/experiments/[id]
+├ ƒ /api/admin/analytics/events
+├ ƒ /api/admin/analytics/users
+├ ƒ /api/admin/audit-log
+├ ƒ /api/admin/calculate-popularity
+├ ƒ /api/admin/clubs
+├ ƒ /api/admin/clubs/[id]
+├ ƒ /api/admin/events
+├ ƒ /api/admin/events/[id]
+├ ƒ /api/admin/events/[id]/edits
+├ ƒ /api/admin/events/[id]/status
+├ ƒ /api/admin/experiments
+├ ƒ /api/admin/experiments/[id]
+├ ƒ /api/admin/experiments/[id]/results
+├ ƒ /api/admin/featured
+├ ƒ /api/admin/featured/[id]
+├ ƒ /api/admin/organizer-requests
+├ ƒ /api/admin/organizer-requests/[id]
+├ ƒ /api/admin/organizers
+├ ƒ /api/admin/reports
+├ ƒ /api/admin/reports/[id]
+├ ƒ /api/admin/stats
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[id]
+├ ƒ /api/admin/users/[id]/ban
+├ ƒ /api/calendar/events
+├ ƒ /api/clubs
+├ ƒ /api/clubs/[id]
+├ ƒ /api/clubs/[id]/analytics
+├ ƒ /api/clubs/[id]/appeal
+├ ƒ /api/clubs/[id]/events
+├ ƒ /api/clubs/[id]/follow
+├ ƒ /api/clubs/[id]/invites
+├ ƒ /api/clubs/[id]/members
+├ ƒ /api/clubs/[id]/members/role
+├ ƒ /api/clubs/[id]/transfer
+├ ƒ /api/clubs/banner
+├ ƒ /api/clubs/featured
+├ ƒ /api/clubs/friends
+├ ƒ /api/clubs/logo
+├ ƒ /api/clubs/new
+├ ƒ /api/clubs/trending
+├ ƒ /api/events
+├ ƒ /api/events/[id]
+├ ƒ /api/events/[id]/analytics
+├ ƒ /api/events/[id]/appeal
+├ ƒ /api/events/[id]/friends
+├ ƒ /api/events/[id]/invite
+├ ƒ /api/events/[id]/report
+├ ƒ /api/events/[id]/reviews
+├ ƒ /api/events/[id]/rsvp
+├ ƒ /api/events/[id]/save
+├ ƒ /api/events/create
+├ ƒ /api/events/export
+├ ƒ /api/events/featured
+├ ƒ /api/events/following
+├ ƒ /api/events/friends-activity
+├ ƒ /api/events/friends-organizing
+├ ƒ /api/events/happening-now
+├ ƒ /api/events/my-events
+├ ƒ /api/events/new
+├ ƒ /api/events/popular
+├ ƒ /api/events/upload-image
+├ ƒ /api/feedback
+├ ƒ /api/health
+├ ƒ /api/interactions
+├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+├ ƒ /api/my-clubs
+├ ƒ /api/notifications
+├ ƒ /api/notifications/[id]
+├ ƒ /api/notifications/count
+├ ƒ /api/onboarding/complete
+├ ƒ /api/organizer-requests
+├ ƒ /api/profile/avatar
+├ ƒ /api/profile/banner
+├ ƒ /api/profile/inferred-tags
+├ ƒ /api/profile/interests
+├ ƒ /api/recommendations
+├ ƒ /api/recommendations/analytics
+├ ƒ /api/recommendations/batch
+├ ƒ /api/recommendations/feedback
+├ ƒ /api/user/engagement
+├ ƒ /api/user/following
+├ ƒ /api/users/[id]
+├ ƒ /api/users/[id]/follow
+├ ƒ /api/users/me/friends
+├ ƒ /api/users/me/requests
+├ ƒ /api/users/me/suggestions
+├ ƒ /api/users/saved-events
+├ ƒ /api/users/search
+├ ƒ /auth/callback
+├ ƒ /auth/signout
+├ ƒ /banned
+├ ○ /calendar
+├ ƒ /clubs
+├ ƒ /clubs/[id]
+├ ○ /clubs/create
+├ ○ /contributors
+├ ○ /create-event
+├ ○ /docs
+├ ƒ /events/[id]
+├ ○ /feedback
+├ ○ /friends
+├ ○ /health
+├ ○ /help
+├ ƒ /invites/[token]
+├ ○ /landing
+├ ƒ /moderation
+├ ƒ /moderation/appeals
+├ ƒ /moderation/audit-log
+├ ƒ /moderation/clubs
+├ ƒ /moderation/events
+├ ƒ /moderation/featured
+├ ƒ /moderation/organizer-requests
+├ ƒ /moderation/organizers
+├ ƒ /moderation/pending
+├ ƒ /moderation/reports
+├ ƒ /moderation/stats
+├ ƒ /moderation/users
+├ ƒ /my-clubs
+├ ƒ /my-clubs/[id]
+├ ○ /my-events
+├ ○ /notifications
+├ ƒ /onboarding
+├ ○ /people
+├ ○ /privacy
+├ ƒ /profile
+├ ○ /robots.txt
+├ ○ /settings
+├ ƒ /sitemap.xml
+├ ○ /terms
+└ ƒ /users/[id]
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+exit=0
+
+Warnings quoted:
+  - [@sentry/nextjs - After Production Compile] Warning: No auth token provided. Will not create release.
+    Expected: no SENTRY_AUTH_TOKEN, sourcemaps disabled, no upload, no release.
+  - (node) [DEP0169] DeprecationWarning: url.parse() — pre-existing; present in the 06-13 and 06-14 gate builds.
+
+------------------------------------------------------------------------------
+2. Default npm run build (verbatim)
+------------------------------------------------------------------------------
+$ npm run build
+2026-09-27T14:56:57Z
+
+> uni-verse@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local, .env
+✓ Running next.config.js took 188ms
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.7s
+  Running next.config.js provided runAfterProductionCompile ...
+✓ Completed runAfterProductionCompile in 72ms
+  Running TypeScript ...
+  Finished TypeScript in 1479ms ...
+  Collecting page data using 9 workers ...
+  Generating static pages using 9 workers (0/98) ...
+  Generating static pages using 9 workers (24/98) 
+  Generating static pages using 9 workers (48/98) 
+  Generating static pages using 9 workers (73/98) 
+(node:95965) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+✓ Generating static pages using 9 workers (98/98) in 382ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /admin-login
+├ ƒ /admin/experiments
+├ ƒ /admin/experiments/[id]
+├ ƒ /api/admin/analytics/events
+├ ƒ /api/admin/analytics/users
+├ ƒ /api/admin/audit-log
+├ ƒ /api/admin/calculate-popularity
+├ ƒ /api/admin/clubs
+├ ƒ /api/admin/clubs/[id]
+├ ƒ /api/admin/events
+├ ƒ /api/admin/events/[id]
+├ ƒ /api/admin/events/[id]/edits
+├ ƒ /api/admin/events/[id]/status
+├ ƒ /api/admin/experiments
+├ ƒ /api/admin/experiments/[id]
+├ ƒ /api/admin/experiments/[id]/results
+├ ƒ /api/admin/featured
+├ ƒ /api/admin/featured/[id]
+├ ƒ /api/admin/organizer-requests
+├ ƒ /api/admin/organizer-requests/[id]
+├ ƒ /api/admin/organizers
+├ ƒ /api/admin/reports
+├ ƒ /api/admin/reports/[id]
+├ ƒ /api/admin/stats
+├ ƒ /api/admin/users
+├ ƒ /api/admin/users/[id]
+├ ƒ /api/admin/users/[id]/ban
+├ ƒ /api/calendar/events
+├ ƒ /api/clubs
+├ ƒ /api/clubs/[id]
+├ ƒ /api/clubs/[id]/analytics
+├ ƒ /api/clubs/[id]/appeal
+├ ƒ /api/clubs/[id]/events
+├ ƒ /api/clubs/[id]/follow
+├ ƒ /api/clubs/[id]/invites
+├ ƒ /api/clubs/[id]/members
+├ ƒ /api/clubs/[id]/members/role
+├ ƒ /api/clubs/[id]/transfer
+├ ƒ /api/clubs/banner
+├ ƒ /api/clubs/featured
+├ ƒ /api/clubs/friends
+├ ƒ /api/clubs/logo
+├ ƒ /api/clubs/new
+├ ƒ /api/clubs/trending
+├ ƒ /api/events
+├ ƒ /api/events/[id]
+├ ƒ /api/events/[id]/analytics
+├ ƒ /api/events/[id]/appeal
+├ ƒ /api/events/[id]/friends
+├ ƒ /api/events/[id]/invite
+├ ƒ /api/events/[id]/report
+├ ƒ /api/events/[id]/reviews
+├ ƒ /api/events/[id]/rsvp
+├ ƒ /api/events/[id]/save
+├ ƒ /api/events/create
+├ ƒ /api/events/export
+├ ƒ /api/events/featured
+├ ƒ /api/events/following
+├ ƒ /api/events/friends-activity
+├ ƒ /api/events/friends-organizing
+├ ƒ /api/events/happening-now
+├ ƒ /api/events/my-events
+├ ƒ /api/events/new
+├ ƒ /api/events/popular
+├ ƒ /api/events/upload-image
+├ ƒ /api/feedback
+├ ƒ /api/health
+├ ƒ /api/interactions
+├ ƒ /api/moderation/reviews/[targetType]/[targetId]
+├ ƒ /api/my-clubs
+├ ƒ /api/notifications
+├ ƒ /api/notifications/[id]
+├ ƒ /api/notifications/count
+├ ƒ /api/onboarding/complete
+├ ƒ /api/organizer-requests
+├ ƒ /api/profile/avatar
+├ ƒ /api/profile/banner
+├ ƒ /api/profile/inferred-tags
+├ ƒ /api/profile/interests
+├ ƒ /api/recommendations
+├ ƒ /api/recommendations/analytics
+├ ƒ /api/recommendations/batch
+├ ƒ /api/recommendations/feedback
+├ ƒ /api/user/engagement
+├ ƒ /api/user/following
+├ ƒ /api/users/[id]
+├ ƒ /api/users/[id]/follow
+├ ƒ /api/users/me/friends
+├ ƒ /api/users/me/requests
+├ ƒ /api/users/me/suggestions
+├ ƒ /api/users/saved-events
+├ ƒ /api/users/search
+├ ƒ /auth/callback
+├ ƒ /auth/signout
+├ ƒ /banned
+├ ○ /calendar
+├ ƒ /clubs
+├ ƒ /clubs/[id]
+├ ○ /clubs/create
+├ ○ /contributors
+├ ○ /create-event
+├ ○ /docs
+├ ƒ /events/[id]
+├ ○ /feedback
+├ ○ /friends
+├ ○ /health
+├ ○ /help
+├ ƒ /invites/[token]
+├ ○ /landing
+├ ƒ /moderation
+├ ƒ /moderation/appeals
+├ ƒ /moderation/audit-log
+├ ƒ /moderation/clubs
+├ ƒ /moderation/events
+├ ƒ /moderation/featured
+├ ƒ /moderation/organizer-requests
+├ ƒ /moderation/organizers
+├ ƒ /moderation/pending
+├ ƒ /moderation/reports
+├ ƒ /moderation/stats
+├ ƒ /moderation/users
+├ ƒ /my-clubs
+├ ƒ /my-clubs/[id]
+├ ○ /my-events
+├ ○ /notifications
+├ ƒ /onboarding
+├ ○ /people
+├ ○ /privacy
+├ ƒ /profile
+├ ○ /robots.txt
+├ ○ /settings
+├ ƒ /sitemap.xml
+├ ○ /terms
+└ ƒ /users/[id]
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+exit=0

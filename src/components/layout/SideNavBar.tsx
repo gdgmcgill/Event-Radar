@@ -64,11 +64,14 @@ function NavLink({
 function NotificationNavLink({
   pathname,
   collapsed,
+  enabled,
 }: {
   pathname: string;
   collapsed: boolean;
+  /** Only a signed-in user's count is requested (F-028: anonymous is 401). */
+  enabled: boolean;
 }) {
-  const unreadCount = useNotificationCount();
+  const unreadCount = useNotificationCount({ enabled });
   const isActive = pathname === "/notifications";
 
   return (
@@ -184,14 +187,18 @@ export function SideNavBar({ forceCollapsed = false }: { forceCollapsed?: boolea
               UNI-VERSE
             </h1>
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-widest mt-1">
-              McGill University
+              Montreal students
             </p>
           </div>
         </Link>
 
         {/* ── Notifications (prominent, above nav) ── */}
         {isAuthenticated && (
-          <NotificationNavLink pathname={pathname} collapsed={collapsed} />
+          <NotificationNavLink
+            pathname={pathname}
+            collapsed={collapsed}
+            enabled={isAuthenticated}
+          />
         )}
 
         {/* ── Navigation ── */}

@@ -3,8 +3,11 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { readQuery } from "@/server/body";
+import { OrganizerRequestsQuery } from "@/contracts/admin";
+import { logRouteError, withRoute } from "@/server/route";
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch organizer requests" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -12,14 +15,15 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const supabase = ctx.supabase;
 
-  const searchParams = request.nextUrl.searchParams;
-  const status = searchParams.get("status") || "pending";
-  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100);
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
+  const { status, limit, offset } = readQuery(
+    request.nextUrl.searchParams,
+    OrganizerRequestsQuery
+  );
 
   let query = supabase
     .from("organizer_requests")
-    .select("*, club:clubs(*), user:users(*)", { count: "exact" })
+    // DI-87: user_id and reviewed_by both reference users; name the subject FK.
+    .select("*, club:clubs(*), user:users!organizer_requests_user_id_fkey(*)", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -30,8 +34,9 @@ export async function GET(request: NextRequest) {
   const { data, error, count } = await query;
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ requests: data, total: count ?? 0 });
-}
+});

@@ -25,3 +25,8 @@ describe("isBanned", () => {
     ).toBe(false);
   });
 });
+
+// M0 DI-76: corrupted upstream data fails closed.
+it("keeps a ban active when its expiry is unparseable", () => {
+  expect(isBanned({ banned_at: "2026-03-01T00:00:00Z", ban_expires_at: "invalid" })).toBe(true);
+});

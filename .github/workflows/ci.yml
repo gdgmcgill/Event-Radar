@@ -24,6 +24,12 @@ permissions:
 env:
   NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder-key"
+  # DEC-61 (plan 06-16). @sentry/nextjs pulls in @sentry/cli, whose postinstall
+  # downloads a platform binary from the network when the optional platform
+  # package is absent. The binary only uploads source maps, which the build
+  # disables without SENTRY_AUTH_TOKEN. Set at workflow level so every job's
+  # `npm ci` skips that install-time download.
+  SENTRYCLI_SKIP_DOWNLOAD: "1"
 
 # WR-07, half two — THIRD-PARTY ACTIONS ARE PINNED BY COMMIT SHA, NOT BY TAG.
 # A tag is a mutable pointer: `@v4` can be force-moved to any commit by whoever
@@ -66,11 +72,32 @@ jobs:
       - name: Migration filename parse check
         run: node scripts/check-migration-filenames.mjs
 
+      - name: Public-table RLS coverage and client-role guard
+        run: node scripts/check-rls-coverage.mjs
+
       # DI-31 (plan 04-03). The shrink-only census of files under src/** that
       # reach the service-role client. Fails when a file the committed
       # allow-list does not hold reaches it; the list may only shrink.
       - name: Elevated-callsite ratchet
         run: node scripts/check-elevated-ratchet.mjs
+
+      # Plan 06-04 (REFAC-15, F-094, DEC-65). The shrink-only census of raw
+      # input reads: request.json()/formData() outside src/server/body.ts, and
+      # query reads or schema-less readJsonObject in route files. Fails when a
+      # site the committed scripts/contracts-allowlist.json does not hold appears.
+      # Plan 06-11 (REFAC-16, DEC-67) adds --client: every non-route file that
+      # sends a mutation to /api/ must import its contract from @/contracts/, so
+      # a contract change that breaks a caller fails the type-check.
+      - name: Contracts census
+        run: node scripts/check-contracts.mjs && node scripts/check-contracts.mjs --client
+
+      # Plan 06-12 (REFAC-20, F-059, DEC-74, DEC-75). The shrink-only census of
+      # raw console calls in server code (S1) and of caught-error text in route
+      # files (S2). Fails when a site the committed
+      # scripts/server-console-allowlist.json does not hold appears; the route
+      # sweeps (06-13, 06-14) shrink it.
+      - name: Server console census
+        run: node scripts/check-server-console.mjs
 
       # Plan 04-01's gate: every characterization suite carries its tag, a
       # defect-tagged suite cites a finding id, and every F-nnn cited is in
@@ -80,6 +107,9 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Edge handler contracts in Deno
+        run: npx --yes --package=deno@2.9.6 deno test --frozen --config supabase/functions/events-webhook/deno.json supabase/functions/tests/webhook-handler.test.ts
 
       - name: Production vulnerability gate
         run: npm audit --audit-level=high --omit=dev
@@ -190,6 +220,12 @@ jobs:
 
       - name: Seed coverage and RLS assertions
         run: supabase test db --local
+
+      - name: Competing moderation transactions
+        run: python3 scripts/test-m0-atomic-concurrency.py
+
+      - name: Live local Edge webhook contracts
+        run: npx tsx scripts/test-edge-local.ts
 
       - name: Install the browser engine
         run: npx playwright install --with-deps chromium

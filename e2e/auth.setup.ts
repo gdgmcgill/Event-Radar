@@ -3,9 +3,11 @@
  *
  * Phase 03-refactor-foundations-schema-truth-and-the-seam-kit · plan 03-07
  *
- * THE PROBLEM THIS SOLVES. The application signs in with Google OAuth only
- * (`SignInButton.tsx` → `signInWithOAuth`), which cannot run against a local
- * Supabase stack. Three options were evaluated (research § Pattern 6):
+ * THE PROBLEM THIS SOLVES. The original Google OAuth flow could not run
+ * against a local Supabase stack. M1 also offers email OTP, separately
+ * verified with local mail capture. This shared persona setup keeps the
+ * existing library-serialized local password sessions to limit sign-ins.
+ * Three options were evaluated (research § Pattern 6):
  *
  *   - drive `/admin-login` — real and shipped, but it signs out any account
  *     whose `roles` lacks `admin`, so it works for exactly one persona;
@@ -116,11 +118,9 @@ for (const persona of PERSONAS) {
     // either direction is a real authorization defect, and it is checked here on
     // every run rather than only in the one spec that features it.
     const expectedLanding =
-      persona.key === "mid_onboarding_student"
-        ? "/onboarding"
-        : persona.banned_at !== null && persona.key !== "suspension_expired"
-          ? "/banned"
-          : "/";
+      persona.banned_at !== null && persona.key !== "suspension_expired"
+        ? "/banned"
+        : "/"; // P1-02 public browsing is available during onboarding.
 
     await page.goto("/");
     expect(

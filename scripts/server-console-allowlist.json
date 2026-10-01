@@ -1,0 +1,8 @@
+[
+  {
+    "file": "src/lib/tagMapping.ts",
+    "rule": "S1",
+    "count": 1,
+    "reason": "module shared with client components; stays on console"
+  }
+]

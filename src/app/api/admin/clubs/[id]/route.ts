@@ -5,13 +5,16 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
-import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
-import { readJsonObject } from "@/server/body";
+import { REJECTION_CATEGORIES } from "@/types";
+import { parseBody } from "@/server/body";
+import { AdminClubDecisionBody } from "@/contracts/admin";
+import { logRouteError, withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update club status" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -20,47 +23,11 @@ export async function PATCH(
   const user = auth.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { status, category, message: rejectionMessage } = body;
-
-  if (!["approved", "rejected", "suspended"].includes(status)) {
-    return NextResponse.json(
-      { error: "Status must be 'approved', 'rejected', or 'suspended'" },
-      { status: 400 }
-    );
-  }
-
-  if (status === "rejected") {
-    if (!category || !rejectionMessage?.trim()) {
-      return NextResponse.json(
-        { error: "Rejection requires category and message" },
-        { status: 400 }
-      );
-    }
-    if (!(category in REJECTION_CATEGORIES)) {
-      return NextResponse.json(
-        { error: "Invalid rejection category" },
-        { status: 400 }
-      );
-    }
-  }
-
-  if (status === "suspended") {
-    if (!category || !rejectionMessage?.trim()) {
-      return NextResponse.json(
-        { error: "Suspension requires category and message" },
-        { status: 400 }
-      );
-    }
-    if (!(category in REJECTION_CATEGORIES)) {
-      return NextResponse.json(
-        { error: "Invalid suspension category" },
-        { status: 400 }
-      );
-    }
-  }
+  // The status, then a rejection's or suspension's category and message, in
+  // the ladder's order and texts (src/contracts/admin.ts).
+  const parsed = await parseBody(request, AdminClubDecisionBody);
+  if (!parsed.ok) return parsed.response;
+  const { status, category, message: rejectionMessage } = parsed.data;
 
   // The club read and update, the moderation review and the owner membership
   // run on the caller's cookie client: the admin policies on clubs
@@ -104,6 +71,7 @@ export async function PATCH(
     .eq("id", id);
 
   if (updateError) {
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -113,7 +81,7 @@ export async function PATCH(
       target_type: "club",
       target_id: id,
       action: "rejection",
-      category: category as RejectionCategory,
+      category,
       message: rejectionMessage.trim(),
       author_id: user.id,
     });
@@ -122,7 +90,7 @@ export async function PATCH(
       target_type: "club",
       target_id: id,
       action: "suspension",
-      category: category as RejectionCategory,
+      category,
       message: rejectionMessage.trim(),
       author_id: user.id,
     });
@@ -161,7 +129,7 @@ export async function PATCH(
       metadata: { club_name: club.name },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   if (status === "approved" && club.created_by) {
@@ -208,13 +176,13 @@ export async function PATCH(
         message: `Your club "${club.name}" has been approved. You are now the owner and can create events.`,
       });
     } catch (notifErr) {
-      console.error("[Admin] Failed to send club notification:", notifErr);
+      log.error("Failed to send club notification", { scope: "Admin", error: notifErr });
     }
   }
 
   if (status === "suspended" && club.created_by) {
     try {
-      const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
+      const categoryLabel = REJECTION_CATEGORIES[category];
       await getElevatedClient().from("notifications").insert({
         user_id: club.created_by,
         type: "club_suspended",
@@ -223,13 +191,13 @@ export async function PATCH(
         club_id: id,
       });
     } catch (notifErr) {
-      console.error("[Admin] Failed to send club notification:", notifErr);
+      log.error("Failed to send club notification", { scope: "Admin", error: notifErr });
     }
   }
 
   if (status === "rejected" && club.created_by) {
     try {
-      const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
+      const categoryLabel = REJECTION_CATEGORIES[category];
       await getElevatedClient().from("notifications").insert({
         user_id: club.created_by,
         type: "club_rejected",
@@ -238,9 +206,9 @@ export async function PATCH(
         club_id: id,
       });
     } catch (notifErr) {
-      console.error("[Admin] Failed to send club notification:", notifErr);
+      log.error("Failed to send club notification", { scope: "Admin", error: notifErr });
     }
   }
 
   return NextResponse.json({ success: true });
-}
+});

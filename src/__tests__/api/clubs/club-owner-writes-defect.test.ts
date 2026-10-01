@@ -122,7 +122,7 @@ function tables(): Record<string, FakeRow[]> {
 
 beforeEach(() => {
   mockCookie = createFakeSupabase({ user: OWNER, tables: tables() });
-  mockElevated = createFakeSupabase({ user: null, tables: tables() });
+  mockElevated = createFakeSupabase({ user: null, tables: tables(), rpc: { transfer_club_ownership_atomic: { data: "ok", error: null } } });
   jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -320,57 +320,15 @@ describe("D5 POST /api/clubs/[id]/transfer as the owner", () => {
     );
   }
 
-  test("stays: every write is on the elevated client, none on the cookie client", async () => {
+  test("every mutation is contained in one elevated transaction", async () => {
     const response = await transfer();
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ success: true });
-    expect(
-      mockCookie.calls
-        .filter((c) => c.operation !== "select")
-        .map((c) => `${c.table}.${c.operation}`)
-    ).toEqual([]);
-    expect(
-      mockElevated.calls
-        .filter((c) => c.operation !== "select")
-        .map((c) => `${c.table}.${c.operation}`)
-    ).toEqual([
-      "club_members.update",
-      "club_members.update",
-      "admin_audit_log.insert",
-    ]);
-  });
-
-  test("stays: the promotion is filtered by the target's membership id", async () => {
-    await transfer();
-    const [promote] = updates(mockElevated.calls, "club_members");
-    expect(promote.payload).toEqual({ role: "owner" });
-    expect(filters(promote)).toEqual([
-      { op: "eq", column: "id", value: ORGANIZER_MEMBERSHIP_ID },
-    ]);
-  });
-
-  test("fixed (DEC-40): the demotion is filtered by (club_id, user_id), not the caller's membership id", async () => {
-    await transfer();
-    const demote = updates(mockElevated.calls, "club_members")[1];
-    expect(demote.payload).toEqual({ role: "organizer" });
-    expect(filters(demote)).toEqual([
-      { op: "eq", column: "club_id", value: CLUB_ID },
-      { op: "eq", column: "user_id", value: OWNER.id },
-    ]);
-  });
-
-  test("stays: the ownership-transfer audit row is inserted on the elevated client", async () => {
-    await transfer();
-    const audit = mockElevated.calls.filter(
-      (c) => c.table === "admin_audit_log" && c.operation === "insert"
-    );
-    expect(audit).toHaveLength(1);
-    expect(audit[0].payload).toEqual({
-      admin_user_id: OWNER.id,
-      action: "club_ownership_transferred",
-      target_type: "club",
-      target_id: CLUB_ID,
-      metadata: { new_owner_id: ORGANIZER_ID, previous_owner_id: OWNER.id },
+    expect(mockCookie.calls.filter((c) => c.operation !== "select")).toEqual([]);
+    expect(mockElevated.calls).toHaveLength(1);
+    expect(mockElevated.calls[0]).toMatchObject({
+      table: "transfer_club_ownership_atomic", operation: "rpc",
+      payload: { p_club_id: CLUB_ID, p_actor_id: OWNER.id, p_new_owner_id: ORGANIZER_ID },
     });
   });
 });

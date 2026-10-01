@@ -26,7 +26,7 @@ export function Footer() {
               UNI-VERSE
             </h3>
             <p className="text-sm text-muted-foreground max-w-md">
-              Campus event discovery for McGill University.
+              Opportunities for Montreal students. Built from the McGill community.
             </p>
           </div>
 

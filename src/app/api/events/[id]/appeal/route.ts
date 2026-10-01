@@ -4,12 +4,15 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { EventAppealBody } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST(
+export const POST = withRoute({ cache: "private", action: "submit appeal" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const active = requireActiveUser(ctx);
   if (!active.ok) return active.response;
@@ -18,42 +21,29 @@ export async function POST(
   const user = active.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { message } = body;
+  // The contract (plan 06-08, REFAC-15): "Appeal message is required" for a
+  // missing or blank message. F-094: a non-string message is that 400 (it
+  // threw on .trim(), an HTML 500) (INTENTIONAL BEHAVIOUR CHANGE).
+  const parsed = await parseBody(request, EventAppealBody);
+  if (!parsed.ok) return parsed.response;
+  const { message } = parsed.data;
 
-  if (!message?.trim()) {
-    return NextResponse.json(
-      { error: "Appeal message is required" },
-      { status: 400 }
-    );
-  }
-
-  // The appeal review ("Creators can appeal their items"), the status reset
-  // ("Organizers can update own events") and the final re-read ("Organizers
-  // can view own events") run on the caller's cookie client (DEC-49). The
-  // pre-read, the admin lookup and the admin notifications go through the
-  // elevated door.
+  // DI-74: scope the pre-read to the creator under RLS. Hidden, deleted,
+  // missing and another creator's events share the same 404.
   const supabase = ctx.supabase;
-
-  // The pre-read runs before the creator check. On the cookie client a
-  // non-creator could not see a rejected or suspended event and would get 404
-  // "Event not found" where this route answers 403 "Forbidden". REGISTRY.md
-  // row: "Read an appealed event before the creator check".
-  const { data: event, error: fetchError } = await getElevatedClient()
+  const { data: event, error: fetchError } = await supabase
     .from("events")
     .select("id, title, created_by, status, appeal_count")
     .eq("id", id)
-    .single();
+    .eq("created_by", user.id)
+    .is("deleted_at", null)
+    .maybeSingle();
 
-  if (fetchError || !event) {
-    return NextResponse.json({ error: "Event not found" }, { status: 404 });
+  if (fetchError) {
+    log.error("Failed to read appealed event", { error: fetchError });
+    return NextResponse.json({ error: "Failed to submit appeal" }, { status: 500 });
   }
-
-  if (event.created_by !== user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  if (!event) return NextResponse.json({ error: "Event not found" }, { status: 404 });
 
   if (!["rejected", "suspended"].includes(event.status)) {
     return NextResponse.json(
@@ -74,7 +64,8 @@ export async function POST(
     });
 
   if (reviewError) {
-    return NextResponse.json({ error: reviewError.message }, { status: 500 });
+    log.error("Failed to insert appeal review", { scope: "Appeal", eventId: id, error: reviewError });
+    return NextResponse.json({ error: "Failed to submit appeal" }, { status: 500 });
   }
 
   const { data: updateData, error: updateError } = await supabase
@@ -89,7 +80,8 @@ export async function POST(
     .select("id");
 
   if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
+    log.error("Failed to reset event to pending", { scope: "Appeal", eventId: id, error: updateError });
+    return NextResponse.json({ error: "Failed to submit appeal" }, { status: 500 });
   }
 
   if (!updateData || updateData.length === 0) {
@@ -118,7 +110,7 @@ export async function POST(
       );
     }
   } catch (notifErr) {
-    console.error("[Appeal] Failed to send admin notifications:", notifErr);
+    log.error("Failed to send admin notifications", { scope: "Appeal", eventId: id, error: notifErr });
   }
 
   const { data: updatedEvent } = await supabase
@@ -128,4 +120,4 @@ export async function POST(
     .single();
 
   return NextResponse.json({ success: true, event: updatedEvent });
-}
+});

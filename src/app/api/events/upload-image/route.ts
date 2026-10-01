@@ -3,10 +3,12 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { parseForm } from "@/server/body";
+import { EVENT_IMAGE_UPLOAD, UploadImageForm } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "upload image" }, async (request: NextRequest) => {
     try {
         const ctx = await createRequestContext();
         const active = requireActiveUser(ctx);
@@ -15,30 +17,12 @@ export async function POST(request: NextRequest) {
         if (!onboarded.ok) return onboarded.response;
         const supabase = ctx.supabase;
 
-        const formData = await request.formData();
-        const file = formData.get("file") as File | null;
-
-        if (!file) {
-            return NextResponse.json({ error: "No file provided" }, { status: 400 });
-        }
-
-        if (file.size > MAX_FILE_SIZE) {
-            return NextResponse.json({ error: "File too large. Maximum size is 5MB" }, { status: 400 });
-        }
-
-        const ALLOWED_MIME_TYPES = [
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "image/gif",
-        ];
-
-        if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-            return NextResponse.json(
-                { error: `Invalid file type "${file.type}". Allowed: JPEG, PNG, WebP, GIF.` },
-                { status: 400 }
-            );
-        }
+        // The multipart contract (plan 06-08, REFAC-15): the route's own
+        // texts and order (missing, size, then type). Malformed multipart
+        // is a 400 client error; the bounded signature check follows.
+        const parsed = await parseForm(request, UploadImageForm, EVENT_IMAGE_UPLOAD);
+        if (!parsed.ok) return parsed.response;
+        const { file } = parsed.data;
 
         const fileExt = file.name.split(".").pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -53,7 +37,7 @@ export async function POST(request: NextRequest) {
             });
 
         if (uploadError) {
-            console.error("Storage upload error:", uploadError);
+            log.error("Storage upload error", { error: uploadError });
             return NextResponse.json({ error: "Failed to upload image" }, { status: 500 });
         }
 
@@ -63,7 +47,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ url: urlData.publicUrl }, { status: 200 });
     } catch (error) {
-        console.error("Error uploading image:", error);
+        log.error("Error uploading image", { error });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
-}
+});

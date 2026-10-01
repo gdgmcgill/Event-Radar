@@ -1,0 +1,1 @@
+PASS: 18 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql

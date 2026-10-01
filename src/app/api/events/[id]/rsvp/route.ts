@@ -12,21 +12,18 @@ import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
-import { badRequest, forbidden, notFound, serverError } from "@/server/errors";
+import { forbidden, notFound, serverError } from "@/server/errors";
+import { parseBody, parseWith } from "@/server/body";
+import { RsvpBody, RsvpDeleteBody, RsvpStatus } from "@/contracts/events";
 import { created, ok } from "@/server/http";
 import type { NextRequest } from "next/server";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 interface RouteContext {
   params: Promise<{
     id: string;
   }>;
-}
-
-const VALID_STATUSES = ["going", "interested"] as const;
-type RsvpStatus = (typeof VALID_STATUSES)[number];
-
-function isValidStatus(status: unknown): status is RsvpStatus {
-  return typeof status === "string" && VALID_STATUSES.includes(status as RsvpStatus);
 }
 
 // ─── GET /api/events/:id/rsvp ───────────────────────────────────────────────
@@ -70,7 +67,7 @@ function isValidStatus(status: unknown): status is RsvpStatus {
  *       500:
  *         description: Internal server error
  */
-export async function GET(_request: NextRequest, { params }: RouteContext) {
+export const GET = withRoute({ cache: "private", action: "fetch RSVPs" }, async (_request: NextRequest, { params }: RouteContext) => {
   try {
     const { id: eventId } = await params;
     // Anonymous-tolerant: no requireUser. ctx.user is read below for user_rsvp.
@@ -86,7 +83,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
       .maybeSingle();
 
     if (eventError) {
-      console.error("Error looking up event:", eventError);
+      log.error("Error looking up event", { error: eventError });
       return serverError("verify event");
     }
 
@@ -94,31 +91,17 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
       return notFound("Event not found");
     }
 
-    // Get RSVP counts (cancelled rows are excluded by counting only the two
-    // live statuses). Two server-side head-only COUNTs — no rows are
-    // returned, so PostgREST's max_rows cap cannot truncate them (F-079,
-    // DEC-23). Same cookie-bound client, same table, same RLS as before.
-    const [going, interested] = await Promise.all([
-      supabase
-        .from("rsvps")
-        .select("id", { count: "exact", head: true })
-        .eq("event_id", eventId)
-        .eq("status", "going"),
-      supabase
-        .from("rsvps")
-        .select("id", { count: "exact", head: true })
-        .eq("event_id", eventId)
-        .eq("status", "interested"),
-    ]);
-
-    const rsvpError = going.error ?? interested.error;
+    // Public counts are a narrow aggregate; attendance rows are private (F-011).
+    // The database counts all matching rows, avoiding PostgREST's row cap (F-079).
+    const { data: counts, error: rsvpError } = await supabase.rpc(
+      "get_public_event_rsvp_counts", { target_event_id: eventId }
+    );
     if (rsvpError) {
-      console.error("Error fetching RSVPs:", rsvpError);
+      log.error("Error fetching RSVPs", { error: rsvpError });
       return serverError("fetch RSVPs");
     }
-
-    const goingCount = going.count ?? 0;
-    const interestedCount = interested.count ?? 0;
+    const goingCount = counts?.[0]?.going ?? 0;
+    const interestedCount = counts?.[0]?.interested ?? 0;
 
     // Check current user's RSVP (if authenticated)
     let userRsvp = null;
@@ -145,10 +128,10 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
       user_rsvp: userRsvp,
     });
   } catch (error) {
-    console.error("Unexpected error fetching RSVPs:", error);
+    log.error("Unexpected error fetching RSVPs", { error });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});
 
 // ─── POST /api/events/:id/rsvp ──────────────────────────────────────────────
 /**
@@ -197,7 +180,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
  *       500:
  *         description: Internal server error
  */
-export async function POST(request: NextRequest, { params }: RouteContext) {
+export const POST = withRoute({ cache: "private", action: "create RSVP" }, async (request: NextRequest, { params }: RouteContext) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -209,38 +192,19 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     const { id: eventId } = await params;
 
-    // Parse body
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return badRequest("Invalid JSON body");
-    }
+    // The contract (plan 06-08, REFAC-15): user_id first, then the handler's
+    // mismatch 403, then the status rules, in today's order. F-094: a non-
+    // object body is a 400 (INTENTIONAL BEHAVIOUR CHANGE).
+    const parsed = await parseBody(request, RsvpBody);
+    if (!parsed.ok) return parsed.response;
 
-    const { user_id: userIdFromBody, status } = body as {
-      user_id?: string;
-      status?: string;
-    };
-
-    // Validate user_id
-    if (!userIdFromBody) {
-      return badRequest("user_id is required");
-    }
-
-    if (userIdFromBody !== user.id) {
+    if (parsed.data.user_id !== user.id) {
       return forbidden("user_id does not match authenticated user");
     }
 
-    // Validate status
-    if (!status) {
-      return badRequest("status is required");
-    }
-
-    if (!isValidStatus(status)) {
-      return badRequest(
-        `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}`
-      );
-    }
+    const statusParsed = parseWith(RsvpStatus, parsed.data.status);
+    if (!statusParsed.ok) return statusParsed.response;
+    const status = statusParsed.data;
 
     // Verify event exists
     const { data: eventExists, error: eventError } = await supabase
@@ -251,7 +215,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .maybeSingle();
 
     if (eventError) {
-      console.error("Error looking up event:", eventError);
+      log.error("Error looking up event", { error: eventError });
       return serverError("verify event");
     }
 
@@ -268,7 +232,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .maybeSingle();
 
     if (existingError) {
-      console.error("Error checking existing RSVP:", existingError);
+      log.error("Error checking existing RSVP", { error: existingError });
       return serverError("check existing RSVP");
     }
 
@@ -286,7 +250,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         .single();
 
       if (updateError) {
-        console.error("Error updating RSVP:", updateError);
+        log.error("Error updating RSVP", { error: updateError });
         return serverError("update RSVP");
       }
 
@@ -309,16 +273,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .single();
 
     if (insertError) {
-      console.error("Error creating RSVP:", insertError);
+      log.error("Error creating RSVP", { error: insertError });
       return serverError("create RSVP");
     }
 
     return created({ success: true, message: `RSVP'd as ${status}`, rsvp: newRsvp });
   } catch (error) {
-    console.error("Unexpected error creating RSVP:", error);
+    log.error("Unexpected error creating RSVP", { error });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});
 
 // ─── DELETE /api/events/:id/rsvp ────────────────────────────────────────────
 /**
@@ -361,7 +325,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
  *       500:
  *         description: Internal server error
  */
-export async function DELETE(request: NextRequest, { params }: RouteContext) {
+export const DELETE = withRoute({ cache: "private", action: "cancel RSVP" }, async (request: NextRequest, { params }: RouteContext) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -373,21 +337,14 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
     const { id: eventId } = await params;
 
-    // Parse body
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      body = {};
-    }
+    // The contract (plan 06-08, REFAC-15). F-094: a body that is not JSON
+    // answers 400 "Invalid JSON body" (it was read as {} and answered
+    // "user_id is required"), a non-object body 400 "Request body must be a
+    // JSON object" (INTENTIONAL BEHAVIOUR CHANGE).
+    const parsed = await parseBody(request, RsvpDeleteBody);
+    if (!parsed.ok) return parsed.response;
 
-    const userIdFromBody = (body as { user_id?: string }).user_id;
-
-    if (!userIdFromBody) {
-      return badRequest("user_id is required");
-    }
-
-    if (userIdFromBody !== user.id) {
+    if (parsed.data.user_id !== user.id) {
       return forbidden("user_id does not match authenticated user");
     }
 
@@ -401,7 +358,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       .maybeSingle();
 
     if (findError) {
-      console.error("Error finding RSVP:", findError);
+      log.error("Error finding RSVP", { error: findError });
       return serverError("find RSVP");
     }
 
@@ -415,13 +372,13 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       .eq("id", existingRsvp.id);
 
     if (updateError) {
-      console.error("Error cancelling RSVP:", updateError);
+      log.error("Error cancelling RSVP", { error: updateError });
       return serverError("cancel RSVP");
     }
 
     return ok({ success: true, message: "RSVP cancelled" });
   } catch (error) {
-    console.error("Unexpected error cancelling RSVP:", error);
+    log.error("Unexpected error cancelling RSVP", { error });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});

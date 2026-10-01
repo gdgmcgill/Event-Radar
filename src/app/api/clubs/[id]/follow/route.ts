@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -12,7 +13,7 @@ interface RouteParams {
  * GET /api/clubs/[id]/follow
  * Returns whether the current user follows this club.
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "check follow status" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const { id: clubId } = await params;
     const supabase = await createClient();
@@ -32,19 +33,20 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       .maybeSingle();
 
     return NextResponse.json({ following: !!data });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to check follow status" },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/clubs/[id]/follow
  * Follow a club.
  */
-export async function POST(_request: NextRequest, { params }: RouteParams) {
+export const POST = withRoute({ cache: "private", action: "follow club" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -62,6 +64,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     );
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to follow club" },
         { status: 500 }
@@ -69,19 +72,20 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     }
 
     return NextResponse.json({ following: true }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to follow club" },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * DELETE /api/clubs/[id]/follow
  * Unfollow a club.
  */
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export const DELETE = withRoute({ cache: "private", action: "unfollow club" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -100,6 +104,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       .eq("club_id", clubId);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to unfollow club" },
         { status: 500 }
@@ -107,10 +112,11 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     }
 
     return NextResponse.json({ following: false });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to unfollow club" },
       { status: 500 }
     );
   }
-}
+});

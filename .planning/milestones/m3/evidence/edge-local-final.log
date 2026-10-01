@@ -1,0 +1,25 @@
+[0m[38;5;245mrunning 21 tests from ./supabase/functions/tests/webhook.test.ts[0m
+CORS preflight request ... [0m[32mok[0m [0m[38;5;245m(12ms)[0m
+Missing signature header returns 401 ... [0m[32mok[0m [0m[38;5;245m(8ms)[0m
+Wrong-length signature returns 401 (was 500 before 06-03) ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+Wrong signature of the right length returns 401 ... [0m[32mok[0m [0m[38;5;245m(3ms)[0m
+Replayed payload is reported as duplicate, not inserted again ... [0m[32mok[0m [0m[38;5;245m(55ms)[0m
+Invalid JSON payload returns 400 ... [0m[32mok[0m [0m[38;5;245m(5ms)[0m
+Invalid payload structure returns 400 ... [0m[32mok[0m [0m[38;5;245m(5ms)[0m
+DI-83: null envelope returns 400 ... [0m[32mok[0m [0m[38;5;245m(4ms)[0m
+DI-83: null event returns 400 ... [0m[32mok[0m [0m[38;5;245m(5ms)[0m
+DI-83: non-string tag returns 400 ... [0m[32mok[0m [0m[38;5;245m(4ms)[0m
+Event count mismatch returns 400 ... [0m[32mok[0m [0m[38;5;245m(4ms)[0m
+Invalid event data returns 400 ... [0m[32mok[0m [0m[38;5;245m(4ms)[0m
+Valid webhook with organizer processes successfully ... [0m[32mok[0m [0m[38;5;245m(9ms)[0m
+Valid webhook with organizer and image_url processes successfully ... [0m[32mok[0m [0m[38;5;245m(8ms)[0m
+Multiple events processed successfully ... [0m[32mok[0m [0m[38;5;245m(12ms)[0m
+Partial failure returns 207 with errors ... [0m[32mok[0m [0m[38;5;245m(4ms)[0m
+Supports x-hub-signature-256 header format ... [0m[32mok[0m [0m[38;5;245m(8ms)[0m
+Supports x-webhook-signature header ... [0m[32mok[0m [0m[38;5;245m(8ms)[0m
+Event tags and category are properly processed ... [0m[32mok[0m [0m[38;5;245m(28ms)[0m
+M3 P1-07: heartbeat and failed runs are recorded; unsigned requests are not ... [0m[32mok[0m [0m[38;5;245m(14ms)[0m
+M3 P1-07: a replayed batch is recorded as duplicate ... [0m[32mok[0m [0m[38;5;245m(16ms)[0m
+
+[0m[32mok[0m | 21 passed | 0 failed [0m[38;5;245m(232ms)[0m
+

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
+import { parseQuery } from "@/server/body";
+import { ExportQuery } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 type EventRow = Database["public"]["Tables"]["events"]["Row"] & {
     approved_by?: string | null;
@@ -14,8 +18,6 @@ type EventRow = Database["public"]["Tables"]["events"]["Row"] & {
 };
 
 type ClubRow = Database["public"]["Tables"]["clubs"]["Row"];
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CSV_HEADERS = [
     "event_id",
@@ -128,38 +130,16 @@ const escapeICalText = (value: string) =>
  *      500:
  *        description: Internal server error
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "public-60-300", action: "generate export" }, async (request: NextRequest) => {
     try {
         const supabase = await createClient();
-        const searchParams = request.nextUrl.searchParams;
-
-        const format = searchParams.get('format');
-        if (format !== 'csv' && format !== 'ical') {
-            return NextResponse.json({ error: "format parameter must be 'csv' or 'ical'" }, { status: 400 });
-        }
-
-        const tags = searchParams.get("tags");
-        const search = searchParams.get("search");
-        const dateFrom = searchParams.get("dateFrom");
-        const dateTo = searchParams.get("dateTo");
-        const clubId = searchParams.get("clubId");
-        const eventId = searchParams.get("eventId");
-        const eventIdsParam = searchParams.get("eventIds");
-        const eventIds = eventIdsParam
-            ? eventIdsParam.split(",").map((id) => id.trim()).filter(Boolean)
-            : [];
-
-        if (eventId && !UUID_RE.test(eventId)) {
-            return NextResponse.json({ error: "eventId must be a valid UUID" }, { status: 400 });
-        }
-
-        if (eventIds.some((id) => !UUID_RE.test(id))) {
-            return NextResponse.json({ error: "eventIds must be a comma-separated list of valid UUIDs" }, { status: 400 });
-        }
-
-        if (eventId && eventIds.length > 0) {
-            return NextResponse.json({ error: "Provide either eventId or eventIds, not both" }, { status: 400 });
-        }
+        // The query contract (plan 06-08, REFAC-15): format, eventId,
+        // eventIds (split, trimmed, blanks dropped), then "not both", with
+        // today's texts; the filters are read as sent.
+        const query = parseQuery(request.nextUrl.searchParams, ExportQuery);
+        if (!query.ok) return query.response;
+        const { format, tags, search, dateFrom, dateTo, clubId, eventId, eventIds } =
+            query.data;
 
         let eventsQuery = supabase
             .from("events")
@@ -207,8 +187,8 @@ export async function GET(request: NextRequest) {
         const { data: eventsData, error: eventsError } = await eventsQuery;
 
         if (eventsError) {
-            console.error("Supabase error fetching events for export:", eventsError);
-            return NextResponse.json({ error: eventsError.message }, { status: 500 });
+            log.error("Supabase error fetching events for export", { error: eventsError });
+            return NextResponse.json({ error: "Failed to generate export" }, { status: 500 });
         }
 
         const dbEvents = (eventsData ?? []) as unknown as EventRow[];
@@ -244,7 +224,9 @@ export async function GET(request: NextRequest) {
                     'Content-Disposition': 'attachment; filename="events.csv"',
                 },
             });
-        } else if (format === "ical") {
+        } else {
+            // format is "ical": ExportQuery admits "csv" and "ical" only, so
+            // the handler always answers (withRoute's type needs a Response).
             const lineBreak = "\r\n";
             const dtstamp = formatDateForICal(new Date().toISOString());
 
@@ -285,10 +267,10 @@ export async function GET(request: NextRequest) {
             });
         }
     } catch (error) {
-        console.error("Error generating export:", error);
+        log.error("Error generating export", { error });
         return NextResponse.json(
             { error: "Failed to generate export" },
             { status: 500 }
         );
     }
-}
+});

@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Play, Pause, CheckCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import type {
+  ExperimentDeleteRequestInit,
+  ExperimentUpdateBodyInput,
+} from "@/contracts/admin";
 
 interface Variant {
   id: string;
@@ -34,17 +38,16 @@ interface VariantResult {
   impressions: number;
   clicks: number;
   saves: number;
-  dismissals: number;
-  ctr: number;
-  save_rate: number;
-  dismiss_rate: number;
+  dismisses: number;
+  ctr_percent: number;
+  save_rate_percent: number;
+  dismiss_rate_percent: number;
 }
 
 interface Results {
-  experiment_id: string;
-  target_metric: string;
-  is_significant: boolean;
-  variants: VariantResult[];
+  experiment: { id: string; target_metric: string | null };
+  significance: { statistic: number; pValue: number; significant: boolean } | null;
+  variant_metrics: VariantResult[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -55,25 +58,26 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const METRIC_KEY_MAP: Record<string, keyof VariantResult> = {
-  ctr: "ctr",
-  click_through_rate: "ctr",
-  save_rate: "save_rate",
-  dismiss_rate: "dismiss_rate",
+  ctr: "ctr_percent",
+  click_through_rate: "ctr_percent",
+  save_rate: "save_rate_percent",
+  dismiss_rate: "dismiss_rate_percent",
   impressions: "impressions",
 };
 
 function getMetricValue(variant: VariantResult, metric: string): number {
-  const key = METRIC_KEY_MAP[metric] ?? "ctr";
+  const key = METRIC_KEY_MAP[metric] ?? "ctr_percent";
   return Number(variant[key]) || 0;
 }
 
 function formatPercent(value: number): string {
-  return `${(value * 100).toFixed(2)}%`;
+  // The endpoint returns percentage points, not fractional rates.
+  return `${value.toFixed(2)}%`;
 }
 
 function LoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="h-6 w-40 animate-pulse rounded bg-gray-200" />
         <div className="space-y-3 rounded-lg border bg-white p-6">
@@ -143,13 +147,15 @@ export default function ExperimentDetailPage({
     fetchData();
   }, [fetchData]);
 
-  const updateStatus = async (status: string) => {
+  const updateStatus = async (
+    status: NonNullable<ExperimentUpdateBodyInput["status"]>
+  ) => {
     setActionLoading(true);
     try {
       const res = await fetch(`/api/admin/experiments/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status } satisfies ExperimentUpdateBodyInput),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -169,7 +175,7 @@ export default function ExperimentDetailPage({
     try {
       const res = await fetch(`/api/admin/experiments/${id}`, {
         method: "DELETE",
-      });
+      } satisfies ExperimentDeleteRequestInit);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || "Failed to delete experiment");
@@ -185,7 +191,7 @@ export default function ExperimentDetailPage({
 
   if (error || !experiment) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
         <div className="mx-auto max-w-5xl">
           <Link
             href="/admin/experiments"
@@ -204,12 +210,12 @@ export default function ExperimentDetailPage({
 
   const targetMetric = experiment.target_metric ?? "ctr";
   const maxMetricValue =
-    results && results.variants.length > 0
-      ? Math.max(...results.variants.map((v) => getMetricValue(v, targetMetric)))
+    results && results.variant_metrics.length > 0
+      ? Math.max(...results.variant_metrics.map((v) => getMetricValue(v, targetMetric)))
       : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 text-gray-900">
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Back link */}
         <Link
@@ -364,19 +370,19 @@ export default function ExperimentDetailPage({
         </div>
 
         {/* Results section */}
-        {results && results.variants.length > 0 && (
+        {results && results.variant_metrics.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold text-gray-900">Results</h2>
 
             {/* Significance banner */}
             <div
               className={`rounded-lg border p-4 text-sm font-medium ${
-                results.is_significant
+                results.significance?.significant
                   ? "border-green-200 bg-green-50 text-green-800"
                   : "border-gray-200 bg-gray-50 text-gray-600"
               }`}
             >
-              {results.is_significant
+              {results.significance?.significant
                 ? "Results are statistically significant."
                 : "Results are not yet statistically significant."}
             </div>
@@ -394,7 +400,7 @@ export default function ExperimentDetailPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {results.variants.map((v) => (
+                  {results.variant_metrics.map((v) => (
                     <tr key={v.variant_id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-900">
                         {v.variant_name}
@@ -403,13 +409,13 @@ export default function ExperimentDetailPage({
                         {v.impressions.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
-                        {formatPercent(v.ctr)}
+                        {formatPercent(v.ctr_percent)}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
-                        {formatPercent(v.save_rate)}
+                        {formatPercent(v.save_rate_percent)}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
-                        {formatPercent(v.dismiss_rate)}
+                        {formatPercent(v.dismiss_rate_percent)}
                       </td>
                     </tr>
                   ))}
@@ -423,7 +429,7 @@ export default function ExperimentDetailPage({
                 {targetMetric.replace(/_/g, " ").toUpperCase()} by Variant
               </h3>
               <div className="space-y-3">
-                {results.variants.map((v) => {
+                {results.variant_metrics.map((v) => {
                   const value = getMetricValue(v, targetMetric);
                   const widthPercent =
                     maxMetricValue > 0
@@ -436,9 +442,9 @@ export default function ExperimentDetailPage({
                           {v.variant_name}
                         </span>
                         <span className="tabular-nums text-gray-500">
-                          {typeof value === "number" && value <= 1
-                            ? formatPercent(value)
-                            : value.toLocaleString()}
+                          {targetMetric === "impressions"
+                            ? value.toLocaleString()
+                            : formatPercent(value)}
                         </span>
                       </div>
                       <div className="h-5 w-full rounded-full bg-gray-100">

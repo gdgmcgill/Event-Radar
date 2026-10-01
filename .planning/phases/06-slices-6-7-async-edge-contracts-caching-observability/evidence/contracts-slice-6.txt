@@ -1,0 +1,262 @@
+# Contracts, slice 6 — plan 06-04 evidence
+# Phase 06 · Plan 04 · recorded 2026-09-26 · base e90589c
+# Every command below is verbatim with its exit code. Jest output is trimmed to the
+# result lines and failure headers; nothing else is edited.
+
+==============================================================================
+TASK 1 — parseWith / parseBody / parseQuery, src/contracts/common.ts, the census gate
+==============================================================================
+
+[1.1 RED] $ npx jest --ci src/server/__tests__/body.test.ts src/__tests__/scripts/check-contracts.test.ts
+FAIL node src/server/__tests__/body.test.ts
+  ● Test suite failed to run
+    Could not locate module @/contracts/common mapped as:
+FAIL node src/__tests__/scripts/check-contracts.test.ts
+  ● check-contracts.mjs › fails on an unlisted raw JSON read, naming file:line
+    Error: Cannot find module '/Users/adyan/Documents/GitHub/Event-Radar/scripts/check-contracts.mjs'
+  ● check-contracts.mjs › passes the same tree once the site is listed
+  ● check-contracts.mjs › passes and prints retired when a listed site has disappeared
+  ● check-contracts.mjs › passes an empty allow-list over a clean tree
+  ● check-contracts.mjs › fails when a listed file grows above its committed count
+  ● check-contracts.mjs › counts req.json() and a multipart read (R2) outside src/server/body.ts
+  ● check-contracts.mjs › counts query reads (R3) and schema-less readJsonObject (R4) in route files only
+  ● check-contracts.mjs › exempts exactly the four OAuth params in src/app/auth/callback/route.ts
+  ● check-contracts.mjs › ignores test files and comment lines
+Test Suites: 2 failed, 2 total
+Tests:       9 failed, 1 passed, 10 total
+exit=1
+note: the 1 passing test is 'refuses an allow-list that is not an array', which a missing
+      script also exits 1 on; it is meaningful only once the script exists (it passes green below).
+
+[1.2 GREEN] $ npx jest --ci src/server/__tests__/body.test.ts src/__tests__/scripts/check-contracts.test.ts
+PASS node src/__tests__/scripts/check-contracts.test.ts
+PASS node src/server/__tests__/body.test.ts
+Test Suites: 2 passed, 2 total
+Tests:       35 passed, 35 total
+exit=0
+
+[1.3] $ node scripts/check-contracts.mjs
+committed=95 live=95 delta=0
+PASS: the live census is within the committed allow-list
+exit=0
+
+[1.4] initial allow-list totals by rule against the floor censuses (evidence/floor.before.txt)
+R1 sites=21 files=20
+R2 sites=5 files=5
+R3 sites=54 files=18
+R4 sites=15 files=15
+entries=58
+  R1 = C2: 21 sites in 20 files. Equal. (Scope is all of src/, not only route files; no non-route site exists.)
+  R2 = C3: 5 sites in 5 files. Equal.
+  R3 vs C4: 54 against 59. Delta -5, all explained:
+     -4  src/app/auth/callback/route.ts code/next/error/error_description (exempt by name, DEC-65)
+     -1  src/app/api/events/route.ts:384 is a comment line ('// `searchParams.get()` yields ...')
+         that C4's grep counted; the census skips comment lines.
+     54 sites in 18 files (C4's 19 files minus the exempt callback).
+  R4 = C5: 15 sites in 15 files. Equal.
+
+[1.5] readJsonObject unchanged: $ git diff -U0 e90589c -- src/server/body.ts | grep '^-' | grep -v '^---'
+exit=1 (1 = no removed line: only docblock and import additions above readJsonObject, and new code below it)
+$ git diff -U0 e90589c -- src/server/body.ts | grep '^@@'
+@@ -12,0 +13,24 @@
+@@ -15,0 +40 @@ import type { NextResponse } from "next/server";
+@@ -41,0 +67,111 @@ export async function readJsonObject(
+
+[1.6] $ npx tsc --noEmit
+exit=0
+
+[1.7] $ npm run lint
+✖ 18 problems (0 errors, 18 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
+exit=0 (the 18 warnings are the pre-existing set)
+
+[1.8] CI: $ grep -n -A1 'Contracts census' .github/workflows/ci.yml
+79:      - name: Contracts census
+80-        run: node scripts/check-contracts.mjs
+
+==============================================================================
+TASK 2 — slice-6 contracts adopted at their routes; notifications/count answers 401
+==============================================================================
+
+[2.1 RED] $ npx jest --ci src/contracts   (before the four contract files existed)
+FAIL node src/contracts/__tests__/slice-6-contracts.test.ts
+    Could not locate module @/contracts/recommendations mapped as:
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+exit=1
+
+[2.2 GREEN] $ npx jest --ci src/contracts
+PASS node src/contracts/__tests__/slice-6-contracts.test.ts
+Test Suites: 1 passed, 1 total
+Tests:       73 passed, 73 total
+exit=0
+note: the first green attempt failed 3 FeedbackBody rows (zod 4 answers "expected nonoptional" for an
+      absent key whose schema is a bare z.custom); type, subject and source became .optional(). No
+      expected body was edited.
+
+[2.3] Adopted routes (after the guard prologue, same point in the flow):
+  src/app/api/interactions/route.ts              parseBody(request, InteractionBody)
+  src/app/api/feedback/route.ts                  parseBody(request, FeedbackBody)
+  src/app/api/recommendations/feedback/route.ts  POST parseBody(request, RecommendationFeedbackBody); GET parseQuery(..., FeedbackEventIdsQuery)
+  src/app/api/recommendations/analytics/route.ts parseQuery(..., AnalyticsQuery)
+  src/app/api/recommendations/route.ts           parseQuery(..., RecommendationsQuery)  (top_k, diversity; never a 400)
+  src/app/api/notifications/route.ts             GET parseQuery(..., NotificationsListQuery); POST parseQuery(..., NotificationsQuery)
+  src/app/api/notifications/count/route.ts       createRequestContext() + requireUser(ctx) -> 401 for anonymous / failed lookup
+  src/app/api/notifications/[id]/route.ts        NOT changed: it reads no body and no query (only its route param;
+                                                 UUID route params are 06-10 per DEC-66). Nothing to adopt.
+  src/hooks/useNotificationCount.ts              { enabled?: boolean } (default true): no fetch, no interval, returns 0 when false
+  src/components/layout/SideNavBar.tsx           NotificationNavLink passes enabled={isAuthenticated} (no rendered change)
+  measured: both consumers of the hook (SideNavBar NotificationNavLink, Header NotificationBell) were already rendered
+  only when a user is signed in, so anonymous pages polled 0 times before and after; the flag makes it explicit.
+
+[2.4] $ node scripts/check-contracts.mjs   (after adoption, before deleting the entries)
+committed=95 live=86 delta=-9
+retired=7 (the list shrank — this is the intended direction; delete these entries)
+  - src/app/api/feedback/route.ts R1 1 -> 0
+  - src/app/api/interactions/route.ts R1 1 -> 0
+  - src/app/api/notifications/route.ts R3 2 -> 0
+  - src/app/api/recommendations/analytics/route.ts R3 1 -> 0
+  - src/app/api/recommendations/feedback/route.ts R1 1 -> 0
+  - src/app/api/recommendations/feedback/route.ts R3 1 -> 0
+  - src/app/api/recommendations/route.ts R3 2 -> 0
+PASS: the live census is within the committed allow-list
+exit=0
+then the 7 entries were deleted by hand (58 -> 51 entries):
+$ node scripts/check-contracts.mjs
+committed=86 live=86 delta=0
+PASS: the live census is within the committed allow-list
+exit=0
+$ node -e (no slice-6 file left in the allow-list)
+exit=0
+
+[2.5] DEFECT protocol, step 2: the fix applied, the DEFECT suites run UNEDITED -> red
+$ npx jest --ci --verbose src/__tests__/api/slice6-malformed-input-defect.test.ts src/__tests__/api/notifications/notifications-count-defect.test.ts
+FAIL node src/__tests__/api/slice6-malformed-input-defect.test.ts
+    ✓ the matrix is three sites by three inputs (1 ms)
+    ✕ interactions, not-json → today's status and body (27 ms)
+    ✕ interactions, array → today's status and body (1 ms)
+    ✓ interactions, number (interaction_type: 5) → today's status and body (2 ms)
+    ✕ feedback, not-json → today's status and body (5 ms)
+    ✕ feedback, array → today's status and body (1 ms)
+    ✓ feedback, number (message: 5) → today's status and body
+    ✕ recommendations/feedback, not-json → today's status and body (1 ms)
+    ✕ recommendations/feedback, array → today's status and body (1 ms)
+    ✓ recommendations/feedback, number (action: 5) → today's status and body (1 ms)
+    ✕ interactions, a JSON null body → 500
+    ✕ feedback, a JSON null body → 500
+    ✕ recommendations/feedback, a JSON null body → 500
+    ✕ feedback, subject sent as a number → 500 (subject.trim throws)
+FAIL node src/__tests__/api/notifications/notifications-count-defect.test.ts
+    ✕ D1: anonymous → 200 { unread_count: 0 }, no notifications read (4 ms)
+    ✕ D2: getUser auth error → the same 200 { unread_count: 0 }, no read
+Test Suites: 2 failed, 2 total
+Tests:       12 failed, 4 passed, 16 total
+exit=1  (12 red = the 10 F-094 rows that move + the 2 F-028 rows; the 3 number rows stay green: their bytes do not move)
+
+[2.6] step 3: assertions moved to the fixed shape -> green
+PASS node src/__tests__/api/slice6-malformed-input-defect.test.ts
+    ✓ the matrix is three sites by three inputs (1 ms)
+    ✓ interactions, not-json → the contract's status and body (36 ms)
+    ✓ interactions, array → the contract's status and body (1 ms)
+    ✓ interactions, number (interaction_type: 5) → the contract's status and body (3 ms)
+    ✓ feedback, not-json → the contract's status and body (3 ms)
+    ✓ feedback, array → the contract's status and body
+    ✓ feedback, number (message: 5) → the contract's status and body (1 ms)
+    ✓ recommendations/feedback, not-json → the contract's status and body (2 ms)
+    ✓ recommendations/feedback, array → the contract's status and body (1 ms)
+    ✓ recommendations/feedback, number (action: 5) → the contract's status and body
+    ✓ interactions, a JSON null body → 400 Request body must be a JSON object (1 ms)
+    ✓ feedback, a JSON null body → 400 Request body must be a JSON object
+    ✓ recommendations/feedback, a JSON null body → 400 Request body must be a JSON object
+    ✓ feedback, subject sent as a number → 400 Subject must be a string (1 ms)
+PASS node src/__tests__/api/notifications/notifications-count-defect.test.ts
+    ✓ D1: anonymous → 401 Unauthorized, no notifications read (12 ms)
+    ✓ D2: getUser auth error → the same 401 Unauthorized, no read
+Test Suites: 2 passed, 2 total
+Tests:       16 passed, 16 total
+exit=0
+
+[2.7] step 4: pre-fix source (git show HEAD:<file>) put back temporarily for the four fixed routes; moved suites -> red; fixed source restored
+FAIL node src/__tests__/api/slice6-malformed-input-defect.test.ts
+    ✓ the matrix is three sites by three inputs (1 ms)
+    ✕ interactions, not-json → the contract's status and body (6 ms)
+    ✕ interactions, array → the contract's status and body (2 ms)
+    ✓ interactions, number (interaction_type: 5) → the contract's status and body
+    ✕ feedback, not-json → the contract's status and body (1 ms)
+    ✕ feedback, array → the contract's status and body (1 ms)
+    ✓ feedback, number (message: 5) → the contract's status and body
+    ✕ recommendations/feedback, not-json → the contract's status and body (1 ms)
+    ✕ recommendations/feedback, array → the contract's status and body (1 ms)
+    ✓ recommendations/feedback, number (action: 5) → the contract's status and body
+    ✕ interactions, a JSON null body → 400 Request body must be a JSON object (1 ms)
+    ✕ feedback, a JSON null body → 400 Request body must be a JSON object
+    ✕ recommendations/feedback, a JSON null body → 400 Request body must be a JSON object
+    ✕ feedback, subject sent as a number → 400 Subject must be a string
+FAIL node src/__tests__/api/notifications/notifications-count-defect.test.ts
+    ✕ D1: anonymous → 401 Unauthorized, no notifications read (3 ms)
+    ✕ D2: getUser auth error → the same 401 Unauthorized, no read
+Test Suites: 2 failed, 2 total
+Tests:       12 failed, 4 passed, 16 total
+exit=1
+cmp exit=0 src/app/api/interactions/route.ts
+cmp exit=0 src/app/api/feedback/route.ts
+cmp exit=0 src/app/api/recommendations/feedback/route.ts
+cmp exit=0 src/app/api/notifications/count/route.ts
+
+[2.8] step 5: the 06-02 PRESERVE suites pass UNEDITED
+$ git diff --stat e90589c -- src/__tests__/api/recommendations/recommendations-characterization.test.ts src/__tests__/api/recommendations/recommendations-family-characterization.test.ts src/__tests__/api/notifications/notifications-characterization.test.ts src/__tests__/api/interactions/interactions-feedback-characterization.test.ts
+(empty) exit=0
+PASS node src/__tests__/api/notifications/notifications-characterization.test.ts
+PASS node src/__tests__/api/interactions/interactions-feedback-characterization.test.ts
+PASS node src/__tests__/api/recommendations/recommendations-characterization.test.ts
+PASS node src/__tests__/api/recommendations/recommendations-family-characterization.test.ts
+Test Suites: 4 passed, 4 total
+Tests:       93 passed, 93 total
+exit=0
+
+[2.9] DI-44: $ grep -n user_id src/app/api/recommendations/feedback/route.ts   (count 4)
+46:      .eq("user_id", user.id)
+104:            user_id: authUser.id,
+108:          { onConflict: "user_id,event_id" }
+125:      user_id: authUser.id,
+  46  GET: the read filter, keyed by the authenticated caller (getUser) — unchanged
+  104 thumbs upsert: user_id = authUser.id (the write)
+  108 thumbs upsert: the onConflict column list (a string, not a value)
+  125 analytics insert: user_id = authUser.id (the write)
+  Two lines write the caller id; every remaining line keys on the authenticated caller only. Removed: the ThumbsBody/
+  AnalyticsBody user_id fields and both `authUser?.id ?? body.user_id` fallbacks with their dead 401s (pre lines 129-135, 182-188).
+
+[2.10] Behaviour changes not pinned by a DEFECT row (INTENTIONAL, F-094, stated for the record):
+  - interactions and recommendations/feedback: a truthy non-string event_id (e.g. 5) now answers the presence 400
+    ("event_id and interaction_type are required" / "Missing event_id" / "Missing required fields: ..."). Before, it
+    reached PostgREST and failed 22P02 -> 500. The fake answered 404/200 here, so 06-02 did not pin it. Contract rows
+    in slice-6-contracts.test.ts assert the new 400s.
+  - Unchanged on purpose (no 400 added where today coerces silently): top_k, diversity, cursor, event_ids, period
+    defaults; recommendation_rank keeps the JS comparison ("0" refused, "2" accepted); session_id, metadata,
+    experiment_variant_id pass through.
+
+[2.11] $ npx jest --ci src/contracts src/__tests__/api/recommendations src/__tests__/api/notifications src/__tests__/api/interactions src/__tests__/api/slice6-malformed-input-defect.test.ts
+PASS node src/__tests__/api/slice6-malformed-input-defect.test.ts
+PASS node src/__tests__/api/notifications/notifications-count-defect.test.ts
+PASS node src/contracts/__tests__/slice-6-contracts.test.ts
+PASS node src/__tests__/api/notifications/notifications-characterization.test.ts
+PASS node src/__tests__/api/recommendations/experiment-assignment-defect.test.ts
+PASS node src/__tests__/api/recommendations/recommendations-characterization.test.ts
+PASS node src/__tests__/api/recommendations/recommendations-family-characterization.test.ts
+PASS node src/__tests__/api/interactions/interactions-feedback-characterization.test.ts
+Test Suites: 8 passed, 8 total
+Tests:       187 passed, 187 total
+exit=0
+$ npx tsc --noEmit
+exit=0 (after one fix: a test narrowed outcome.data as object)
+$ npm run lint
+✖ 18 problems (0 errors, 18 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
+exit=0
+$ npx jest --ci
+Test Suites: 1 skipped, 102 passed, 102 of 103 total
+Tests:       1 skipped, 1995 passed, 1996 total
+exit=0
+

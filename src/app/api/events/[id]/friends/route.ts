@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -9,7 +11,7 @@ interface RouteParams {
 /**
  * GET /api/events/[id]/friends — Returns friends who saved this event
  */
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "fetch friends going" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const { id: eventId } = await params;
     const ctx = await createRequestContext();
@@ -31,14 +33,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       // The fallback degrades to an empty list, never to an error response, so
       // each failure is logged here or it is invisible (WR-02 of the Phase 4
       // code review: F-071's TypeError went unnoticed for exactly that reason).
-      console.error("get_friends_going_to_event RPC error, using fallback:", error);
+      log.error("get_friends_going_to_event RPC error, using fallback", { error });
 
       const { data: following, error: followingError } = await supabase
         .from("user_follows")
         .select("following_id")
         .eq("follower_id", user.id);
       if (followingError) {
-        console.error("Friends fallback: user_follows read failed:", followingError);
+        log.error("Friends fallback: user_follows read failed", { error: followingError });
       }
       const followingIds = (following ?? []).map((r) => r.following_id);
 
@@ -48,7 +50,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         .eq("event_id", eventId)
         .in("user_id", followingIds);
       if (savedError) {
-        console.error("Friends fallback: saved_events read failed:", savedError);
+        log.error("Friends fallback: saved_events read failed", { error: savedError });
       }
 
       // Filter to mutual follows manually
@@ -58,7 +60,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
           .select("follower_id")
           .eq("following_id", user.id);
         if (reverseError) {
-          console.error("Friends fallback: reverse user_follows read failed:", reverseError);
+          log.error("Friends fallback: reverse user_follows read failed", { error: reverseError });
         }
 
         const reverseSet = new Set(
@@ -83,7 +85,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       count: friends?.length ?? 0,
     });
   } catch (error) {
-    console.error("Error fetching friends going to event:", error);
+    log.error("Error fetching friends going to event", { error });
     return NextResponse.json({ friends: [], count: 0 });
   }
-}
+});

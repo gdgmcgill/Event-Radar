@@ -3,11 +3,14 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
-import { sanitizeText } from "@/lib/sanitize";
 import { logAdminAction } from "@/lib/audit";
+import { parseBody } from "@/server/body";
+import { FeaturedCreateBody } from "@/contracts/admin";
 import { getESTNowISO } from "@/lib/timezone";
+import { logRouteError, withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch featured events" }, async () => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -22,6 +25,7 @@ export async function GET() {
       .order("ends_at", { ascending: false });
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
@@ -33,15 +37,16 @@ export async function GET() {
     const expired = (data ?? []).filter((r: any) => r.ends_at <= now);
 
     return NextResponse.json({ active, upcoming, expired });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch featured events" },
       { status: 500 }
     );
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "create featured event" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -51,19 +56,12 @@ export async function POST(request: NextRequest) {
   const supabase = ctx.supabase;
 
   try {
-    const body = await request.json();
-    const { event_id, priority, starts_at, ends_at } = body;
-
-    if (!event_id || !starts_at || !ends_at) {
-      return NextResponse.json(
-        { error: "event_id, starts_at, and ends_at are required" },
-        { status: 400 }
-      );
-    }
-
-    const sponsor_name = body.sponsor_name
-      ? sanitizeText(body.sponsor_name)
-      : null;
+    // The three required keys, then the sponsor name, sanitized when truthy
+    // and null otherwise (src/contracts/admin.ts).
+    const parsed = await parseBody(request, FeaturedCreateBody);
+    if (!parsed.ok) return parsed.response;
+    const { event_id, priority, starts_at, ends_at, sponsor_name } =
+      parsed.data;
 
     const { data, error } = await supabase
       .from("featured_events")
@@ -85,6 +83,7 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
+      logRouteError(error);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
@@ -98,14 +97,15 @@ export async function POST(request: NextRequest) {
         metadata: { event_id, sponsor_name, starts_at, ends_at },
       });
     } catch (auditErr) {
-      console.error("[Admin] Failed to log audit action:", auditErr);
+      log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
     }
 
     return NextResponse.json({ featured: data }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to create featured event" },
       { status: 500 }
     );
   }
-}
+});

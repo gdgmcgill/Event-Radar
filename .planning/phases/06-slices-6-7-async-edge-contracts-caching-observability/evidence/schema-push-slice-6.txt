@@ -1,0 +1,253 @@
+# Slice 6 local schema push — plan 06-05 Task 3 [BLOCKING]
+# base head=57cb55f · migration 20260926120000_async_edge_definer_hardening.sql (uncommitted until this file's commit)
+# recorded: 2026-09-27T01:25Z-01:27Z · supabase CLI 2.115.0 · LOCAL ONLY
+#
+# Production is not touched: no production push command, no linked-project flag, no production
+# read or write anywhere in this file (DI-23 is Phase 8). Every supabase command below carries --local
+# or reads the local stack (supabase status reads the local demo anon key, which is not printed).
+#
+# | # | Command | Result | Reading |
+# |---|---------|--------|---------|
+# | 1 | supabase --version | 2.115.0; exit 0 | the CI types-job version |
+# | 2 | supabase db reset --local | 9 migrations applied, incl. 20260926120000_async_edge_definer_hardening.sql; exit 0 | rebuilds from zero |
+# | 3 | supabase gen types typescript --local --schema public > src/lib/supabase/types.ts; git diff | exit 0; +10 lines, exactly the cron_job_status RPC entry | expected: the only new public object; revokes, search_path and bodies do not reach the types |
+# | 4 | npx tsc --noEmit | exit 0 | the regenerated types compile |
+# | 5 | npx jest --ci | 102 passed / 1 skipped suites; 1995 passed / 1 skipped tests; exit 0 | floor unchanged |
+# | 6 | supabase test db --local, UNSEEDED | Files=13, Tests=260, Result: PASS; exit 0 | 031 (13) and 070 (47) green, 11 floor files green |
+# | 7 | npx tsx scripts/seed/load.ts | 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved; exit 0 | seed unchanged |
+# | 8 | supabase test db --local, SEEDED | Files=13, Tests=260, Result: PASS; exit 0 | green on the seed too |
+# | 9 | cron.job probe vs .planning/audit/async/cron-job.json | 3 jobs live, 3 in production; schedule, command, active, username EQUAL for all three | F-042's criterion met |
+# | 10 | PostgREST RPC as the local anon key | 42501 "permission denied for function …" (HTTP 401) for send_event_reminders, compute_user_scores, send_feedback_requests, cron_job_status, get_friends | the revokes hold at the HTTP edge, not only in the catalog |
+# | 11 | git diff --exit-code -- supabase/config.toml | no output; exit 0 | C3: no config change |
+#
+# Before this migration the same suite was RED: 031 9/13, 070 31/47 (evidence/definer-hardening-red.txt).
+
+## 1. $ supabase --version
+2.115.0
+exit=0
+
+## 2. $ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+Applying migration 20260923130000_users_grants_audit_log_insert.sql...
+Applying migration 20260925120000_events_guard_moderated_update.sql...
+Applying migration 20260925130000_events_guard_appeal_increment.sql...
+Applying migration 20260926120000_async_edge_definer_hardening.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+
+## 3. $ supabase gen types typescript --local --schema public > src/lib/supabase/types.ts
+exit=0
+$ git diff --stat -- src/lib/supabase/types.ts
+ src/lib/supabase/types.ts | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+$ git diff -- src/lib/supabase/types.ts
+diff --git a/src/lib/supabase/types.ts b/src/lib/supabase/types.ts
+index f5a08ac..9b0506f 100644
+--- a/src/lib/supabase/types.ts
++++ b/src/lib/supabase/types.ts
+@@ -1286,6 +1286,16 @@ export type Database = {
+         Returns: boolean
+       }
+       compute_user_scores: { Args: never; Returns: undefined }
++      cron_job_status: {
++        Args: never
++        Returns: {
++          active: boolean
++          jobname: string
++          last_start: string
++          last_status: string
++          schedule: string
++        }[]
++      }
+       get_event_ids_by_time_filter: {
+         Args: { day_type?: string; time_of_day?: string }
+         Returns: {
+Reading: the diff is exactly the cron_job_status entry (Args: never; five columns). No other change.
+
+## 4. $ npx tsc --noEmit
+exit=0
+
+## 5. $ npx jest --ci   (summary lines)
+Test Suites: 1 skipped, 102 passed, 102 of 103 total
+Tests:       1 skipped, 1995 passed, 1996 total
+Snapshots:   0 total
+Time:        2.461 s
+Ran all test suites in 2 projects.
+exit=0
+
+## 6. $ supabase test db --local   — UNSEEDED
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/031-cron-jobs.test.sql ................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/065-events-moderated-update.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql ........... ok
+All tests successful.
+Files=13, Tests=260,  0 wallclock secs ( 0.03 usr  0.02 sys +  0.04 cusr  0.02 csys =  0.11 CPU)
+Result: PASS
+exit=0
+
+## 7. $ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+
+## 8. $ supabase test db --local   — SEEDED
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:34: NOTICE:  schema "tests" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/031-cron-jobs.test.sql ................... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/065-events-moderated-update.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql ........... ok
+All tests successful.
+Files=13, Tests=260,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.04 cusr  0.01 csys =  0.08 CPU)
+Result: PASS
+exit=0
+
+## 9. cron.job probe (docker exec -i supabase_db_Event-Radar psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < s9-cron.sql)
+--- s9-cron.sql ---
+\pset pager off
+\pset format unaligned
+\pset fieldsep '\t'
+SELECT jobname, schedule, command, active, username FROM cron.job ORDER BY jobname;
+BEGIN;
+SET LOCAL ROLE service_role;
+SELECT jobname, schedule, active FROM public.cron_job_status();
+ROLLBACK;
+--- output ---
+Pager usage is off.
+Output format is unaligned.
+Field separator is "	".
+jobname	schedule	command	active	username
+compute-user-scores	0 */6 * * *	SELECT compute_user_scores()	t	postgres
+send-event-reminders	*/15 * * * *	select public.send_event_reminders()	t	postgres
+send-feedback-requests	*/30 * * * *	SELECT public.send_feedback_requests()	t	postgres
+(3 rows)
+BEGIN
+SET
+jobname	schedule	active
+compute-user-scores	0 */6 * * *	t
+send-event-reminders	*/15 * * * *	t
+send-feedback-requests	*/30 * * * *	t
+(3 rows)
+ROLLBACK
+exit=0
+--- comparison with .planning/audit/async/cron-job.json (jobname, schedule, command, active, username) ---
+send-event-reminders: schedule '*/15 * * * *' vs '*/15 * * * *'; command 'select public.send_event_reminders()' vs 'select public.send_event_reminders()'; active t ; username postgres vs postgres -> EQUAL
+compute-user-scores: schedule '0 */6 * * *' vs '0 */6 * * *'; command 'SELECT compute_user_scores()' vs 'SELECT compute_user_scores()'; active t ; username postgres vs postgres -> EQUAL
+send-feedback-requests: schedule '*/30 * * * *' vs '*/30 * * * *'; command 'SELECT public.send_feedback_requests()' vs 'SELECT public.send_feedback_requests()'; active t ; username postgres vs postgres -> EQUAL
+jobs live=3 prod=3; F-042 criterion: EQUAL
+
+## 10. PostgREST RPC as anon (local stack, http://127.0.0.1:54321)
+$ curl -X POST http://127.0.0.1:54321/rest/v1/rpc/send_event_reminders  (apikey + bearer = local anon key)
+{"code":"42501","details":null,"hint":null,"message":"permission denied for function send_event_reminders"}
+http=401
+$ curl -X POST http://127.0.0.1:54321/rest/v1/rpc/compute_user_scores  (apikey + bearer = local anon key)
+{"code":"42501","details":null,"hint":null,"message":"permission denied for function compute_user_scores"}
+http=401
+$ curl -X POST http://127.0.0.1:54321/rest/v1/rpc/send_feedback_requests  (apikey + bearer = local anon key)
+{"code":"42501","details":null,"hint":null,"message":"permission denied for function send_feedback_requests"}
+http=401
+$ curl -X POST http://127.0.0.1:54321/rest/v1/rpc/cron_job_status  (apikey + bearer = local anon key)
+{"code":"42501","details":null,"hint":null,"message":"permission denied for function cron_job_status"}
+http=401
+$ curl -X POST http://127.0.0.1:54321/rest/v1/rpc/get_friends {"target_user_id":"00000000-0000-4000-8000-000000000001"}  (anon)
+{"code":"42501","details":null,"hint":null,"message":"permission denied for function get_friends"}
+http=401
+
+## 11. $ git diff --exit-code -- supabase/config.toml
+(no output)
+exit=0
+
+## 12. Playwright, from the reset + seeded + green state left by the mutation check (slice-6-mutation-check.txt § 4)
+$ npx playwright test e2e/specs/public-profile-privacy.spec.ts e2e/specs/async-edge.spec.ts e2e/specs/event-read-path.spec.ts
+# (webServer: npm run build && npm run start on port 3000, never reused; started 01:38:53Z, ended 01:39:11Z)
+  ✓   1 [setup] › e2e/auth.setup.ts:59:18 › authenticate as onboarded_student (430ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:18 › authenticate as mid_onboarding_student (262ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_member (252ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_owner (257ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:18 › authenticate as multi_club_organizer (248ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:18 › authenticate as cross_club_attacker (243ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:18 › authenticate as admin (225ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:18 › authenticate as banned_permanent (211ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspended_active (205ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspension_expired (226ms)
+  ✓  11 [chromium] › e2e/specs/async-edge.spec.ts:59:5 › FIXED F-028: an anonymous notifications count answers 401 (24ms)
+  ✓  12 [chromium] › e2e/specs/async-edge.spec.ts:98:7 › FIXED F-092: the admin reports list › a student's report reaches the admin list with the reporter's name (140ms)
+  ✓  13 [chromium] › e2e/specs/async-edge.spec.ts:197:7 › FIXED F-017: a non-admin is assigned an A/B variant › the student's recommendations assign exactly one variant, keyed by the student (137ms)
+  ✓  14 [chromium] › e2e/specs/event-read-path.spec.ts:84:5 › PRESERVE: GET /api/events?limit=1 returns 200 with the approved event first and total 2 (10ms)
+  ✓  15 [chromium] › e2e/specs/event-read-path.spec.ts:95:5 › PRESERVE: GET /api/events?search=Music Night returns exactly the second approved event (7ms)
+  ✓  16 [chromium] › e2e/specs/event-read-path.spec.ts:104:5 › PRESERVE: typing a,b into the search box shows the No events found state (745ms)
+  ✓  17 [chromium] › e2e/specs/event-read-path.spec.ts:117:5 › PRESERVE: the approved event's detail page renders its title (236ms)
+  ✓  18 [chromium] › e2e/specs/event-read-path.spec.ts:149:5 › PRESERVE: limit=1 then its nextCursor traverses both approved events in start_date order, total 2 on each page (20ms)
+  ✓  19 [chromium] › e2e/specs/event-read-path.spec.ts:163:5 › PRESERVE: the same cursor traversal with search=Seed yields the same two pages (the search or() and the keyset or() are both applied) (15ms)
+  ✓  20 [chromium] › e2e/specs/event-read-path.spec.ts:174:5 › PRESERVE: cursor=not-a-valid-cursor is a 400 with Invalid cursor (2ms)
+  ✓  21 [chromium] › e2e/specs/event-read-path.spec.ts:182:5 › DEFECT F-080: the detail page says Hosted by the organizer label, not the event's real club (moves only if 04-11 ships the visual fix) (207ms)
+  ✓  22 [chromium] › e2e/specs/event-read-path.spec.ts:203:5 › DEFECT F-081: the feed files the academic+tech event under a Social row, and there is no Tech row (moves only if 04-11 ships the identity mappings) (370ms)
+  ✓  23 [chromium] › e2e/specs/event-read-path.spec.ts:226:5 › FIXED F-082: search=a,b is a 200 with an empty events list (moved in 04-08) (7ms)
+  ✓  24 [chromium] › e2e/specs/event-read-path.spec.ts:238:5 › FIXED F-082: search=% matches only a literal percent, so no seeded event (moved in 04-08) (8ms)
+  ✓  25 [chromium] › e2e/specs/event-read-path.spec.ts:250:5 › FIXED F-083: the list body carries a nextCursor when more rows remain (moved in 04-09) (5ms)
+  ✓  26 [chromium] › e2e/specs/public-profile-privacy.spec.ts:71:7 › public profile privacy (F-005) › private: the not-found response to an anonymous reader, the page to a signed-in viewer; public again: the page, never the email (186ms)
+  26 passed (16.3s)
+exit=0
+
+Reading: 26 passed, 0 failed. The public profile friend list through the door (public-profile-privacy),
+the batch computation through the door (async-edge) and the event friends reads (event-read-path)
+all still pass with the revokes and the subject predicate applied.
+The server log prints "Fuzzy search RPC error: { code: 0A000, message: SET is not allowed in a
+non-volatile function }" 7 times. That is the registered search_events_fuzzy finding (F-078, audit),
+untouched by this migration; 06-04 run t3-pw3 printed it 7 times as well.
+
+## 13. After Playwright: the drift gate (the plan verify)
+# The first attempt ran on the Playwright-touched database and FAILED one pre-existing seed pin:
+#   040-seed-coverage row 20 "every seeded user carries the pinned stamp, not a wall-clock one" —
+#   the specs write to seeded users, and update_users_updated_at stamps now(). Not this migration;
+#   Phase 5 left the stack the same way (reset + seed after Playwright, schema-push-slice-5.txt row 20).
+#   # Failed test 20: "every seeded user carries the pinned stamp, not a wall-clock one"
+#   #     Unexpected records:
+#   #         (1)
+#     Failed test:  20
+#   Files=13, Tests=260,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.04 cusr  0.01 csys =  0.08 CPU)
+#   Result: FAIL
+# Then, from a fresh reset and seed:
+=== after Playwright: 2026-09-27T01:39:52Z
+$ supabase db reset --local  exit=0
+$ npx tsx scripts/seed/load.ts  exit=0
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+$ supabase test db --local && supabase gen types typescript --local --schema public | diff -u src/lib/supabase/types.ts - && node scripts/check-migration-filenames.mjs
+Files=13, Tests=260,  0 wallclock secs ( 0.02 usr  0.01 sys +  0.04 cusr  0.02 csys =  0.09 CPU)
+Result: PASS
+PASS: 9 top-level migration filename(s) in supabase/migrations/ parse as <version>_<name>.sql
+exit=0

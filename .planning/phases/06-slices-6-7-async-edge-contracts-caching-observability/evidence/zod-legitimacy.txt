@@ -1,0 +1,185 @@
+zod package-legitimacy bundle — plan 06-01 Task 2 (DEC-60, threat T-06-01-SC)
+**Plan:** 06-01 · **Phase:** 06-slices-6-7-async-edge-contracts-caching-observability · **Recorded:** 2026-09-25T23:07Z–23:09Z (registry read on this date)
+npm 11.13.0 · node v24.16.0 · registry https://registry.npmjs.org/
+
+What this is: the registry facts a human needs to verify zod@4.6.5 before 06-03 installs it, readable
+from this one file without running anything. 06-03 compares the live registry integrity against
+the INTEGRITY line at the end of this file and refuses to install if they differ (DEC-60).
+
+How it was produced: every command below ran from the session scratchpad directory, never from the
+repo root. `npm view` reads metadata only. Section 4 fetched the tarball into the scratchpad with
+`npm pack <spec>` (a download, not an install), hashed it, extracted it there and read its package.json.
+Nothing was installed and nothing was written into the project (the git status check at the end).
+
+FINDINGS (read from the verbatim output below)
+- Identity: repository github.com/colinhacks/zod; maintainer colinhacks; 4.6.5 was published by
+  "GitHub Actions <npm-oidc-no-reply@github.com>" (npm trusted publishing) with an SLSA v1 provenance
+  attestation (section 1).
+- Age: the package was created 2020-03-07 (6.5 years); 4.6.5 was published 2026-09-13T23:25Z, 12 days
+  before this read; 4.6.5 is the `latest` dist-tag (sections 2 and 6).
+- Downloads: 274,124,357 in the week 2026-09-18..2026-09-24 (research recorded 216 M the week before; the
+  figure is the registry's, read now).
+- Install surface: no preinstall, install, postinstall or prepare script in the published package.json;
+  no dependencies and no peerDependencies (section 6 prints nothing for them because npm omits empty
+  fields); 840 files in the tarball.
+- Integrity: the tarball's sha512 equals the registry's dist.integrity (MATCH, section 4).
+- Seam: `package-legitimacy check` answers verdict SUS with the single reason `too-new`. The seam measures
+  the latest version's age against a 30-day minimum; 4.6.5 is 12 days old. That is release cadence, not
+  identity: the publisher, provenance, repository and download volume all match the package's history.
+  DEC-60 resolves it by rule (exact pin, integrity comparison at install, owner countersignature carried
+  to the completion note as a human-check).
+- Already in the tree: zod@4.1.13, transitive in the dev tree under eslint-plugin-react-hooks
+  (evidence/floor.before.txt C9). Installing a direct 4.6.5 may change how the dev tree dedupes; 06-03
+  reviews the lockfile diff.
+
+==============================================================================
+REGISTRY OUTPUT (verbatim)
+==============================================================================
+$ pwd
+<scratchpad>/pack
+exit=0
+
+$ npm --version; node --version; npm config get registry
+11.13.0
+v24.16.0
+https://registry.npmjs.org/
+exit=0
+
+------------------------------------------------------------------------------
+1. The pinned version: identity, publisher, provenance, scripts, dependencies, integrity
+------------------------------------------------------------------------------
+$ npm view zod@4.6.5 version time.4.6.5 dist.integrity dist.tarball dist.attestations repository.url maintainers _npmUser scripts dependencies peerDependencies --json
+{
+  "version": "4.6.5",
+  "dist.integrity": "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==",
+  "dist.tarball": "https://registry.npmjs.org/zod/-/zod-4.6.5.tgz",
+  "dist.attestations": {
+    "url": "https://registry.npmjs.org/-/npm/v1/attestations/zod@4.6.5",
+    "provenance": {
+      "predicateType": "https://slsa.dev/provenance/v1"
+    }
+  },
+  "repository.url": "git+https://github.com/colinhacks/zod.git",
+  "maintainers": [
+    "colinhacks <colinmcd94@gmail.com>"
+  ],
+  "_npmUser": "GitHub Actions <npm-oidc-no-reply@github.com>",
+  "scripts": {
+    "test": "nub exec --node vitest run",
+    "build": "nub exec --node zshy --project tsconfig.build.json",
+    "clean": "git clean -xdf . -e node_modules",
+    "postbuild": "nub ../../scripts/write-stub-package-jsons.ts && nub exec --node biome check --write .",
+    "test:watch": "nub exec --node vitest",
+    "prepublishOnly": "nub ../../scripts/check-versions.ts"
+  }
+}
+exit=0
+
+------------------------------------------------------------------------------
+2. Package age and dist-tags
+------------------------------------------------------------------------------
+$ npm view zod time.created time.modified dist-tags --json
+{
+  "time.created": "2020-03-07T21:19:15.387Z",
+  "time.modified": "2026-09-25T10:23:18.499Z",
+  "dist-tags": {
+    "next": "3.25.0-beta.20250519T094321",
+    "alpha": "3.25.68-alpha.11",
+    "beta": "4.1.13-beta.0",
+    "canary": "4.5.0-canary.20260828T171753",
+    "latest": "4.6.5"
+  }
+}
+exit=0
+
+------------------------------------------------------------------------------
+3. Weekly downloads
+------------------------------------------------------------------------------
+$ curl -s https://api.npmjs.org/downloads/point/last-week/zod
+{"downloads":274124357,"start":"2026-09-18","end":"2026-09-24","package":"zod"}
+exit=0
+
+------------------------------------------------------------------------------
+4. Tarball: fetched into the scratchpad with npm pack (a download, not an install), hashed, compared to dist.integrity
+------------------------------------------------------------------------------
+$ npm pack zod@4.6.5 --pack-destination <scratchpad>/pack --silent
+zod-4.6.5.tgz
+exit=0
+
+$ shasum -a 512 zod-4.6.5.tgz
+bf997f6855d941e6a2e1ac0b6cea52a0779c13d52232b9dfc7be6d1172e33689d754047143998e7a2a538d1394721b3350d0aa9c4fa1a8032e8d1b111ecbadd9
+exit=0
+$ node -e <base64-decode dist.integrity to hex>
+bf997f6855d941e6a2e1ac0b6cea52a0779c13d52232b9dfc7be6d1172e33689d754047143998e7a2a538d1394721b3350d0aa9c4fa1a8032e8d1b111ecbadd9
+exit=0
+MATCH: the tarball's sha512 equals the registry dist.integrity
+
+$ node -p "JSON.stringify(require('<scratchpad>/pack/extract-zod/package/package.json').scripts || {}, null, 0)"
+{"clean":"git clean -xdf . -e node_modules","build":"nub exec --node zshy --project tsconfig.build.json","postbuild":"nub ../../scripts/write-stub-package-jsons.ts && nub exec --node biome check --write .","test:watch":"nub exec --node vitest","test":"nub exec --node vitest run","prepublishOnly":"nub ../../scripts/check-versions.ts"}
+exit=0
+
+$ node -p <lifecycle scripts present? preinstall/install/postinstall/prepare>
+preinstall=none install=none postinstall=none prepare=none
+exit=0
+
+$ tar tzf zod-4.6.5.tgz | wc -l; tar tzf zod-4.6.5.tgz | head -15
+840
+package/LICENSE
+package/README.md
+package/compile.cjs
+package/compile.d.cts
+package/compile.d.ts
+package/compile.js
+package/index.cjs
+package/index.d.cts
+package/index.d.ts
+package/index.js
+package/locales/index.cjs
+package/locales/index.d.cts
+package/locales/index.d.ts
+package/locales/index.js
+package/locales/package.json
+exit=0
+
+------------------------------------------------------------------------------
+5. The GSD package-legitimacy seam
+------------------------------------------------------------------------------
+$ node /Users/adyan/.claude/gsd-core/bin/gsd-tools.cjs query package-legitimacy check --ecosystem npm zod
+[
+  {
+    "name": "zod",
+    "verdict": "SUS",
+    "signals": {
+      "exists": true,
+      "publishedAt": "2026-09-13T23:25:14.644Z",
+      "weeklyDownloads": 274124357,
+      "repoUrl": "git+https://github.com/colinhacks/zod.git",
+      "deprecated": false,
+      "postinstall": null,
+      "ecosystem": "npm"
+    },
+    "reasons": [
+      "too-new"
+    ]
+  }
+]
+exit=0
+
+------------------------------------------------------------------------------
+6. The pinned version's publish time (npm view cannot address a dotted version key, so time is read whole and filtered)
+------------------------------------------------------------------------------
+$ npm view zod time --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const t=JSON.parse(s);console.log("4.6.5",t["4.6.5"]);console.log("4.1.13",t["4.1.13"])})'
+4.6.5 2026-09-13T23:25:14.644Z
+4.1.13 2025-11-24T02:38:31.131Z
+exit=0
+
+$ npm view zod@4.6.5 dependencies peerDependencies engines --json
+exit=0
+
+==============================================================================
+END OF BUNDLE
+==============================================================================
+$ git status --porcelain -- package.json package-lock.json      (run from the repo root after the bundle)
+exit=0  (no output = nothing installed, lockfile untouched)
+
+INTEGRITY zod@4.6.5 sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==

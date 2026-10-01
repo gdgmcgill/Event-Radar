@@ -5,15 +5,19 @@ import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
 import { isBanned } from "@/lib/ban";
 import { getElevatedClient } from "@/server/db/elevated";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { CanonicalId } from "@/contracts/common";
+import { BanBody } from "@/contracts/admin";
+import { logRouteError, withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * POST /api/admin/users/[id]/ban — Ban a user
  */
-export async function POST(
+export const POST = withRoute({ cache: "private", action: "ban user" }, async (
   request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -21,40 +25,18 @@ export async function POST(
   if (!auth.ok) return auth.response;
   const user = auth.user;
 
-  const { id } = await params;
+  // The canonical (lower-case) id, so the self-check below cannot be
+  // sidestepped by sending the caller's own id in another case: Postgres
+  // matches a uuid in any case (DI-64, DEC-66). Any other string passes
+  // through unchanged and the lookup answers it, as before.
+  const id = CanonicalId.parse((await params).id);
 
-  // An invalid body answers 400 "Invalid JSON body", as before. A valid body
-  // that is not an object (`null`, a string, a number, an array) used to
-  // reach the destructuring below and throw outside any try, which the
-  // framework answered with an HTML 500 (REVIEW-05 iter3 WR-08); it now
-  // answers 400 "Request body must be a JSON object".
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const { reason, duration_days, suspend_content } = parsedBody.body as {
-    reason?: string;
-    duration_days?: number;
-    suspend_content?: boolean;
-  };
-
-  // Validate reason
-  if (!reason || typeof reason !== "string" || !reason.trim()) {
-    return NextResponse.json(
-      { error: "Reason is required" },
-      { status: 400 }
-    );
-  }
-
-  // Validate duration_days if provided
-  if (
-    duration_days !== undefined &&
-    duration_days !== null &&
-    (!Number.isInteger(duration_days) || duration_days <= 0)
-  ) {
-    return NextResponse.json(
-      { error: "duration_days must be a positive integer" },
-      { status: 400 }
-    );
-  }
+  // An invalid body answers 400 "Invalid JSON body" and a non-object body
+  // 400 "Request body must be a JSON object" (REVIEW-05 iter3 WR-08). Then
+  // the reason, then duration_days if provided (src/contracts/admin.ts).
+  const parsed = await parseBody(request, BanBody);
+  if (!parsed.ok) return parsed.response;
+  const { reason, duration_days, suspend_content } = parsed.data;
 
   // Reads, the content suspension and its moderation reviews run on the
   // caller's cookie client: the admin policies on users (SELECT), events,
@@ -63,7 +45,7 @@ export async function POST(
   const supabase = ctx.supabase;
 
   // Prevent self-ban
-  if (id === user.id) {
+  if (id === CanonicalId.parse(user.id)) {
     return NextResponse.json({ error: "Cannot ban your own account" }, { status: 400 });
   }
 
@@ -116,6 +98,7 @@ export async function POST(
     .eq("id", id);
 
   if (updateError) {
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -131,7 +114,7 @@ export async function POST(
       .eq("status", "approved");
 
     if (evtFetchErr) {
-      console.error("Failed to fetch user events for suspension:", evtFetchErr);
+      log.error("Failed to fetch user events for suspension", { error: evtFetchErr });
       warnings.push("Failed to fetch events for suspension");
     }
 
@@ -142,7 +125,7 @@ export async function POST(
       .eq("status", "approved");
 
     if (clubFetchErr) {
-      console.error("Failed to fetch user clubs for suspension:", clubFetchErr);
+      log.error("Failed to fetch user clubs for suspension", { error: clubFetchErr });
       warnings.push("Failed to fetch clubs for suspension");
     }
 
@@ -155,7 +138,7 @@ export async function POST(
         .eq("status", "approved");
 
       if (evtUpdateErr) {
-        console.error("Failed to suspend user events:", evtUpdateErr);
+        log.error("Failed to suspend user events", { error: evtUpdateErr });
         warnings.push("Some events may not have been suspended");
       }
 
@@ -172,7 +155,7 @@ export async function POST(
       );
 
       if (evtReviewErr) {
-        console.error("Failed to create event moderation reviews:", evtReviewErr);
+        log.error("Failed to create event moderation reviews", { error: evtReviewErr });
         warnings.push("Some event moderation reviews may not have been created");
       }
     }
@@ -186,7 +169,7 @@ export async function POST(
         .eq("status", "approved");
 
       if (clubUpdateErr) {
-        console.error("Failed to suspend user clubs:", clubUpdateErr);
+        log.error("Failed to suspend user clubs", { error: clubUpdateErr });
         warnings.push("Some clubs may not have been suspended");
       }
 
@@ -203,7 +186,7 @@ export async function POST(
       );
 
       if (clubReviewErr) {
-        console.error("Failed to create club moderation reviews:", clubReviewErr);
+        log.error("Failed to create club moderation reviews", { error: clubReviewErr });
         warnings.push("Some club moderation reviews may not have been created");
       }
     }
@@ -225,7 +208,7 @@ export async function POST(
       created_at: now.toISOString(),
     });
   } catch (notifErr) {
-    console.error("[Admin] Failed to send ban notification:", notifErr);
+    log.error("Failed to send ban notification", { scope: "Admin", error: notifErr });
   }
 
   // Log audit action
@@ -245,22 +228,22 @@ export async function POST(
       },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   return NextResponse.json({
     success: true,
     ...(warnings.length > 0 && { warnings }),
   });
-}
+});
 
 /**
  * DELETE /api/admin/users/[id]/ban — Unban a user
  */
-export async function DELETE(
+export const DELETE = withRoute({ cache: "private", action: "unban user" }, async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -303,6 +286,7 @@ export async function DELETE(
     .eq("id", id);
 
   if (updateError) {
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -319,7 +303,7 @@ export async function DELETE(
       created_at: new Date().toISOString(),
     });
   } catch (notifErr) {
-    console.error("[Admin] Failed to send unban notification:", notifErr);
+    log.error("Failed to send unban notification", { scope: "Admin", error: notifErr });
   }
 
   // Log audit action
@@ -335,8 +319,8 @@ export async function DELETE(
       },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   return NextResponse.json({ success: true });
-}
+});

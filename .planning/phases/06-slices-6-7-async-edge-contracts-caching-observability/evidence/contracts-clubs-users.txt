@@ -1,0 +1,315 @@
+# Evidence — plan 06-09: clubs, organizer-requests, users and profile on zod contracts
+
+Plan: 06-09 · Phase: 06-slices-6-7-async-edge-contracts-caching-observability · Recorded: 2026-09-27
+Base: c8d7fd5 (06-08 complete). Task 1 commit: 4f918ae. Task 2 commit: the commit carrying this file.
+Every command below was run in the repository root; exit codes are as printed by the shell. Output is
+excerpted verbatim (test-name lines, summary lines); full logs stayed in the session scratchpad.
+
+## 1. Task 1 RED — src/contracts/__tests__/clubs.test.ts before src/contracts/clubs.ts existed
+
+$ npx jest --ci src/contracts/__tests__/clubs.test.ts        exit 1
+FAIL node src/contracts/__tests__/clubs.test.ts
+    Could not locate module @/contracts/clubs mapped as:
+Tests:       0 total
+
+## 2. Task 1 GREEN — the contract and the parseForm deferFileChecks row
+
+$ npx jest --ci src/contracts/__tests__/clubs.test.ts src/server/__tests__/body.test.ts        exit 0
+Test Suites: 2 passed, 2 total
+Tests:       164 passed, 164 total
+
+## 3. Task 1 ledger protocol (F-094; DI-66 / DEC-66)
+
+3.1 Step 2 — routes adopted, DEFECT and PRESERVE suites unedited
+$ npx jest --ci src/__tests__/contracts src/__tests__/api/clubs src/__tests__/api/review05 src/contracts        exit 1
+FAIL node src/__tests__/contracts/malformed-input-defect.test.ts
+FAIL node src/__tests__/api/review05/club-links.test.ts
+FAIL node src/__tests__/contracts/bad-request-characterization.test.ts
+Test Suites: 3 failed, 15 passed, 18 total
+Tests:       13 failed, 881 passed, 894 total
+● D0: the site lists are the tree › RAW_SITES covers every raw request.json() in a route file (12 sites)
+● D0: the site lists are the tree › RJO_SITES is every route file calling readJsonObject (13)
+● D1: each raw site, a body that is not JSON › clubs/[id] PATCH
+● D1: each raw site, a body that is not JSON › clubs/[id]/invites POST
+● D1: each raw site, a body that is not JSON › clubs/[id]/members DELETE
+● D2: each raw site, a JSON array › clubs/[id] PATCH
+● D2: each raw site, a JSON array › clubs/[id]/invites POST
+● D2: each raw site, a JSON array › clubs/[id]/members DELETE
+● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › clubs POST
+● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › clubs/[id]/appeal POST
+● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › clubs/[id]/invites POST
+● P1: shape rules — today's exact 400 › clubs/[id] PATCH — club PATCH: URL relative
+● POST /api/clubs › still accepts a scheme-less website typed into the form, and an https one
+(11 DEFECT rows red as expected, plus the two DEC-66 pins: the PRESERVE table row "club PATCH: URL
+relative" and the club-links row "still accepts a scheme-less website". Every other 06-07 PRESERVE row
+and every club PRESERVE suite green.)
+
+3.2 The two DEC-66 pins moved to src/__tests__/api/review05/club-links-defect.test.ts, first with their
+OLD assertions:
+$ npx jest --ci src/__tests__/api/review05/club-links-defect.test.ts   (fixed sources)        exit 1
+    ✕ a scheme-less website link (club.ca) (147 ms)
+    ✕ a scheme-less website typed into the form, and an https one (4 ms)
+Tests:       2 failed, 2 total
+$ npx jest --ci src/__tests__/api/review05/club-links-defect.test.ts   (pre-fix sources swapped in)        exit 0
+    ✓ a scheme-less website link (club.ca) (20 ms)
+    ✓ a scheme-less website typed into the form, and an https one (2 ms)
+Tests:       2 passed, 2 total
+(restored; cmp exit 0 for all 11 route files)
+
+3.3 Step 3 — rows moved, assertions flipped
+$ npx jest --ci src/__tests__/contracts src/__tests__/api/clubs src/__tests__/api/review05 src/contracts src/server        exit 0
+Test Suites: 1 skipped, 35 passed, 35 of 36 total
+Tests:       1 skipped, 1089 passed, 1090 total
+
+3.4 Step 4 — pre-fix route sources (c8d7fd5) swapped in, moved suites run
+$ npx jest --ci src/__tests__/contracts/malformed-input-defect.test.ts src/__tests__/api/review05/club-links-defect.test.ts        exit 1
+Test Suites: 2 failed, 2 total
+Tests:       14 failed, 61 passed, 75 total
+● D0: the site lists are the tree › RAW_SITES covers every raw request.json() in a route file (9 sites)
+● D0: the site lists are the tree › RJO_SITES is every route file calling readJsonObject (7)
+● D0: the site lists are the tree › the adopted sites read their body through parseBody and nothing raw (06-08, 06-09)
+● D1: each raw site, a body that is not JSON › clubs/[id] PATCH
+● D1: each raw site, a body that is not JSON › clubs/[id]/invites POST
+● D1: each raw site, a body that is not JSON › clubs/[id]/members DELETE
+● D2: each raw site, a JSON array › clubs/[id] PATCH
+● D2: each raw site, a JSON array › clubs/[id]/invites POST
+● D2: each raw site, a JSON array › clubs/[id]/members DELETE
+● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › clubs POST
+● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › clubs/[id]/appeal POST
+● D3: each raw and readJsonObject site, a number where a string is trimmed or compared › clubs/[id]/invites POST
+● PATCH /api/clubs/[id] as the owner (moved from the 06-07 table) › a scheme-less website link (club.ca)
+● POST /api/clubs (moved from club-links.test.ts) › a scheme-less website typed into the form, and an https one
+$ cmp <fixed copy> <restored file>   (x17 files under clubs/ and organizer-requests/, the 11 adopted included)
+cmp ok ./clubs/[id]/analytics/route.ts
+cmp ok ./clubs/[id]/appeal/route.ts
+cmp ok ./clubs/[id]/events/route.ts
+cmp ok ./clubs/[id]/follow/route.ts
+cmp ok ./clubs/[id]/invites/route.ts
+cmp ok ./clubs/[id]/members/role/route.ts
+cmp ok ./clubs/[id]/members/route.ts
+cmp ok ./clubs/[id]/route.ts
+cmp ok ./clubs/[id]/transfer/route.ts
+cmp ok ./clubs/banner/route.ts
+cmp ok ./clubs/featured/route.ts
+cmp ok ./clubs/friends/route.ts
+cmp ok ./clubs/logo/route.ts
+cmp ok ./clubs/new/route.ts
+cmp ok ./clubs/route.ts
+cmp ok ./clubs/trending/route.ts
+cmp ok ./organizer-requests/route.ts
+
+3.5 PRESERVE diff against aa04365 (06-07's commit)
+$ git diff --quiet aa04365 -- src/__tests__/contracts/bad-request-characterization.test.ts        exit 0
+$ git diff aa04365 --stat -- src/__tests__/contracts/badRequestTable.ts src/__tests__/api/clubs
+ src/__tests__/contracts/badRequestTable.ts | 1 -      (the one moved DEC-66 row; src/__tests__/api/clubs unedited)
+
+## 4. Task 1 verify (verbatim) and gates
+
+$ npx jest --ci src/contracts src/__tests__/api/clubs src/__tests__/contracts && node scripts/check-contracts.mjs && npx tsc --noEmit        exit 0
+Test Suites: 8 passed, 8 total
+Tests:       704 passed, 704 total
+committed=41 live=41 delta=0
+PASS: the live census is within the committed allow-list
+$ npm run lint        exit 0
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+$ node scripts/check-characterization-tags.mjs --all        exit 0
+ok 54 files
+$ npx jest --ci   (every suite; run before the Task 1 commit)        exit 0
+Test Suites: 1 skipped, 114 passed, 114 of 115 total
+Tests:       1 skipped, 2685 passed, 2686 total
+
+## 5. Task 1 allow-list diff (12 entries, 12 sites retired; census 53 -> 41)
+
+$ git diff c8d7fd5 4f918ae -- scripts/contracts-allowlist.json | grep '"file"'
+-    "file": "src/app/api/clubs/[id]/appeal/route.ts",
+-    "file": "src/app/api/clubs/[id]/invites/route.ts",
+-    "file": "src/app/api/clubs/[id]/members/role/route.ts",
+-    "file": "src/app/api/clubs/[id]/members/route.ts",
+-    "file": "src/app/api/clubs/[id]/route.ts",
+-    "file": "src/app/api/clubs/[id]/route.ts",
+-    "file": "src/app/api/clubs/[id]/transfer/route.ts",
+-    "file": "src/app/api/clubs/banner/route.ts",
+-    "file": "src/app/api/clubs/logo/route.ts",
+-    "file": "src/app/api/clubs/route.ts",
+-    "file": "src/app/api/clubs/trending/route.ts",
+-    "file": "src/app/api/organizer-requests/route.ts",
+     "file": "src/app/api/profile/avatar/route.ts",
+
+## 6. Task 2 RED — src/contracts/__tests__/users.test.ts before src/contracts/users.ts existed
+
+$ npx jest --ci src/contracts/__tests__/users.test.ts        exit 1
+    Could not locate module @/contracts/users mapped as:
+Test Suites: 1 failed, 1 total
+Tests:       0 total
+
+## 7. Task 2 GREEN
+
+$ npx jest --ci src/contracts/__tests__/users.test.ts        exit 0
+Test Suites: 1 passed, 1 total
+Tests:       58 passed, 58 total
+
+## 8. Task 2 ledger protocol (F-094)
+
+8.1 Step 2 — routes adopted, DEFECT and PRESERVE suites unedited
+$ npx jest --ci src/__tests__/contracts src/contracts src/__tests__/api/users src/__tests__/api/profile        exit 1
+FAIL node src/__tests__/contracts/malformed-input-defect.test.ts
+Test Suites: 1 failed, 5 passed, 6 total
+Tests:       7 failed, 630 passed, 637 total
+● D0: the site lists are the tree › RAW_SITES covers every raw request.json() in a route file (9 sites)
+● D1: each raw site, a body that is not JSON › profile/inferred-tags DELETE
+● D1: each raw site, a body that is not JSON › profile/interests PUT
+● D1: each raw site, a body that is not JSON › users/[id] PATCH
+● D2: each raw site, a JSON array › profile/inferred-tags DELETE
+● D2: each raw site, a JSON array › profile/interests PUT
+● D2: each raw site, a JSON array › users/[id] PATCH
+(The three D3 rows, a numeric name, tag element and tag, were already refused by the ladder and keep
+their outcome.)
+
+8.2 Step 3 — rows moved
+$ npx jest --ci src/__tests__/contracts src/contracts        exit 0
+Test Suites: 6 passed, 6 total
+Tests:       637 passed, 637 total
+
+8.3 Step 4 — pre-fix sources swapped in
+$ npx jest --ci src/__tests__/contracts/malformed-input-defect.test.ts        exit 1
+Tests:       8 failed, 65 passed, 73 total
+● D0: the site lists are the tree › RAW_SITES covers every raw request.json() in a route file (6 sites)
+● D0: the site lists are the tree › the adopted sites read their body through parseBody and nothing raw (06-08, 06-09)
+● D1: each raw site, a body that is not JSON › profile/inferred-tags DELETE
+● D1: each raw site, a body that is not JSON › profile/interests PUT
+● D1: each raw site, a body that is not JSON › users/[id] PATCH
+● D2: each raw site, a JSON array › profile/inferred-tags DELETE
+● D2: each raw site, a JSON array › profile/interests PUT
+● D2: each raw site, a JSON array › users/[id] PATCH
+cmp ok ./profile/inferred-tags/route.ts
+cmp ok ./profile/avatar/route.ts
+cmp ok ./profile/interests/route.ts
+cmp ok ./profile/banner/route.ts
+cmp ok ./users/saved-events/route.ts
+cmp ok ./users/search/route.ts
+cmp ok ./users/[id]/route.ts
+
+## 9. Task 2 allow-list diff (7 entries, 8 sites retired; census 41 -> 33)
+
+$ git diff 4f918ae -- scripts/contracts-allowlist.json | grep '"file"'
+     "file": "src/app/api/admin/users/[id]/route.ts",
+-    "file": "src/app/api/profile/avatar/route.ts",
+-    "file": "src/app/api/profile/banner/route.ts",
+-    "file": "src/app/api/profile/inferred-tags/route.ts",
+-    "file": "src/app/api/profile/interests/route.ts",
+-    "file": "src/app/api/users/[id]/route.ts",
+-    "file": "src/app/api/users/saved-events/route.ts",
+-    "file": "src/app/api/users/search/route.ts",
+$ node -e '...some(e=>/api\/(clubs|users|user|profile|organizer-requests|my-clubs|onboarding)\//.test(e.file))?1:0'        exit 0
+
+## 10. Task 2 verify (verbatim)
+
+$ npx jest --ci && node scripts/check-contracts.mjs && npx tsc --noEmit && npm run lint        exit 0
+Test Suites: 1 skipped, 115 passed, 115 of 116 total
+Tests:       1 skipped, 2743 passed, 2744 total
+committed=33 live=33 delta=0
+PASS: the live census is within the committed allow-list
+  168:7  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+✖ 18 problems (0 errors, 18 warnings)
+(the 18 warnings are the pre-existing set, in the same 13 files as before this plan; none in a file this
+plan touched)
+$ node scripts/check-characterization-tags.mjs --all        exit 0
+ok 54 files
+$ node scripts/check-elevated-ratchet.mjs        exit 0
+committed=0 live=0 delta=0
+
+## 11. Playwright — the five club and profile specs from a fresh reset and seed
+
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN        exit 1 (nothing listening)
+$ supabase db reset --local        exit 0
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+$ npx tsx scripts/seed/load.ts        exit 0
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+$ npx playwright test e2e/specs/club-owner-surfaces.spec.ts e2e/specs/club-authorization.spec.ts \
+    e2e/specs/club-invitation-acceptance.spec.ts e2e/specs/public-profile-privacy.spec.ts \
+    e2e/specs/ban-and-onboarding-ring.spec.ts --reporter=list        exit 0
+(webServer: `npm run build && npm run start`, reuseExistingServer: false; the build ran)
+[WebServer] ✓ Running next.config.js took 5ms
+[WebServer] ✓ Compiled successfully in 2.1s
+[WebServer] ✓ Generating static pages using 9 workers (98/98) in 320ms
+[WebServer] ✓ Ready in 49ms
+[WebServer] ✓ Running next.config.js took 6ms
+  ✓   1 [setup] › e2e/auth.setup.ts:59:18 › authenticate as onboarded_student (423ms)
+  ✓   2 [setup] › e2e/auth.setup.ts:59:18 › authenticate as mid_onboarding_student (267ms)
+  ✓   3 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_member (268ms)
+  ✓   4 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_owner (258ms)
+  ✓   5 [setup] › e2e/auth.setup.ts:59:18 › authenticate as multi_club_organizer (260ms)
+  ✓   6 [setup] › e2e/auth.setup.ts:59:18 › authenticate as cross_club_attacker (440ms)
+  ✓   7 [setup] › e2e/auth.setup.ts:59:18 › authenticate as admin (244ms)
+  ✓   8 [setup] › e2e/auth.setup.ts:59:18 › authenticate as banned_permanent (208ms)
+  ✓   9 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspended_active (202ms)
+  ✓  10 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspension_expired (228ms)
+  ✓  11 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:60:7 › a permanently banned user (F-062, F-088) › gets a JSON 403 Account suspended on an API write (106ms)
+  ✓  12 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:64:7 › a permanently banned user (F-062, F-088) › gets the same JSON 403 on an API read (78ms)
+  ✓  13 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:68:7 › a permanently banned user (F-062, F-088) › is still sent to the ban page on a page request (144ms)
+  ✓  14 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:77:7 › a user whose suspension is still running (F-088) › gets a JSON 403 Account suspended on an API write (62ms)
+  ✓  15 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:85:7 › a user whose suspension has expired › reads their own saved events, because banned_at alone is not a ban (109ms)
+  ✓  16 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:94:7 › the mid-onboarding student (F-089, DEC-34) › is sent to onboarding from the home page (134ms)
+  ✓  17 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:99:7 › the mid-onboarding student (F-089, DEC-34) › is still sent to onboarding with the needs_onboarding cookie deleted (database truth) (149ms)
+  ✓  18 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:108:7 › the mid-onboarding student (F-089, DEC-34) › gets a JSON 403 Onboarding required on a direct API write (78ms)
+  ✓  19 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:112:7 › the mid-onboarding student (F-089, DEC-34) › can still make the wizard's self-update (exempt from the onboarding guard) (83ms)
+  ✓  20 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:119:7 › the mid-onboarding student (F-089, DEC-34) › can still complete onboarding (exempt from the onboarding guard) (78ms)
+  ✓  21 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:129:7 › the deleted debug route (F-027) › answers 404 in the production build (60ms)
+  ✓  22 [chromium] › e2e/specs/club-authorization.spec.ts:73:7 › the cross-club attacker on the approved club (REFAC-12) › cannot update the club (112ms)
+  ✓  23 [chromium] › e2e/specs/club-authorization.spec.ts:80:7 › the cross-club attacker on the approved club (REFAC-12) › cannot delete the club (108ms)
+  ✓  24 [chromium] › e2e/specs/club-authorization.spec.ts:87:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view invitations (111ms)
+  ✓  25 [chromium] › e2e/specs/club-authorization.spec.ts:94:7 › the cross-club attacker on the approved club (REFAC-12) › cannot send invitations (109ms)
+  ✓  26 [chromium] › e2e/specs/club-authorization.spec.ts:101:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view members (110ms)
+  ✓  27 [chromium] › e2e/specs/club-authorization.spec.ts:108:7 › the cross-club attacker on the approved club (REFAC-12) › cannot remove members (103ms)
+  ✓  28 [chromium] › e2e/specs/club-authorization.spec.ts:117:7 › the cross-club attacker on the approved club (REFAC-12) › cannot change member roles (113ms)
+  ✓  29 [chromium] › e2e/specs/club-authorization.spec.ts:126:7 › the cross-club attacker on the approved club (REFAC-12) › cannot transfer ownership (106ms)
+  ✓  30 [chromium] › e2e/specs/club-authorization.spec.ts:133:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view club analytics (106ms)
+  ✓  31 [chromium] › e2e/specs/club-authorization.spec.ts:140:7 › the cross-club attacker on the approved club (REFAC-12) › cannot view the analytics of the club's event (107ms)
+  ✓  32 [chromium] › e2e/specs/club-authorization.spec.ts:147:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's banner (108ms)
+  ✓  33 [chromium] › e2e/specs/club-authorization.spec.ts:154:7 › the cross-club attacker on the approved club (REFAC-12) › cannot upload the club's logo (108ms)
+  ✓  34 [chromium] › e2e/specs/club-authorization.spec.ts:165:7 › the club's organizer (not the owner) › cannot update the club (owner only) (120ms)
+  ✓  35 [chromium] › e2e/specs/club-authorization.spec.ts:172:7 › the club's organizer (not the owner) › can view members (104ms)
+  ✓  36 [chromium] › e2e/specs/club-authorization.spec.ts:179:7 › the club's organizer (not the owner) › can view club analytics (121ms)
+  ✓  37 [chromium] › e2e/specs/club-authorization.spec.ts:187:7 › the club owner › can view invitations (109ms)
+  ✓  38 [chromium] › e2e/specs/club-authorization.spec.ts:193:7 › the club owner › can view members (104ms)
+  ✓  39 [chromium] › e2e/specs/club-authorization.spec.ts:202:7 › the club owner › can view club analytics (112ms)
+  ✓  40 [chromium] › e2e/specs/club-authorization.spec.ts:206:7 › the club owner › FIXED F-087: the owner's own club PATCH answers 200, and status stays unwritable (195ms)
+  ✓  41 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:118:7 › club invitation acceptance (F-016, DEC-43) › the club owner invites the student by email (44ms)
+  ✓  42 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:130:7 › club invitation acceptance (F-016, DEC-43) › the student opens the invitation and it is accepted (471ms)
+  ✓  43 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:159:7 › club invitation acceptance (F-016, DEC-43) › the owner sees the invitation accepted (44ms)
+  ✓  44 [chromium] › e2e/specs/club-invitation-acceptance.spec.ts:176:7 › club invitation acceptance (F-016, DEC-43) › the student is now a member of the club, as an organizer (37ms)
+  ✓  45 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:41:18 › the club owner › is routed from /my-clubs to the multi-club surface and sees the approved club (1.1s)
+  ✓  46 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:51:18 › the club owner › opens the club dashboard and sees the club's own events (416ms)
+  ✓  47 [chromium] › e2e/specs/club-owner-surfaces.spec.ts:67:18 › a member of a different club › does not see the approved club on their own surface (302ms)
+  ✓  48 [chromium] › e2e/specs/public-profile-privacy.spec.ts:71:7 › public profile privacy (F-005) › private: the not-found response to an anonymous reader, the page to a signed-in viewer; public again: the page, never the email (153ms)
+  48 passed (19.6s)
+$ lsof -nP -iTCP:3000 -sTCP:LISTEN        exit 1 (nothing listening)
+
+## 12. Ledger rows appended by this plan (22)
+
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: RAW_SITES) | the raw `request.json()` list is the tree at **12 sites** (12 files), `clubs/[id]` PATCH, `clubs/[id]/members` DELETE and `clubs/[id]/invites` POST included | the list is the tree at **9 sites** (9 files); the three club sites moved to `ADOPTED_RAW_SITES` | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: RJO_SITES) | the `readJsonObject` file list is the tree at **13** files, `clubs/[id]/appeal`, `clubs/[id]/members/role`, `clubs/[id]` DELETE, `clubs/[id]/transfer`, `clubs` POST and `organizer-requests` POST included | the list is the tree at **7** (the admin files); the six moved to `ADOPTED_RJO_SITES` (they read through `parseBody` with the `src/contracts/clubs.ts` schemas) | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: the adopted sites read through parseBody) | **7** adopted route files (06-08's events files) call `parseBody(request, ` with no raw read or `readJsonObject(` | **15** adopted route files: the 7 events files and 8 club and organizer-request files (`clubs/[id]` holds both a raw and a readJsonObject site) | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: clubs/[id] PATCH, not JSON) | **500** `{"error":"Failed to update club"}` (the raw read threw inside the try) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `ClubUpdateBody`, after the owner gate), no write | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: clubs/[id]/members DELETE, not JSON) | **500** `{"error":"Failed to remove member"}` | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `ClubMemberBody`), no write | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: clubs/[id]/invites POST, not JSON) | **500** `{"error":"Failed to create invitation"}` | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `ClubInviteBody`), no write | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: clubs/[id] PATCH, array) | **400** `{"error":"No valid fields to update"}` (an array read as an object with no keys) | **400** `{"error":"Request body must be a JSON object"}`, no write | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: clubs/[id]/members DELETE, array) | **400** `{"error":"memberId is required"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: clubs/[id]/invites POST, array) | **400** `{"error":"Email is required"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: clubs/[id]/invites POST, numeric `email`) | **500** `{"error":"Failed to create invitation"}` (`email.trim` is not a function, inside the try) | **400** `{"error":"Email is required"}` (`ClubInviteBody`), no write | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: clubs/[id]/appeal POST, numeric `message`) | rejected handler promise, `message?.trim is not a function` (no outer try: Next's HTML 500, F-058) | **400** `{"error":"Appeal message is required"}` (`ClubAppealBody`, `NonEmptyTrimmedString`), no write | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D3: clubs POST, numeric `name`, no contact email) | **400** `{"error":"Contact email is required"}` (`sanitizeText` coerced the name to "5", so the required check passed and the email answered) | **400** `{"error":"Name, description, and category are required"}` (`ClubCreateBody` refuses a non-string name with its required text), no write | `4f918ae` | 06-09 |
+| F-094 (DI-66, DEC-66) | `src/__tests__/api/review05/club-links-defect.test.ts` (new DEFECT; PATCH row) | moved out of PRESERVE: `badRequestTable.ts` row `club PATCH: URL relative` (read by `bad-request-characterization.test.ts` P1): owner PATCH `{"website_url":"club.ca"}` answers **400** `{"error":"Invalid URL for website_url"}`, nothing written | **200**, one `clubs.update` with payload `{"website_url":"https://club.ca"}` (`ClubLinkFields`: a scheme-less host path is saved with https:// prefixed). The old pin was proven green on the pre-fix sources and red on the fix before the flip | `4f918ae` | 06-09 |
+| F-094 (DI-66, DEC-66) | `src/__tests__/api/review05/club-links-defect.test.ts` (new DEFECT; POST row) | moved out of `src/__tests__/api/review05/club-links.test.ts`: "still accepts a scheme-less website typed into the form, and an https one": POST answers **201** and inserts `website_url: "yourclub.com"` verbatim (a relative link on the club page) | **201**, the insert carries `website_url: "https://yourclub.com"`; `linkedin_url` `https://linkedin.com/company/x` kept byte for byte | `4f918ae` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: RAW_SITES) | the raw `request.json()` list is the tree at **9 sites** (9 files), `profile/interests` PUT, `profile/inferred-tags` DELETE and `users/[id]` PATCH included | the list is the tree at **6 sites** (the admin files); the three moved to `ADOPTED_RAW_SITES` | `(06-09 T2)` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D0: the adopted sites read through parseBody) | **15** adopted route files | **18**: the three user and profile files added (`parseBody(request, ` with `UserUpdateBody`, `InterestsBody`, `InferredTagBody`; no raw read) | `(06-09 T2)` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: profile/interests PUT, not JSON) | **500** `{"error":"Internal server error"}` (the raw read threw inside the try) | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `InterestsBody`), no write | `(06-09 T2)` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: profile/inferred-tags DELETE, not JSON) | **500** `{"error":"Internal server error"}` | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `InferredTagBody`), no write | `(06-09 T2)` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D1: users/[id] PATCH, not JSON) | **500** `{"error":"Internal server error"}` | **400** `{"error":"Invalid JSON body"}` (`parseBody` + `UserUpdateBody`, after the self-only 403), no write | `(06-09 T2)` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: profile/interests PUT, array) | **400** `{"error":"interest_tags must be an array"}` (an array destructured to no keys) | **400** `{"error":"Request body must be a JSON object"}`, no write | `(06-09 T2)` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: profile/inferred-tags DELETE, array) | **400** `{"error":"tag is required and must be a string"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `(06-09 T2)` | 06-09 |
+| F-094 | `src/__tests__/contracts/malformed-input-defect.test.ts` (D2: users/[id] PATCH, array) | **400** `{"error":"No fields to update"}` | **400** `{"error":"Request body must be a JSON object"}`, no write | `(06-09 T2)` | 06-09 |

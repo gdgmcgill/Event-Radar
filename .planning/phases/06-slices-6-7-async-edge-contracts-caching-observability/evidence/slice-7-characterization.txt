@@ -1,0 +1,694 @@
+slice-7-characterization.txt — plan 06-07 (slice 7 characterize step)
+head at start: f550de9 (plans 06-01..06-06 complete). Test commits: ee69dda (Task 1), 830c0ba (Task 2).
+Date: 2026-09-27 (UTC). Machine: macOS, Node 24, Jest 30 (two projects). No database, no Playwright, no port 3000 use.
+Every value pinned by the nine new suites was measured on the UNMODIFIED source before it was pinned.
+The measurement harnesses were temporary test files (src/__tests__/contracts/zz-measure.test.ts,
+src/__tests__/api/zz-measure2.test.ts); both were deleted before any commit (git never saw them).
+
+Contents
+  §1 Task 1 measurement: 174 bad-request rows, 13 query-coercion rows, the F-094 malformed matrix (69 rows)
+  §2 Task 2 measurement: the F-026 cache-header sweep (44 arms + control, signed in and anonymous)
+  §3 Task 2 first runs: error-text (F-059), health (F-029), uncaught-throw (F-058), config and docs suites
+  §4 Census C7 re-derived at HEAD (the F-059 worklist) and its reconciliation
+  §5 Mutation M1 (a 400 text in events/create) — PRESERVE rows red, restored, cmp exit 0
+  §6 Mutation M2 (caught-error text at events/my-events:24) — DEFECT row red, restored, cmp exit 0
+  §7 The nine new suites (plus the helper badRequestTable.ts)
+  §8 Tag gate (--all)
+  §9 Full Jest run and each task's verify command, with exit codes
+  §10 Source untouched
+
+------------------------------------------------------------------------------
+[§1 Task 1 measurement harness output (MEASURE_OUT of zz-measure.test.ts, second run)]
+$ MEASURE_OUT=<scratch>/measure2.txt npx jest --ci src/__tests__/contracts/zz-measure.test.ts
+Line format: SAME|DIFF | row id | measured status and body  (SAME = equals the row as written from reading the handler)
+             SAME|DIFF | Q coercion id | measured status and observed value
+             M | raw|rjo | route verb | input (nonstring|notjson|array) | measured status and body | non-select calls on both fakes
+Notes:
+  - The first run (measure1) differed only on the admin/organizers coercion row: the shared fake has no
+    `contains` ("supabase.from(...).select(...).contains is not a function"). The fake was NOT extended (PRESERVE
+    suites pin its gaps); the table's test-local `withContainsAndNot` wrapper was added and this second run is SAME.
+  - JSON.stringify prints NaN as null, so the NaN range rows print null here; the suite compares with toEqual,
+    which treats NaN as equal to NaN.
+  - "M | rjo | clubs POST | nonstring" measured a fake gap (`ilike is not a function`: sanitizeText coerced the numeric
+    name to "5" and the handler went on to its duplicate check). That is not today's production behaviour, so the pinned
+    D3 row pairs the numeric name with a missing contact_email: it answers 400 "Contact email is required", which proves
+    the number passed the required-name check. That row was measured by the suite's first run (§7, 72/72).
+SAME | create: title missing | 400 {"error":"Title is required"}
+SAME | create: title only markup | 400 {"error":"Title is required"}
+SAME | create: description missing | 400 {"error":"Description is required"}
+SAME | create: start_date missing | 400 {"error":"Start date is required","field":"start_date"}
+SAME | create: location missing | 400 {"error":"Location is required"}
+SAME | create: tags missing | 400 {"error":"At least one tag is required"}
+SAME | create: tags not an array | 400 {"error":"At least one tag is required"}
+SAME | create: tags empty | 400 {"error":"At least one tag is required"}
+SAME | create: price over 20 chars | 400 {"error":"Price must be 20 characters or less"}
+SAME | create: rsvp_link over 500 chars | 400 {"error":"Registration link is too long"}
+SAME | create: rsvp_link not http(s) | 400 {"error":"Registration link must use http or https"}
+SAME | create: rsvp_link not a URL | 400 {"error":"Registration link must be a valid URL"}
+SAME | create: start_date not ISO | 400 {"error":"start_date must be a valid ISO 8601 date (e.g. \"2026-03-15\" or \"2026-03-15T09:00:00Z\")","field":"start_date"}
+SAME | create: start_date in the past | 400 {"error":"start_date must be a date in the future","field":"start_date"}
+SAME | create: end_date not ISO | 400 {"error":"end_date must be a valid ISO 8601 date (e.g. \"2026-03-15\" or \"2026-03-15T11:00:00Z\")","field":"end_date"}
+SAME | create: end_date before start | 400 {"error":"end_date must be after start_date","field":"end_date"}
+SAME | create order: empty body → title first | 400 {"error":"Title is required"}
+SAME | create order: bad price and bad dates → price first | 400 {"error":"Price must be 20 characters or less"}
+SAME | event PATCH: no editable field | 400 {"error":"No valid fields to update"}
+SAME | event PATCH: start_date not ISO | 400 {"error":"start_date must be a valid ISO 8601 date (e.g. \"2026-03-15\" or \"2026-03-15T09:00:00Z\")","field":"start_date"}
+SAME | event PATCH: start_date in the past | 400 {"error":"start_date must be a date in the future","field":"start_date"}
+SAME | event PATCH: end_date before start | 400 {"error":"end_date must be after start_date","field":"end_date"}
+SAME | event PATCH: end_date alone not ISO | 400 {"error":"end_date must be a valid ISO 8601 date (e.g. \"2026-03-15\" or \"2026-03-15T11:00:00Z\")","field":"end_date"}
+SAME | event PATCH order: no field beats a bad date | 400 {"error":"No valid fields to update"}
+SAME | rsvp POST: user_id missing | 400 {"error":"user_id is required"}
+SAME | rsvp POST: status missing | 400 {"error":"status is required"}
+SAME | rsvp POST: status not a member | 400 {"error":"Invalid status. Must be one of: going, interested"}
+SAME | rsvp POST order: empty body → user_id first | 400 {"error":"user_id is required"}
+SAME | rsvp DELETE: user_id missing | 400 {"error":"user_id is required"}
+SAME | reviews: rating missing | 400 {"error":"Rating must be an integer between 1 and 5"}
+SAME | reviews: rating 6 | 400 {"error":"Rating must be an integer between 1 and 5"}
+SAME | reviews: rating 2.5 | 400 {"error":"Rating must be an integer between 1 and 5"}
+SAME | reviews: event not ended | 400 {"error":"Reviews can only be submitted after the event has ended"}
+SAME | invite: invitee_ids missing | 400 {"error":"No invitees provided"}
+SAME | invite: invitee_ids empty | 400 {"error":"No invitees provided"}
+SAME | invite: no invitee is a friend | 400 {"error":"No valid friends to invite"}
+SAME | report: category missing | 400 {"error":"Invalid category"}
+SAME | report: category unknown | 400 {"error":"Invalid category"}
+SAME | event appeal: message missing | 400 {"error":"Appeal message is required"}
+SAME | event appeal: message blank | 400 {"error":"Appeal message is required"}
+SAME | event analytics: event has no club | 400 {"error":"Event is not associated with a club"}
+SAME | export: format missing | 400 {"error":"format parameter must be 'csv' or 'ical'"}
+SAME | export: format pdf | 400 {"error":"format parameter must be 'csv' or 'ical'"}
+SAME | export: eventId not a UUID | 400 {"error":"eventId must be a valid UUID"}
+SAME | export: eventIds not UUIDs | 400 {"error":"eventIds must be a comma-separated list of valid UUIDs"}
+SAME | export: eventId and eventIds | 400 {"error":"Provide either eventId or eventIds, not both"}
+SAME | export order: bad format beats bad eventId | 400 {"error":"format parameter must be 'csv' or 'ical'"}
+SAME | export order: bad eventId beats both-given | 400 {"error":"eventId must be a valid UUID"}
+SAME | popular: sort unknown | 400 {"error":"sort must be 'popularity' or 'trending'"}
+SAME | events list order: bad timeOfDay beats bad dayType | 400 {"error":"Invalid timeOfDay value. Must be one of: morning, afternoon, evening, night"}
+SAME | events list order: bad dayType beats bad cursor | 400 {"error":"Invalid dayType value. Must be one of: weekday, weekend"}
+SAME | upload-image: no file | 400 {"error":"No file provided"}
+SAME | upload-image: too large | 400 {"error":"File too large. Maximum size is 5MB"}
+SAME | upload-image: wrong type | 400 {"error":"Invalid file type \"text/plain\". Allowed: JPEG, PNG, WebP, GIF."}
+SAME | upload-image order: too large and wrong type → size first | 400 {"error":"File too large. Maximum size is 5MB"}
+SAME | club POST: link not a string | 400 {"error":"Invalid value for website_url","field":"website_url"}
+SAME | club POST: logo_url not a string | 400 {"error":"Invalid value for logo_url","field":"logo_url"}
+SAME | club POST: link javascript: | 400 {"error":"Invalid URL for discord_url"}
+SAME | club POST: name missing | 400 {"error":"Name, description, and category are required"}
+SAME | club POST: description missing | 400 {"error":"Name, description, and category are required"}
+SAME | club POST: category missing | 400 {"error":"Name, description, and category are required"}
+SAME | club POST: contact_email missing | 400 {"error":"Contact email is required"}
+SAME | club POST: contact_email not a string | 400 {"error":"Contact email is required"}
+SAME | club POST: contact_email malformed | 400 {"error":"Please provide a valid email address"}
+SAME | club POST: name over 100 | 400 {"error":"Name max 100 chars, description max 500 chars"}
+SAME | club POST: description over 500 | 400 {"error":"Name max 100 chars, description max 500 chars"}
+SAME | club POST order: bad link type beats missing name | 400 {"error":"Invalid value for twitter_url","field":"twitter_url"}
+SAME | club POST order: missing name beats missing email | 400 {"error":"Name, description, and category are required"}
+SAME | club PATCH: value not a string | 400 {"error":"Invalid value for description","field":"description"}
+SAME | club PATCH: URL not http(s) | 400 {"error":"Invalid URL for banner_url"}
+SAME | club PATCH: URL relative | 400 {"error":"Invalid URL for website_url"}
+SAME | club PATCH: contact_email malformed | 400 {"error":"Invalid email format for contact_email"}
+SAME | club PATCH: no allowed field | 400 {"error":"No valid fields to update"}
+SAME | club PATCH order: bad type beats bad URL | 400 {"error":"Invalid value for name","field":"name"}
+SAME | club PATCH order: bad URL beats bad email | 400 {"error":"Invalid URL for linkedin_url"}
+SAME | club DELETE: confirmName wrong | 400 {"error":"Club name confirmation does not match"}
+SAME | club DELETE: confirmName missing | 400 {"error":"Club name confirmation does not match"}
+SAME | transfer: newOwnerId missing | 400 {"error":"newOwnerId is required"}
+SAME | transfer: to self | 400 {"error":"You already own this club"}
+SAME | transfer: target not a member | 400 {"error":"Target user is not a member of this club"}
+SAME | member role: memberId missing | 400 {"error":"Invalid request. Role must be 'organizer'."}
+SAME | member role: role owner | 400 {"error":"Invalid request. Role must be 'organizer'."}
+SAME | member role: own role | 400 {"error":"Cannot change your own role"}
+SAME | member role: another owner | 400 {"error":"Cannot change owner role. Use transfer ownership instead."}
+SAME | member DELETE: memberId missing | 400 {"error":"memberId is required"}
+SAME | member DELETE: self | 400 {"error":"You cannot remove yourself from the club"}
+SAME | member DELETE: another owner | 400 {"error":"Cannot remove the club owner"}
+SAME | invites: email missing | 400 {"error":"Email is required"}
+SAME | invites: not McGill | 400 {"error":"Must be a McGill email"}
+SAME | club appeal: message missing | 400 {"error":"Appeal message is required"}
+SAME | club appeal: message blank | 400 {"error":"Appeal message is required"}
+SAME | club banner: no file | 400 {"error":"File and clubId are required"}
+SAME | club banner: no clubId | 400 {"error":"File and clubId are required"}
+SAME | club banner: wrong type | 400 {"error":"File must be JPEG, PNG, or WebP"}
+SAME | club banner: too large | 400 {"error":"File must be under 5MB"}
+SAME | club banner order: wrong type and too large → type first | 400 {"error":"File must be JPEG, PNG, or WebP"}
+SAME | club logo: no file | 400 {"error":"File and clubId are required"}
+SAME | club logo: no clubId | 400 {"error":"File and clubId are required"}
+SAME | club logo: wrong type | 400 {"error":"File must be JPEG, PNG, or WebP"}
+SAME | club logo: too large | 400 {"error":"File must be under 2MB"}
+SAME | club logo order: wrong type and too large → type first | 400 {"error":"File must be JPEG, PNG, or WebP"}
+SAME | user PATCH: name too short | 400 {"error":"Name must be between 2 and 50 characters long"}
+SAME | user PATCH: name too long | 400 {"error":"Name must be between 2 and 50 characters long"}
+SAME | user PATCH: avatar_url not a string | 400 {"error":"Avatar URL must be a string or null"}
+SAME | user PATCH: avatar_url not a URL | 400 {"error":"Invalid Avatar URL format"}
+SAME | user PATCH: banner_url not a string | 400 {"error":"Banner URL must be a string or null"}
+SAME | user PATCH: banner_url not a URL | 400 {"error":"Invalid Banner URL format"}
+SAME | user PATCH: interest_tags not an array | 400 {"error":"interest_tags must be an array"}
+SAME | user PATCH: interest_tags unknown value | 400 {"error":"Invalid tag values provided in interest_tags"}
+SAME | user PATCH: pronouns not a string | 400 {"error":"Pronouns must be a string or null"}
+SAME | user PATCH: year not a string | 400 {"error":"Year must be a string or null"}
+SAME | user PATCH: faculty not a string | 400 {"error":"Faculty must be a string or null"}
+SAME | user PATCH: visibility unknown | 400 {"error":"Visibility must be 'public' or 'private'"}
+SAME | user PATCH: onboarding_completed not boolean | 400 {"error":"onboarding_completed must be a boolean"}
+SAME | user PATCH: no field | 400 {"error":"No fields to update"}
+SAME | user PATCH order: bad name beats bad visibility | 400 {"error":"Name must be between 2 and 50 characters long"}
+SAME | user PATCH order: bad pronouns beats bad year | 400 {"error":"Pronouns must be a string or null"}
+SAME | follow: self | 400 {"error":"Cannot follow yourself"}
+SAME | avatar: no file | 400 {"error":"No file provided"}
+SAME | avatar: wrong type | 400 {"error":"Invalid file type. Allowed: JPEG, PNG, WebP, GIF"}
+SAME | avatar: too large | 400 {"error":"File too large. Maximum size is 5MB"}
+SAME | avatar order: wrong type and too large → type first | 400 {"error":"Invalid file type. Allowed: JPEG, PNG, WebP, GIF"}
+SAME | profile banner: no file | 400 {"error":"No file provided"}
+SAME | profile banner: wrong type | 400 {"error":"Invalid file type. Allowed: JPEG, PNG, WebP"}
+SAME | profile banner: too large | 400 {"error":"File too large. Maximum size is 8MB"}
+SAME | interests: not an array | 400 {"error":"interest_tags must be an array"}
+SAME | interests: missing | 400 {"error":"interest_tags must be an array"}
+SAME | interests: unknown value | 400 {"error":"Invalid tag values provided"}
+SAME | inferred-tags: tag missing | 400 {"error":"tag is required and must be a string"}
+SAME | inferred-tags: tag not a string | 400 {"error":"tag is required and must be a string"}
+SAME | organizer request: club_id missing | 400 {"error":"club_id is required"}
+SAME | moderation reviews: target type unknown | 400 {"error":"Invalid target type"}
+SAME | admin club: status missing | 400 {"error":"Status must be 'approved', 'rejected', or 'suspended'"}
+SAME | admin club: status unknown | 400 {"error":"Status must be 'approved', 'rejected', or 'suspended'"}
+SAME | admin club: rejection without message | 400 {"error":"Rejection requires category and message"}
+SAME | admin club: rejection without category | 400 {"error":"Rejection requires category and message"}
+SAME | admin club: rejection category unknown | 400 {"error":"Invalid rejection category"}
+SAME | admin club: suspension without message | 400 {"error":"Suspension requires category and message"}
+SAME | admin club: suspension category unknown | 400 {"error":"Invalid suspension category"}
+SAME | admin club order: requires beats category | 400 {"error":"Rejection requires category and message"}
+SAME | admin edits: action missing | 400 {"error":"action must be 'approve' or 'reject'"}
+SAME | admin edits: action unknown | 400 {"error":"action must be 'approve' or 'reject'"}
+SAME | admin edits: reject without reason | 400 {"error":"reason is required when rejecting edits"}
+SAME | admin edits: no pending edits | 400 {"error":"This event has no pending edits"}
+SAME | admin status: status missing | 400 {"error":"Invalid status"}
+SAME | admin status: status pending | 400 {"error":"Invalid status"}
+SAME | admin status: rejection without category | 400 {"error":"Rejection requires category and message"}
+SAME | admin status: rejection category unknown | 400 {"error":"Invalid rejection category"}
+SAME | admin status: suspension without message | 400 {"error":"Suspension requires category and message"}
+SAME | admin status: suspension category unknown | 400 {"error":"Invalid suspension category"}
+SAME | admin event POST: title missing | 400 {"error":"title, start_date, and end_date are required"}
+SAME | admin event POST: start_date missing | 400 {"error":"title, start_date, and end_date are required"}
+SAME | admin event POST: end_date missing | 400 {"error":"title, start_date, and end_date are required"}
+SAME | experiment POST: name missing | 400 {"error":"name is required"}
+SAME | experiment POST: one variant | 400 {"error":"At least 2 variants are required"}
+SAME | experiment POST: variants not an array | 400 {"error":"At least 2 variants are required"}
+SAME | experiment POST order: name beats variants | 400 {"error":"name is required"}
+SAME | experiment DELETE: not draft | 400 {"error":"Only draft experiments can be deleted"}
+SAME | featured POST: event_id missing | 400 {"error":"event_id, starts_at, and ends_at are required"}
+SAME | featured POST: ends_at missing | 400 {"error":"event_id, starts_at, and ends_at are required"}
+SAME | featured PATCH: no field | 400 {"error":"No fields to update"}
+SAME | admin organizer request: status unknown | 400 {"error":"Status must be 'approved' or 'rejected'"}
+SAME | admin report: status unknown | 400 {"error":"Invalid status"}
+SAME | ban: reason missing | 400 {"error":"Reason is required"}
+SAME | ban: reason blank | 400 {"error":"Reason is required"}
+SAME | ban: duration_days zero | 400 {"error":"duration_days must be a positive integer"}
+SAME | ban: duration_days fractional | 400 {"error":"duration_days must be a positive integer"}
+SAME | ban: self | 400 {"error":"Cannot ban your own account"}
+SAME | ban order: reason beats duration | 400 {"error":"Reason is required"}
+SAME | admin user PATCH: role unknown | 400 {"error":"Invalid role","field":"roles"}
+SAME | admin user PATCH: roles not an array | 400 {"error":"Invalid role","field":"roles"}
+SAME | admin user PATCH: name too short | 400 {"error":"Name must be between 2 and 50 characters long","field":"name"}
+SAME | admin user PATCH: name not a string | 400 {"error":"Name must be between 2 and 50 characters long","field":"name"}
+SAME | admin user PATCH order: roles beats name | 400 {"error":"Invalid role","field":"roles"}
+SAME | Q events: limit=5.9 is truncated to 5 | status 200 observed [200,5] 
+SAME | Q events/export: blank eventIds elements are dropped, not refused | status 200 observed 200 
+SAME | Q events/popular: limit=999 is capped at 50 and never refused | status 200 observed 200 
+SAME | Q calendar/events: from=garbage reaches the query as-is | status 200 observed [200,"garbage"] 
+SAME | Q clubs/trending: limit=abc falls back to 15, never refused | status 200 observed 200 
+SAME | Q admin/events: limit=abc becomes a NaN range | status 200 observed {"from":0,"to":null} 
+SAME | Q admin/reports: limit=-5 falls back to 50 | status 200 observed {"from":0,"to":49} 
+SAME | Q admin/organizer-requests: offset=abc becomes a NaN range | status 200 observed {"from":null,"to":null} 
+SAME | Q admin/audit-log: page=0 becomes a negative offset | status 200 observed {"from":-20,"to":-1} 
+SAME | Q admin/clubs: an unknown status is passed to the filter | status 200 observed "banana" 
+SAME | Q admin/organizers: an unknown status applies no ban filter | status 200 observed [200,false] 
+SAME | Q users/saved-events: include_past=1 is read as false | status 200 observed [200,true] 
+SAME | Q users/search: a one-character q answers an empty list | status 200 observed [200,{"users":[]}] 
+M | raw | clubs/[id] PATCH | nonstring | 400 {"error":"Invalid value for name","field":"name"} | writes []
+M | raw | clubs/[id] PATCH | notjson | 500 {"error":"Failed to update club"} | writes []
+M | raw | clubs/[id] PATCH | array | 400 {"error":"No valid fields to update"} | writes []
+M | raw | clubs/[id]/members DELETE | nonstring | 404 {"error":"Member not found"} | writes []
+M | raw | clubs/[id]/members DELETE | notjson | 500 {"error":"Failed to remove member"} | writes []
+M | raw | clubs/[id]/members DELETE | array | 400 {"error":"memberId is required"} | writes []
+M | raw | clubs/[id]/invites POST | nonstring | 500 {"error":"Failed to create invitation"} | writes []
+M | raw | clubs/[id]/invites POST | notjson | 500 {"error":"Failed to create invitation"} | writes []
+M | raw | clubs/[id]/invites POST | array | 400 {"error":"Email is required"} | writes []
+M | raw | admin/experiments/[id] PATCH | nonstring | 200 {"experiment":{"id":"5eed0000-0000-4000-8000-0a70000000a1","name":"running-exp","status":5,"updated_at":"2026-09-27T02:15:05.480Z"}} | writes ["experiments.update"]
+M | raw | admin/experiments/[id] PATCH | notjson | threw "SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)" | writes []
+M | raw | admin/experiments/[id] PATCH | array | 200 {"experiment":{"id":"5eed0000-0000-4000-8000-0a70000000a1","name":"running-exp","status":"running","updated_at":"2026-09-27T02:15:05.480Z"}} | writes ["experiments.update"]
+M | raw | admin/experiments POST | nonstring | 201 {"experiment":{"id":"fake-experiments-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","name":5,"description":null,"target_metric":null,"start_date":null,"end_date":null,"variants":[{"id":"fake-experiment_variants-2","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","experiment_id":"fake-experiments-1","name":"a","config":{},"weight":1},{"id":"fake-experiment_variants-3","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","experiment_id":"fake-experiments-1","name":"b","config":{},"weight":1}]}} | writes ["experiments.insert","experiment_variants.insert"]
+M | raw | admin/experiments POST | notjson | threw "SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)" | writes []
+M | raw | admin/experiments POST | array | 400 {"error":"name is required"} | writes []
+M | raw | admin/featured POST | nonstring | 201 {"featured":{"id":"fake-featured_events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","event_id":"5eed0000-0000-4000-8000-0a70000000e1","sponsor_name":"5","priority":0,"starts_at":"2030-01-01","ends_at":"2030-01-02","created_by":"5eed0000-0000-4000-8000-0a7000000001"}} | writes ["featured_events.insert","admin_audit_log.insert"]
+M | raw | admin/featured POST | notjson | 500 {"error":"Failed to create featured event"} | writes []
+M | raw | admin/featured POST | array | 400 {"error":"event_id, starts_at, and ends_at are required"} | writes []
+M | raw | admin/events POST | nonstring | 201 {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"5","description":"","start_date":"2030-01-01","end_date":"2030-01-02","location":"","organizer":null,"tags":[],"image_url":null,"category":null,"status":"approved","content_hash":"8532ab4bc4331162e9bf514523ff9467708090841b99584a665ba124e4e3f37c"}} | writes ["events.insert","admin_audit_log.insert"]
+M | raw | admin/events POST | notjson | threw "SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)" | writes []
+M | raw | admin/events POST | array | 400 {"error":"title, start_date, and end_date are required"} | writes []
+M | raw | admin/featured/[id] PATCH | nonstring | 200 {"featured":{"id":"5eed0000-0000-4000-8000-0a70000000f1","event_id":"5eed0000-0000-4000-8000-0a70000000e1","priority":0,"sponsor_name":"5"}} | writes ["featured_events.update","admin_audit_log.insert"]
+M | raw | admin/featured/[id] PATCH | notjson | 500 {"error":"Failed to update featured event"} | writes []
+M | raw | admin/featured/[id] PATCH | array | 400 {"error":"No fields to update"} | writes []
+M | raw | admin/events/[id] PUT | nonstring | 200 {"event":{"id":"5eed0000-0000-4000-8000-0a70000000e1","title":5,"description":"d","status":"approved","deleted_at":null,"created_by":"5eed0000-0000-4000-8000-0a7000000001","club_id":null,"start_date":"2030-01-01T18:00:00+00:00","end_date":null,"pending_edits":null,"tags":["academic"],"appeal_count":0,"updated_at":"2026-09-27T02:15:05.483Z"}} | writes ["events.update","admin_audit_log.insert"]
+M | raw | admin/events/[id] PUT | notjson | threw "SyntaxError: Expected property name or '}' in JSON at position 1 (line 1 column 2)" | writes []
+M | raw | admin/events/[id] PUT | array | 200 {"event":{"id":"5eed0000-0000-4000-8000-0a70000000e1","title":"Bad Request Event","description":"d","status":"approved","deleted_at":null,"created_by":"5eed0000-0000-4000-8000-0a7000000001","club_id":null,"start_date":"2030-01-01T18:00:00+00:00","end_date":null,"pending_edits":null,"tags":["academic"],"appeal_count":0,"updated_at":"2026-09-27T02:15:05.483Z"}} | writes ["events.update","admin_audit_log.insert"]
+M | raw | profile/interests PUT | nonstring | 400 {"error":"Invalid tag values provided"} | writes []
+M | raw | profile/interests PUT | notjson | 500 {"error":"Internal server error"} | writes []
+M | raw | profile/interests PUT | array | 400 {"error":"interest_tags must be an array"} | writes []
+M | raw | profile/inferred-tags DELETE | nonstring | 400 {"error":"tag is required and must be a string"} | writes []
+M | raw | profile/inferred-tags DELETE | notjson | 500 {"error":"Internal server error"} | writes []
+M | raw | profile/inferred-tags DELETE | array | 400 {"error":"tag is required and must be a string"} | writes []
+M | raw | users/[id] PATCH | nonstring | 400 {"error":"Name must be between 2 and 50 characters long"} | writes []
+M | raw | users/[id] PATCH | notjson | 500 {"error":"Internal server error"} | writes []
+M | raw | users/[id] PATCH | array | 400 {"error":"No fields to update"} | writes []
+M | raw | events/[id]/invite POST | nonstring | 400 {"error":"No invitees provided"} | writes []
+M | raw | events/[id]/invite POST | notjson | 500 {"error":"Failed to send invites"} | writes []
+M | raw | events/[id]/invite POST | array | 400 {"error":"No invitees provided"} | writes []
+M | raw | events/[id] PATCH | nonstring | 200 {"event":{"id":"5eed0000-0000-4000-8000-0a70000000e1","title":"Bad Request Event","description":"d","status":"approved","deleted_at":null,"created_by":"5eed0000-0000-4000-8000-0a7000000001","club_id":null,"start_date":"2030-01-01T18:00:00+00:00","end_date":null,"pending_edits":{"title":5,"submitted_at":"2026-09-27T02:15:05.484Z"},"tags":["academic"],"appeal_count":0},"message":"Some changes require admin approval before going live","pending_fields":["title"]} | writes ["events.update"]
+M | raw | events/[id] PATCH | notjson | 500 {"error":"Failed to update event"} | writes []
+M | raw | events/[id] PATCH | array | 400 {"error":"No valid fields to update"} | writes []
+M | raw | events/[id]/rsvp POST | nonstring | 400 {"error":"Invalid status. Must be one of: going, interested"} | writes []
+M | raw | events/[id]/rsvp POST | notjson | 400 {"error":"Invalid JSON body"} | writes []
+M | raw | events/[id]/rsvp POST | array | 400 {"error":"user_id is required"} | writes []
+M | raw | events/[id]/rsvp DELETE | nonstring | 403 {"error":"user_id does not match authenticated user"} | writes []
+M | raw | events/[id]/rsvp DELETE | notjson | 400 {"error":"user_id is required"} | writes []
+M | raw | events/[id]/rsvp DELETE | array | 400 {"error":"user_id is required"} | writes []
+M | raw | events/[id]/reviews POST | nonstring | 400 {"error":"Rating must be an integer between 1 and 5"} | writes []
+M | raw | events/[id]/reviews POST | notjson | 400 {"error":"Invalid JSON body"} | writes []
+M | raw | events/[id]/reviews POST | array | 400 {"error":"Rating must be an integer between 1 and 5"} | writes []
+M | raw | events/create POST | nonstring | 201 {"event":{"id":"fake-events-1","created_at":"2026-01-01T00:00:00.000Z","updated_at":"2026-01-01T00:00:00.000Z","title":"5","description":"An evening of contracts","start_date":"2030-06-01T18:00:00Z","end_date":"2030-06-01T18:00:00Z","location":"Leacock 132","organizer":"Bad Request Caller","tags":["academic"],"image_url":null,"category":"academic","club_id":null,"status":"pending","created_by":"5eed0000-0000-4000-8000-0a7000000001","content_hash":"7041e7dc938a944f24bd76cc38c1cc947d40848ebfced3a6b981aa93ebfa7ce5","is_free":true,"price":null,"rsvp_link":null},"message":"Event submitted for review"} | writes ["events.insert"]
+M | raw | events/create POST | notjson | 500 {"error":"Failed to create event"} | writes []
+M | raw | events/create POST | array | 400 {"error":"Title is required"} | writes []
+M | rjo | admin/clubs/[id] PATCH | nonstring | threw "rejectionMessage?.trim is not a function" | writes []
+M | rjo | admin/events/[id]/edits PATCH | nonstring | 400 {"error":"action must be 'approve' or 'reject'"} | writes []
+M | rjo | admin/events/[id]/status PATCH | nonstring | threw "message?.trim is not a function" | writes []
+M | rjo | admin/organizer-requests/[id] PATCH | nonstring | 400 {"error":"Status must be 'approved' or 'rejected'"} | writes []
+M | rjo | admin/reports/[id] PATCH | nonstring | 400 {"error":"Invalid status"} | writes []
+M | rjo | admin/users/[id]/ban POST | nonstring | 400 {"error":"Reason is required"} | writes []
+M | rjo | admin/users/[id] PATCH | nonstring | 400 {"error":"Name must be between 2 and 50 characters long","field":"name"} | writes []
+M | rjo | clubs/[id]/appeal POST | nonstring | threw "message?.trim is not a function" | writes []
+M | rjo | clubs/[id]/members/role PATCH | nonstring | 400 {"error":"Invalid request. Role must be 'organizer'."} | writes []
+M | rjo | clubs/[id] DELETE | nonstring | 400 {"error":"Club name confirmation does not match"} | writes []
+M | rjo | clubs/[id]/transfer POST | nonstring | 400 {"error":"Target user is not a member of this club"} | writes []
+M | rjo | clubs POST | nonstring | threw "supabase.from(...).select(...).ilike is not a function" | writes []
+M | rjo | events/[id]/appeal POST | nonstring | threw "message?.trim is not a function" | writes []
+M | rjo | events/[id]/report POST | nonstring | 400 {"error":"Invalid category"} | writes []
+M | rjo | organizer-requests POST | nonstring | 404 {"error":"Club not found"} | writes []
+rows 174 coercion 13 mismatches 0
+exit=0 (harness test passed; the harness asserts nothing)
+
+------------------------------------------------------------------------------
+[§2 Task 2 cache-header sweep (MEASURE_OUT of zz-measure2.test.ts)]
+$ MEASURE_OUT=<scratch>/measure3.txt npx jest --ci src/__tests__/api/zz-measure2.test.ts
+Rows: every endpoints.json GET row whose cache_policy_target is "private, no-store"; admin persona for admin rows,
+club owner otherwise; "anonymous" = the same world with no session. cc = the response's Cache-Control header.
+NOARM rows have no invoker: /api/auth-debug (file deleted in Phase 5, stale inventory row, DI-58) and /auth/callback
+(a redirect route outside /api). Result: 44 arms + the /api/recommendations control, all drivable; every arm answers
+cc=null on both paths, the control answers "private, no-store" on both.
+signed | /api/admin/analytics/events | 200 cc=null body={"dailyCreation":[{"date":"2026-08-27","count":0},{"date":"2026-08-28","count":0
+anonymous | /api/admin/analytics/events | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/analytics/users | 200 cc=null body={"dailySignups":[{"date":"2026-08-27","count":0},{"date":"2026-08-28","count":0}
+anonymous | /api/admin/analytics/users | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/audit-log | 200 cc=null body={"entries":[],"total":0,"page":1,"totalPages":0}
+anonymous | /api/admin/audit-log | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/calculate-popularity | 200 cc=null body={"total_events":1,"events_with_scores":0,"events_without_scores":1,"oldest_calcu
+anonymous | /api/admin/calculate-popularity | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/clubs | 200 cc=null body={"clubs":[],"total":0}
+anonymous | /api/admin/clubs | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/events | 200 cc=null body={"events":[{"id":"5eed0000-0000-4000-8000-0a70000000e1","title":"Bad Request Eve
+anonymous | /api/admin/events | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/experiments/[id]/results | 200 cc=null body={"experiment":{"id":"5eed0000-0000-4000-8000-0a70000000a1","name":"running-exp",
+anonymous | /api/admin/experiments/[id]/results | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/experiments/[id] | 200 cc=null body={"experiment":{"id":"5eed0000-0000-4000-8000-0a70000000a1","name":"running-exp",
+anonymous | /api/admin/experiments/[id] | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/experiments | 200 cc=null body={"experiments":[{"id":"5eed0000-0000-4000-8000-0a70000000a1","name":"running-exp
+anonymous | /api/admin/experiments | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/featured | 200 cc=null body={"active":[],"upcoming":[],"expired":[]}
+anonymous | /api/admin/featured | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/organizer-requests | 200 cc=null body={"requests":[{"id":"5eed0000-0000-4000-8000-0a70000000b1","user_id":"5eed0000-00
+anonymous | /api/admin/organizer-requests | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/organizers | 200 cc=null body={"organizers":[]}
+anonymous | /api/admin/organizers | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/reports | 200 cc=null body={"reports":[{"id":"5eed0000-0000-4000-8000-0a70000000a2","event_id":"5eed0000-00
+anonymous | /api/admin/reports | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/stats | 200 cc=null body={"totalEvents":2,"pendingEvents":1,"approvedEvents":1,"totalUsers":3,"engagedUse
+anonymous | /api/admin/stats | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/admin/users | 200 cc=null body={"users":[{"id":"5eed0000-0000-4000-8000-0a7000000001","email":"bad.request.call
+anonymous | /api/admin/users | 401 cc=null body={"error":"Unauthorized"}
+NOARM | /api/auth-debug
+signed | /api/calendar/events | 200 cc=null body={"events":[{"id":"5eed0000-0000-4000-8000-0a70000000e1","title":"Bad Request Eve
+anonymous | /api/calendar/events | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/clubs/[id]/analytics | 200 cc=null body={"follower_growth":[],"total_attendees":0,"popular_tags":[],"events":[],"engagem
+anonymous | /api/clubs/[id]/analytics | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/clubs/[id]/events | 200 cc=null body={"events":[],"isOrganizer":false}
+anonymous | /api/clubs/[id]/events | 200 cc=null body={"events":[],"isOrganizer":false}
+signed | /api/clubs/[id]/follow | 200 cc=null body={"following":false}
+anonymous | /api/clubs/[id]/follow | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/clubs/[id]/invites | 200 cc=null body=[]
+anonymous | /api/clubs/[id]/invites | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/clubs/[id]/members | 200 cc=null body={"members":[{"id":"5eed0000-0000-4000-8000-0a70000000d1","user_id":"5eed0000-000
+anonymous | /api/clubs/[id]/members | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/clubs/friends | 200 cc=null body={"clubs":[]}
+anonymous | /api/clubs/friends | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/events/[id]/analytics | 400 cc=null body={"error":"Event is not associated with a club"}
+anonymous | /api/events/[id]/analytics | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/events/[id]/friends | 200 cc=null body={"friends":[],"count":0}
+anonymous | /api/events/[id]/friends | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/events/[id]/reviews | 200 cc=null body={"aggregate":{"average_rating":0,"total_reviews":0,"distribution":[{"rating":1,"
+anonymous | /api/events/[id]/reviews | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/events/[id]/rsvp | 200 cc=null body={"counts":{"going":0,"interested":0,"total":0},"user_rsvp":null}
+anonymous | /api/events/[id]/rsvp | 200 cc=null body={"counts":{"going":0,"interested":0,"total":0},"user_rsvp":null}
+signed | /api/events/following | 200 cc=null body={"events":[]}
+anonymous | /api/events/following | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/events/friends-activity | 200 cc=null body={"events":[]}
+anonymous | /api/events/friends-activity | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/events/friends-organizing | 200 cc=null body={"events":[]}
+anonymous | /api/events/friends-organizing | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/events/my-events | 200 cc=null body={"events":[{"id":"5eed0000-0000-4000-8000-0a70000000e1","title":"Bad Request Eve
+anonymous | /api/events/my-events | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/moderation/reviews/[targetType]/[targetId] | 200 cc=null body={"reviews":[]}
+anonymous | /api/moderation/reviews/[targetType]/[targetId] | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/my-clubs | 200 cc=null body={"clubs":[{"id":"5eed0000-0000-4000-8000-0a70000000d1","role":"owner","created_a
+anonymous | /api/my-clubs | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/notifications/count | 200 cc=null body={"unread_count":0}
+anonymous | /api/notifications/count | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/notifications | 200 cc=null body={"notifications":[],"unread_count":0,"next_cursor":null}
+anonymous | /api/notifications | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/organizer-requests | 200 cc=null body={"requests":[]}
+anonymous | /api/organizer-requests | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/recommendations/analytics | 200 cc=null body={"period":"7d","since":"2026-09-20T02:22:38.422Z","metrics":{"impressions":0,"cl
+anonymous | /api/recommendations/analytics | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/recommendations/feedback | 200 cc=null body={"feedback":{}}
+anonymous | /api/recommendations/feedback | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/recommendations | 200 cc="private, no-store" body={"recommendations":[{"event_id":"5eed0000-0000-4000-8000-0a70000000e1","score":0
+anonymous | /api/recommendations | 200 cc="private, no-store" body={"recommendations":[{"event_id":"5eed0000-0000-4000-8000-0a70000000e1","score":0
+signed | /api/user/engagement | 200 cc=null body={"user_id":"5eed0000-0000-4000-8000-0a7000000001","total_views":0,"total_clicks"
+anonymous | /api/user/engagement | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/user/following | 200 cc=null body={"following":[]}
+anonymous | /api/user/following | 401 cc=null body={"error":"You must be signed in"}
+signed | /api/users/me/friends | 200 cc=null body={"friends":[]}
+anonymous | /api/users/me/friends | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/users/me/requests | 200 cc=null body={"requests":[]}
+anonymous | /api/users/me/requests | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/users/me/suggestions | 200 cc=null body={"suggestions":[]}
+anonymous | /api/users/me/suggestions | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/users/saved-events | 200 cc=null body={"events":[{"id":"5eed0000-0000-4000-8000-0a70000000e1","title":"Bad Request Eve
+anonymous | /api/users/saved-events | 401 cc=null body={"error":"Unauthorized"}
+signed | /api/users/search | 500 cc=null body={"error":"Search failed"}
+anonymous | /api/users/search | 401 cc=null body={"error":"Unauthorized"}
+NOARM | /auth/callback
+exit=0
+
+------------------------------------------------------------------------------
+[§3 Task 2 first runs (each suite written from the source, then run; the run is the measurement)]
+error-text-defect (F-059): first run 35/35 green, no expectation changed.
+    ✓ file by file, 34 driven + 6 listed = 40 (17 ms)
+    ✓ src/app/api/admin/calculate-popularity/route.ts:108 (8 ms)
+    ✓ src/app/api/admin/calculate-popularity/route.ts:118
+    ✓ src/app/api/calendar/events/route.ts:67 (4 ms)
+    ✓ src/app/api/clubs/[id]/appeal/route.ts:72 (2 ms)
+    ✓ src/app/api/clubs/featured/route.ts:17 (5 ms)
+    ✓ src/app/api/events/[id]/appeal/route.ts:77 (1 ms)
+    ✓ src/app/api/events/[id]/report/route.ts:73 (40 ms)
+    ✓ src/app/api/events/[id]/route.ts:106 (4 ms)
+    ✓ src/app/api/events/[id]/route.ts:331
+    ✓ src/app/api/events/[id]/route.ts:401 (1 ms)
+    ✓ src/app/api/events/create/route.ts:196 (10 ms)
+    ✓ src/app/api/events/export/route.ts:211 (3 ms)
+    ✓ src/app/api/events/featured/route.ts:17 (2 ms)
+    ✓ src/app/api/events/happening-now/route.ts:40 (6 ms)
+    ✓ src/app/api/events/happening-now/route.ts:51
+    ✓ src/app/api/events/my-events/route.ts:24 (1 ms)
+    ✓ src/app/api/events/route.ts:448 (3 ms)
+    ✓ src/app/api/health/route.ts:118 (2 ms)
+    ✓ src/app/api/health/route.ts:143
+    ✓ src/app/api/health/route.ts:167
+    ✓ src/app/api/health/route.ts:181
+    ✓ src/app/api/health/route.ts:211
+    ✓ src/app/api/health/route.ts:214 (1 ms)
+    ✓ src/app/api/health/route.ts:247
+    ✓ src/app/api/health/route.ts:322
+    ✓ src/app/api/health/route.ts:383
+    ✓ src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts:55 (1 ms)
+    ✓ src/app/api/notifications/[id]/route.ts:32 (1 ms)
+    ✓ src/app/api/notifications/route.ts:51 (52 ms)
+    ✓ src/app/api/notifications/route.ts:104 (1 ms)
+    ✓ src/app/api/organizer-requests/route.ts:59 (1 ms)
+    ✓ src/app/api/organizer-requests/route.ts:84
+    ✓ src/app/api/recommendations/batch/route.ts:25 (1 ms)
+    ✓ src/app/api/user/following/route.ts:45
+Test Suites: 1 passed, 1 total
+Tests:       35 passed, 35 total
+
+health-defect (F-029): first run 5/5 green, no expectation changed.
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+
+uncaught-throw-defect (F-058): first run 27/28. admin/users/[id] PATCH resolved instead of rejecting because the
+throwing wrapper spared the first `users` call on the ELEVATED client too; the elevated client never serves the
+request context's profile read, so sparing is now applied to the cookie client only. Harness fix, not an expectation
+change; second run 28/28.
+    ✕ api/admin/users/[id] PATCH (3 ms)
+    Received promise resolved instead of rejected
+Tests:       1 failed, 27 passed, 28 total
+Tests:       28 passed, 28 total
+
+cache-headers-defect (F-026, F-025): first run 91/92; C0 expected 45 drivable arms, measured 44 (45 was arms + the
+control). Count corrected; second run 92/92.
+    ✕ every private-target GET row has an invoker or a NOT_DRIVABLE reason (2 ms)
+Tests:       1 failed, 91 passed, 92 total
+Tests:       92 passed, 92 total
+
+vercel-json-defect (F-025, F-026), csp-defect (F-055), docs-gate-defect (F-054): first run 11/11.
+PASS node src/__tests__/pages/docs-gate-defect.test.ts
+PASS node src/__tests__/config/vercel-json-defect.test.ts
+PASS node src/__tests__/config/csp-defect.test.ts
+Tests:       11 passed, 11 total
+
+------------------------------------------------------------------------------
+[§4 Census C7 at HEAD (same regex and classification rule as floor.before.txt § C7)]
+$ node <inline>  (every src/app/**/route.ts line matching /\.message\b/ and not containing dateError.message)
+src/app/api/admin/calculate-popularity/route.ts:108: error: rpcError.message,
+src/app/api/admin/calculate-popularity/route.ts:118: error: err instanceof Error ? err.message : "Unknown error",
+src/app/api/admin/events/[id]/status/route.ts:244: message: row.message,
+src/app/api/calendar/events/route.ts:67: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/clubs/[id]/appeal/route.ts:72: return NextResponse.json({ error: reviewError.message }, { status: 500 });
+src/app/api/clubs/featured/route.ts:17: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/events/[id]/appeal/route.ts:77: return NextResponse.json({ error: reviewError.message }, { status: 500 });
+src/app/api/events/[id]/report/route.ts:73: return NextResponse.json({ error: insertError.message }, { status: 500 });
+src/app/api/events/[id]/route.ts:106: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/events/[id]/route.ts:331: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/events/[id]/route.ts:401: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/events/create/route.ts:196: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/events/export/route.ts:211: return NextResponse.json({ error: eventsError.message }, { status: 500 });
+src/app/api/events/featured/route.ts:17: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/events/happening-now/route.ts:40: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/events/happening-now/route.ts:51: const message = error instanceof Error ? error.message : String(error);
+src/app/api/events/my-events/route.ts:24: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/events/route.ts:448: const errorMessage = eventsError.message;
+src/app/api/health/route.ts:118: message: `Database table '${table}' check failed: ${error.message}`,
+src/app/api/health/route.ts:143: message: `Database connection failed: ${error.message}`,
+src/app/api/health/route.ts:167: message: `Supabase Auth error: ${error.message}`,
+src/app/api/health/route.ts:181: message: `Supabase Auth check failed: ${error.message}`,
+src/app/api/health/route.ts:211: message: `Azure OAuth not configured: ${error.message}`,
+src/app/api/health/route.ts:214: error: error.message,
+src/app/api/health/route.ts:247: message: `Azure OAuth check failed: ${error.message}`,
+src/app/api/health/route.ts:322: message: `Memory check failed: ${error.message}`,
+src/app/api/health/route.ts:383: error: `Health check failed: ${error.message}`,
+src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts:55: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/notifications/[id]/route.ts:32: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/notifications/route.ts:51: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/notifications/route.ts:104: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/organizer-requests/route.ts:59: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/organizer-requests/route.ts:84: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/api/recommendations/batch/route.ts:25: { error: "Batch scoring failed", details: error.message },
+src/app/api/user/following/route.ts:45: return NextResponse.json({ error: error.message }, { status: 500 });
+src/app/auth/callback/route.ts:127: console.error("[Callback] Code exchange FAILED:", exchangeError.message, exchangeError);
+src/app/auth/callback/route.ts:129: new URL(`/?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin)
+src/app/auth/callback/route.ts:141: console.error("[Callback] Get user FAILED:", userError?.message);
+src/app/auth/callback/route.ts:204: throw new Error(`profile upsert failed: ${upsertError.message}`);
+src/app/auth/callback/route.ts:216: `profile read failed: ${profileError?.message ?? "no row"}`
+C7 sites: 40  files: 22
+exit=0
+
+Reconciliation with error-text-defect.test.ts (E0 asserts it file by file on every run):
+  34 driven rows (sentinel SENTINEL-<n> reaches the caller) + 6 NOT_DRIVEN lines = 40 = census total, 22 files.
+  NOT_DRIVEN: admin/events/[id]/status:244 (the admin's moderation message copied into a notification row, not
+  caught-error text); auth/callback:127 and :141 (log lines); :129 (redirect Location `message` query; the callback's
+  client is @supabase/ssr, not the fake; pinned today by the PRESERVE assertion src/app/auth/callback/route.test.ts:269);
+  :204 and :216 (thrown into the handler's own catch, which redirects to /?error=profile_sync_failed with no text).
+Correction to floor.before.txt's C7 cell: events/route.ts:448 was classed "feeds a benign-error test"; measured, the
+text reaches the 500 body through safeMessage (route.ts:470-473) whenever it does not start with "{". It is driven (n=18).
+
+------------------------------------------------------------------------------
+[§5 Mutation M1]
+=== M1: mutate one 400 text in src/app/api/events/create/route.ts
+$ sed -i "" s/"Title is required"/"Title is required."/ src/app/api/events/create/route.ts
+--- git diff (mutation)
+diff --git a/src/app/api/events/create/route.ts b/src/app/api/events/create/route.ts
+index af95a77..4ce43fe 100644
+--- a/src/app/api/events/create/route.ts
++++ b/src/app/api/events/create/route.ts
+@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
+ 
+     // Validate required fields
+     if (!title) {
+-      return NextResponse.json({ error: "Title is required" }, { status: 400 });
++      return NextResponse.json({ error: "Title is required." }, { status: 400 });
+     }
+     if (!description) {
+       return NextResponse.json({ error: "Description is required" }, { status: 400 });
+--- npx jest --ci src/__tests__/contracts (expect red)
+exit=1
+Test Suites: 2 failed, 2 total
+Tests:       4 failed, 260 passed, 264 total
+--- restore
+cmp exit=0
+git diff --quiet exit=0
+--- red tests
+  ● D2: each raw site, a JSON array › events/create POST
+  ● P1: check order — the first broken rule answers › events/create POST — create order: empty body → title first
+  ● P1: shape rules — today's exact 400 › events/create POST — create: title missing
+  ● P1: shape rules — today's exact 400 › events/create POST — create: title only markup
+
+------------------------------------------------------------------------------
+[§6 Mutation M2]
+=== M2: replace the caught-error text in the body at src/app/api/events/my-events/route.ts:24 with a constant
+$ sed -i "" s/{ error: error.message }/{ error: "Failed to fetch events" }/ src/app/api/events/my-events/route.ts
+--- git diff (mutation)
+diff --git a/src/app/api/events/my-events/route.ts b/src/app/api/events/my-events/route.ts
+index 7f618a8..05c46b1 100644
+--- a/src/app/api/events/my-events/route.ts
++++ b/src/app/api/events/my-events/route.ts
+@@ -21,7 +21,7 @@ export async function GET() {
+     .order("start_date", { ascending: true });
+ 
+   if (error) {
+-    return NextResponse.json({ error: error.message }, { status: 500 });
++    return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
+   }
+ 
+   return NextResponse.json({ events: events ?? [] });
+--- npx jest --ci src/__tests__/api/error-text-defect.test.ts (expect the :24 row red)
+exit=1
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 33 passed, 35 total
+--- red tests
+  ● E0: the rows plus NOT_DRIVEN are census C7 › file by file, 34 driven + 6 listed = 40
+  ● E1: a caught error's text reaches the response body today › src/app/api/events/my-events/route.ts:24
+    Expected substring: "SENTINEL-17"
+    Received string:    "{\"error\":\"Failed to fetch events\"}"
+
+      487 |     expect(status).toBe(row.status);
+      488 |     const where = row.at ? row.at(body) : body;
+    > 489 |     expect(JSON.stringify(where)).toContain(S(row.n));
+          |                                   ^
+--- restore
+cmp exit=0
+git diff --quiet exit=0
+
+------------------------------------------------------------------------------
+[§7 The nine new suites]
+$ npx jest --ci src/__tests__/contracts src/__tests__/api/error-text-defect.test.ts src/__tests__/api/uncaught-throw-defect.test.ts src/__tests__/api/cache-headers-defect.test.ts src/__tests__/api/health src/__tests__/config src/__tests__/pages/docs-gate-defect.test.ts
+The plan's "ten new suites" counts the helper src/__tests__/contracts/badRequestTable.ts, which is not a test file
+(the 06-02 precedent): 9 test suites = 2 (Task 1) + 7 (Task 2); the tag gate grows by 9.
+PASS node src/__tests__/contracts/bad-request-characterization.test.ts
+PASS node src/__tests__/api/error-text-defect.test.ts
+PASS node src/__tests__/api/cache-headers-defect.test.ts
+PASS node src/__tests__/contracts/malformed-input-defect.test.ts
+PASS node src/__tests__/api/uncaught-throw-defect.test.ts
+PASS node src/__tests__/api/health/health-defect.test.ts
+PASS node src/__tests__/pages/docs-gate-defect.test.ts
+PASS node src/__tests__/config/vercel-json-defect.test.ts
+PASS node src/__tests__/config/csp-defect.test.ts
+Test Suites: 9 passed, 9 total
+Tests:       435 passed, 435 total
+nine suites exit=0
+
+------------------------------------------------------------------------------
+[§8 Tag gate]
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/admin/admin-guard-characterization.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-guard-defect.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-reports-defect.test.ts (F-092)
+ok   DEFECT   src/__tests__/api/admin/admin-users-patch-defect.test.ts (F-091)
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   DEFECT   src/__tests__/api/cache-headers-defect.test.ts (F-026, F-025)
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/error-text-defect.test.ts (F-059)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/events/ban-asymmetry-defect.test.ts (F-088, F-062, F-089)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071, F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   DEFECT   src/__tests__/api/events/pending-edits-defect.test.ts (F-086)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   DEFECT   src/__tests__/api/health/health-defect.test.ts (F-029)
+ok   PRESERVE src/__tests__/api/interactions/interactions-feedback-characterization.test.ts (F-094)
+ok   PRESERVE src/__tests__/api/notifications/notifications-characterization.test.ts (F-028, F-059)
+ok   DEFECT   src/__tests__/api/notifications/notifications-count-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/recommendations/experiment-assignment-defect.test.ts (F-017)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-characterization.test.ts (F-017, F-041)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-family-characterization.test.ts
+ok   DEFECT   src/__tests__/api/slice6-malformed-input-defect.test.ts (F-094)
+ok   DEFECT   src/__tests__/api/uncaught-throw-defect.test.ts (F-058)
+ok   DEFECT   src/__tests__/config/csp-defect.test.ts (F-055)
+ok   DEFECT   src/__tests__/config/vercel-json-defect.test.ts (F-025, F-026)
+ok   PRESERVE src/__tests__/contracts/bad-request-characterization.test.ts
+ok   DEFECT   src/__tests__/contracts/malformed-input-defect.test.ts (F-094, F-058)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   DEFECT   src/__tests__/pages/docs-gate-defect.test.ts (F-054)
+ok   DEFECT   src/__tests__/pages/public-profile-defect.test.tsx (F-005)
+ok   PRESERVE src/__tests__/webhook/verify-signature.test.ts (F-039)
+ok   PRESERVE src/__tests__/webhook/webhook-handler.test.ts (F-039)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 53 files
+tag gate exit=0
+Slice-6 close count 44 + 9 = 53.
+
+------------------------------------------------------------------------------
+[§9 Full Jest and each task verify command]
+Task 1 verify: npx jest --ci src/__tests__/contracts && node scripts/check-characterization-tags.mjs src/__tests__/contracts/bad-request-characterization.test.ts src/__tests__/contracts/malformed-input-defect.test.ts
+Test Suites: 2 passed, 2 total
+Tests:       264 passed, 264 total
+ok   PRESERVE src/__tests__/contracts/bad-request-characterization.test.ts
+ok   DEFECT   src/__tests__/contracts/malformed-input-defect.test.ts (F-094, F-058)
+ok 2 files
+verify exit=0
+
+Task 2 verify: npx jest --ci <the seven suites> && node scripts/check-characterization-tags.mjs --all
+Test Suites: 7 passed, 7 total
+Tests:       171 passed, 171 total
+ok 53 files
+verify exit=0 (re-run of the two suites edited after it, removing two unused eslint-disable lines: 99/99, exit=0)
+
+Task 3 verify: npx jest --ci && node scripts/check-characterization-tags.mjs --all && test -z "$(git status --porcelain -- src/app src/server src/lib)"
+Test Suites: 1 skipped, 111 passed, 111 of 112 total
+Tests:       1 skipped, 2430 passed, 2431 total
+ok 53 files
+verify exit=0
+Floor before this plan: 102 suites passed + 1 skipped, 1995 passed + 1 skipped. After: 111 + 1 skipped, 2430 + 1 skipped (+9 suites, +435 tests, 0 failed).
+
+------------------------------------------------------------------------------
+[§10 Source untouched]
+$ git diff --stat f550de9 HEAD -- src/app src/server src/lib supabase next.config.js vercel.json
+(empty)
+exit=0
+$ git status --porcelain -- src/app src/server src/lib   (after the M1 and M2 restores)
+(empty)
+exit=0
+src/__tests__/helpers/fakeSupabase.ts: unchanged (git diff empty).

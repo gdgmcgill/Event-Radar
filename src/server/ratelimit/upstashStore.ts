@@ -17,7 +17,7 @@
  *   Rate limiting is not an authorization control. A store call that takes
  *   longer than 1000 ms resolves as allowed (the library's `timeout`), and a
  *   store call that fails (network, auth, quota) is allowed too. Both are
- *   logged with the key and never with the token. A store outage therefore
+ *   logged with the budget only, never the address-bearing key or token. A store outage therefore
  *   slows no request by more than a second and fails none.
  *
  * ONE LIMITER PER BUDGET
@@ -32,6 +32,7 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { UpstashConfig } from "@/lib/env";
 import type { RateDecision, RateLimitStore } from "./types";
+import { log } from "../log";
 
 /** Every key this store writes starts with this prefix. */
 export const UPSTASH_PREFIX = "uv:rl";
@@ -68,14 +69,15 @@ export class UpstashRateLimitStore implements RateLimitStore {
     try {
       const r = await this.limiterFor(limit, windowMs).limit(key);
       if (r.reason === "timeout") {
-        console.error("[RateLimit] store timeout; request allowed", { key });
+        log.error("store timeout; request allowed", { scope: "RateLimit", limit, windowMs });
         return { allowed: true, limit, resetAtMs: Date.now() + windowMs };
       }
       return { allowed: r.success, limit: r.limit, resetAtMs: r.reset };
     } catch (err) {
-      console.error("[RateLimit] store error; request allowed", {
-        key,
-        error: err instanceof Error ? err.message : String(err),
+      log.error("store error; request allowed", {
+        scope: "RateLimit",
+        limit, windowMs,
+        error: err instanceof Error ? err.name : typeof err,
       });
       return { allowed: true, limit, resetAtMs: Date.now() + windowMs };
     }

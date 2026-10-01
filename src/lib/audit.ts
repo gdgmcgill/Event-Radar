@@ -1,5 +1,6 @@
 import { getElevatedClient } from "@/server/db/elevated";
 import type { Json } from "@/lib/supabase/types";
+import { log } from "@/server/log";
 
 export type AuditAction =
   | "approved"
@@ -33,6 +34,11 @@ export type AuditTargetType = "event" | "user" | "club" | "featured_event" | "or
  *
  * Resolves without throwing. A rejected insert is logged loudly with the
  * request id, so a lost audit row is visible in the logs instead of silent.
+ * The line is one JSON object from the structured logger (plan 06-12, DEC-74):
+ * scope "Audit", the action, target and ids, and the database error's code
+ * and message. No actor email or name is logged, and the logger replaces any
+ * email-shaped text in the message with "[email]". When the caller passes no
+ * request id, the request store's id is used.
  */
 export async function logAdminAction(params: {
   adminUserId: string;
@@ -57,7 +63,8 @@ export async function logAdminAction(params: {
   });
 
   if (error) {
-    console.error("[Audit] admin_audit_log insert rejected", {
+    log.error("admin_audit_log insert rejected", {
+      scope: "Audit",
       action: params.action,
       targetType: params.targetType,
       targetId: params.targetId,

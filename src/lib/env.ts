@@ -11,7 +11,11 @@
  *   configuration: `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` or the
  *   Vercel Marketplace's `KV_REST_API_URL`/`KV_REST_API_TOKEN`, through
  *   `upstashConfig()`, and the optional `RATE_LIMIT_REQUIRE_DISTRIBUTED`,
- *   through `rateLimitRequireDistributed()`. Every read is a literal `process.env.NAME` member
+ *   through `rateLimitRequireDistributed()`. Plan 06-16 adds the optional
+ *   `SENTRY_DSN`, through `sentryDsn()` and `sentryDsnProblem()`, and the pure
+ *   `usableSentryDsn()` that the browser init applies to the DSN it reads
+ *   itself. Plan 06-17 adds the optional `HEALTH_TOKEN`, through
+ *   `healthToken()`. Every read is a literal `process.env.NAME` member
  *   access. Nothing is read by computed key: a computed read evades the
  *   service-key lint rule in `eslint.config.mjs`, and Next inlines only literal
  *   `process.env.NEXT_PUBLIC_*` reads into the browser bundle.
@@ -139,15 +143,16 @@ function present(value: string | undefined): value is string {
 export function upstashConfig(): UpstashConfig | null {
   const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
   const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (present(upstashUrl) && present(upstashToken)) {
-    return { url: upstashUrl.trim(), token: upstashToken.trim() };
-  }
+  const primary = present(upstashUrl) && present(upstashToken)
+    ? { url: upstashUrl.trim(), token: upstashToken.trim() } : null;
   const kvUrl = process.env.KV_REST_API_URL;
   const kvToken = process.env.KV_REST_API_TOKEN;
-  if (present(kvUrl) && present(kvToken)) {
-    return { url: kvUrl.trim(), token: kvToken.trim() };
-  }
-  return null;
+  const fallback = present(kvUrl) && present(kvToken)
+    ? { url: kvUrl.trim(), token: kvToken.trim() } : null;
+  if (primary && !upstashConfigProblem(primary)) return primary;
+  if (fallback && !upstashConfigProblem(fallback)) return fallback;
+  // Retain an invalid pair for the caller's actionable, redacted diagnostic.
+  return primary ?? fallback;
 }
 
 /**
@@ -178,6 +183,9 @@ export function upstashConfigProblem(config: UpstashConfig): string | null {
   if (parsed.protocol !== "https:") {
     return `the Upstash REST URL must use https: (got ${parsed.protocol}); use the REST URL, not the redis:// or rediss:// connection string`;
   }
+  if (parsed.username || parsed.password || /\s/.test(config.token)) {
+    return "the REST credentials contain URL userinfo or internal token whitespace";
+  }
   if (!UPSTASH_CLIENT_URL.test(config.url)) {
     return "the Upstash REST URL is not in the form the Upstash client accepts";
   }
@@ -201,4 +209,91 @@ export function rateLimitRequireDistributed(): boolean {
     "RATE_LIMIT_REQUIRE_DISTRIBUTED",
     '"true" or "false"'
   );
+}
+
+// ─── Sentry (plan 06-16, DEC-76) ─────────────────────────────────────────────
+
+/**
+ * The value, trimmed, when it is a Sentry DSN this app will use, else null.
+ *
+ * A usable DSN parses as a URL, uses `https:`, carries the public key as its
+ * username and a project id as its path: `https://<key>@<host>/<project>`.
+ * Anything else reads as absent, which disables Sentry. It never throws.
+ * Pure: it reads nothing, so the browser init can apply it to the
+ * `NEXT_PUBLIC_SENTRY_DSN` it reads with its own literal member access.
+ */
+export function usableSentryDsn(value: string | undefined): string | null {
+  if (!present(value)) return null;
+  const trimmed = value.trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:") return null;
+  if (parsed.username === "") return null;
+  if (parsed.pathname.replace(/\//g, "") === "") return null;
+  return trimmed;
+}
+
+/**
+ * `SENTRY_DSN`, optional (DEC-76): the server's DSN, or null when it is
+ * absent, blank or not an https Sentry DSN. Absent means disabled; it never
+ * throws, so a missing or mistyped DSN can never fail boot.
+ */
+export function sentryDsn(): string | null {
+  return usableSentryDsn(process.env.SENTRY_DSN);
+}
+
+/**
+ * Why `sentryDsn()` is null, or null when it is not. The text names the
+ * variable and never its value: a DSN carries the project's public key.
+ */
+export function sentryDsnProblem(): string | null {
+  const value = process.env.SENTRY_DSN;
+  if (!present(value)) return "SENTRY_DSN is not set";
+  if (usableSentryDsn(value) === null) return "SENTRY_DSN is not an https Sentry DSN";
+  return null;
+}
+
+// ─── The uptime monitor's token (plan 06-17, DEC-78) ─────────────────────────
+
+/** The shortest `HEALTH_TOKEN` that enables token access to /api/health. */
+export const HEALTH_TOKEN_MIN_LENGTH = 32;
+
+let shortHealthTokenWarned = false;
+
+/**
+ * `HEALTH_TOKEN`, optional (DEC-78): the bearer an uptime monitor presents to
+ * read the /api/health report, trimmed, or null.
+ *
+ * Absent or blank is null: the token arm is DISABLED, never compared against
+ * an empty or undefined value (the F-001/F-002 lesson). A value shorter than
+ * `HEALTH_TOKEN_MIN_LENGTH` is also null, with ONE warn line per process that
+ * names the variable and the minimum and never the value. It never throws, so
+ * a bad token can never fail boot or a request.
+ *
+ * The warn line goes to `console.warn` in the logger's JSON shape: this module
+ * is shared with browser code and cannot import the Node-only logger.
+ */
+export function healthToken(): string | null {
+  const value = process.env.HEALTH_TOKEN;
+  if (!present(value)) return null;
+  const trimmed = value.trim();
+  if (trimmed.length < HEALTH_TOKEN_MIN_LENGTH) {
+    if (!shortHealthTokenWarned) {
+      shortHealthTokenWarned = true;
+      console.warn(
+        JSON.stringify({
+          ts: new Date().toISOString(),
+          level: "warn",
+          msg: `HEALTH_TOKEN is shorter than ${HEALTH_TOKEN_MIN_LENGTH} characters; token access to /api/health is disabled`,
+          scope: "Health",
+        })
+      );
+    }
+    return null;
+  }
+  return trimmed;
 }

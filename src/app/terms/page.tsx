@@ -38,7 +38,7 @@ export default function TermsOfServicePage() {
               By accessing or using UNI-VERSE (&quot;the Platform&quot;), you
               agree to be bound by these Terms of Service. If you do not agree to
               these terms, please do not use the Platform. UNI-VERSE is operated
-              by GDG McGill for the McGill University community.
+              by GDG McGill for the wider student community.
             </p>
           </div>
 
@@ -47,15 +47,11 @@ export default function TermsOfServicePage() {
               2. Eligibility
             </h2>
             <p className="text-muted-foreground leading-relaxed">
-              UNI-VERSE is available to members of the McGill University
-              community. To access authenticated features (saving events, RSVPs,
-              recommendations, event submission), you must sign in with a valid
-              McGill email address (
-              <span className="font-medium text-foreground">@mcgill.ca</span> or{" "}
-              <span className="font-medium text-foreground">
-                @mail.mcgill.ca
-              </span>
-              ). Browsing events is available to all visitors.
+              Anyone may browse public opportunities. Authenticated features
+              require an account with a verified email address, through Google
+              sign-in or an email code. Some student actions require profile
+              setup. University affiliation is self-declared and does not grant
+              club, administrator, or recruiter permissions.
             </p>
           </div>
 

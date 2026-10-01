@@ -1,0 +1,4 @@
+$ supabase gen types typescript --local --schema public > types.gen.ts  (CLI 2.115.0)
+gen exit: 0
+$ diff -u src/lib/supabase/types.ts types.gen.ts
+Exit: 0

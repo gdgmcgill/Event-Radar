@@ -19,8 +19,7 @@ const EVENT_TZ = "America/New_York";
  * whose ISO string is `2026-03-24T14:00:00.000Z` — matching how
  * "2 PM Eastern" is stored in the DB.
  */
-export function getESTNow(): Date {
-  const now = new Date();
+export function getESTNow(now: Date = new Date()): Date {
   // Format current instant as EST/EDT wall-clock parts
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: EVENT_TZ,
@@ -52,6 +51,6 @@ export function getESTToday(): string {
 /**
  * Returns an ISO string of the current EST time (for Supabase queries).
  */
-export function getESTNowISO(): string {
-  return getESTNow().toISOString();
+export function getESTNowISO(now: Date = new Date()): string {
+  return getESTNow(now).toISOString();
 }

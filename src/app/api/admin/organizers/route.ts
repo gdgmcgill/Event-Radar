@@ -2,17 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { readQuery } from "@/server/body";
+import { OrganizersQuery } from "@/contracts/admin";
+import { logRouteError, withRoute } from "@/server/route";
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch organizers" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
   const auth = requireRole(ctx, "admin");
   if (!auth.ok) return auth.response;
 
-  const { searchParams } = request.nextUrl;
-  const search = searchParams.get("search") ?? "";
-  const status = searchParams.get("status") ?? "all";
+  const { search, status } = readQuery(
+    request.nextUrl.searchParams,
+    OrganizersQuery
+  );
 
   // Every read here is permitted to an admin on the cookie client ("Admins can
   // view all profiles", "Admins manage memberships", "Admins can view all
@@ -51,6 +55,7 @@ export async function GET(request: NextRequest) {
   });
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -105,4 +110,4 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json({ organizers: result });
-}
+});

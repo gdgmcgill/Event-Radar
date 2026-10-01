@@ -1,7 +1,32 @@
 /**
- * GET /api/health
- * Comprehensive health check endpoint
- * Checks: Server, Supabase, Azure OAuth config, Environment variables, Memory Usage
+ * GET /api/health — liveness for everyone, the documented report for an
+ * active admin or the uptime monitor (plan 06-17, REFAC-22, DEC-78, F-029).
+ *
+ * The shapes, the auth modes, every check's source and threshold and the
+ * status rules are documented in `docs/health.md`; the schemas are
+ * `HealthLiveness` and `HealthReport` in `src/contracts/health.ts`.
+ *
+ * WHO GETS WHAT
+ *   - `Authorization: Bearer <HEALTH_TOKEN>`, when `healthToken()` is set
+ *     (32+ characters): the report. The bearer and the token are hashed with
+ *     SHA-256 and the digests compared with `timingSafeEqual`, so the compare
+ *     takes the same time whatever the bearer's length or content. No token
+ *     configured means the token arm is off, never an empty comparison.
+ *   - otherwise the caller is read through the request context (the
+ *     revalidating user read, never the session accessor): `requireActiveUser`
+ *     then `requireRole(ctx, "admin")`. A banned admin is refused by the
+ *     first, exactly as every admin API is.
+ *   - everyone else: 200 `{ status: "ok", version }`, which says only that
+ *     this process answers.
+ *
+ * WHAT THE REPORT NEVER CARRIES
+ *   An error's text, a variable name, memory figures or OAuth provider state.
+ *   A failing check is logged with its code (or its error's name) only, and
+ *   answered as a status. The old OAuth-provider, environment, memory and
+ *   session checks are deleted (the F-029 leak surface).
+ *
+ * Always `private, no-store` with an `x-request-id` (the wrapper's private
+ * class): a CDN-cached "ok" would mask an origin outage (research C8).
  */
 
 /**
@@ -9,381 +34,253 @@
  * /api/health:
  *   get:
  *     tags: [Health]
- *     summary: System health check
- *     description: Monitors server, database, auth, and memory. Returns 200 if healthy, 503 if unhealthy.
+ *     summary: Liveness, and the dependency report for admins and monitors
+ *     description: >
+ *       Anyone gets { status, version }. An active admin session, or
+ *       Authorization Bearer HEALTH_TOKEN, gets the report of db, auth,
+ *       storage, pg_cron and webhook. See docs/health.md.
  *     responses:
  *       200:
- *         description: System healthy
+ *         description: Alive (liveness), or the report with status ok
  *         content:
  *           application/json:
  *             example:
- *               status: healthy
- *               timestamp: "2026-01-03T17:30:00Z"
- *               uptime: 3600
+ *               status: ok
  *               version: "0.1.0"
- *               checks:
- *                 server: { status: healthy }
- *                 database: { status: healthy }
- *                 supabase_auth: { status: healthy }
- *                 azure_oauth: { status: healthy }
- *                 environment: { status: healthy }
- *                 memory: { status: healthy }
  *       503:
- *         description: System unhealthy
+ *         description: The report with status degraded or down
  */
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import type {
+  HealthCronJob,
+  HealthLiveness,
+  HealthPgCron,
+  HealthProbe,
+  HealthReport,
+  HealthStatus,
+  HealthWebhook,
+} from "@/contracts/health";
+import { healthToken, supabaseAnonKey, supabaseUrl } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { requireRole } from "@/server/authz/requireRole";
+import { createRequestContext, type ServerSupabaseClient } from "@/server/context";
+import { getElevatedClient } from "@/server/db/elevated";
+import { ingestionSummary } from "@/server/ingestion/summary";
+import { log } from "@/server/log";
+import { withRoute } from "@/server/route";
 
-// Store server start time
-const serverStartTime = Date.now();
+/** How long the auth and storage probes may take before they count as down. */
+const PROBE_TIMEOUT_MS = 3_000;
 
-// Return type for each health check
-interface HealthCheck {
-  status: "healthy" | "degraded" | "unhealthy";
-  message?: string;
-  responseTime?: number;
-  details?: any;
-}
-
-// Return type for the health check endpoint
-interface HealthResponse {
-  status: "healthy" | "degraded" | "unhealthy";
-  timestamp: string;
-  uptime: number;
-  version: string;
-  checks: {
-    server: HealthCheck;
-    database: HealthCheck;
-    supabase_auth: HealthCheck;
-    azure_oauth: HealthCheck;
-    environment: HealthCheck;
-    memory: HealthCheck;
-  };
-}
-/**
- * 
-┌─────────────────────────────────────┐
-│         Supabase Platform           │
-├─────────────────────────────────────┤
-│                                     │
-│  ┌──────────────────────┐          │
-│  │  Auth Service        │ ← checkSupabaseAuth()
-│  │  (login, sessions)   │
-│  │                      │
-│  │  ├─ Azure OAuth      │ ← checkAzureOAuth()
-│  │  ├─ Google OAuth     │
-│  │  └─ Email/Password   │
-│  └──────────────────────┘
-│                                     │
-│  ┌──────────────────────┐          │
-│  │  Database            │ ← checkDatabase()
-│  │  (PostgreSQL)        │
-│  │  - events            │
-│  │  - users             │
-│  │  - saved_events      │
-│  │  - rsvps             │
-│  └──────────────────────┘
-│                                     │
-└─────────────────────────────────────┘
- * 
- */
-
+const HOUR_MS = 3_600_000;
+const MINUTE_MS = 60_000;
 
 /**
- * Checks if Supabase database connection is working
- * Verifies all critical tables: events, users, saved_events, rsvps
+ * Twice each job's schedule (DEC-78): compute-user-scores runs every 6 h,
+ * send-event-reminders every 15 min, send-feedback-requests every 30 min. A
+ * job not named here is listed with `stale: null` and does not move the
+ * pg_cron status.
  */
-async function checkDatabase(): Promise<HealthCheck> {
-  const startTime = Date.now();
-  try {
-    const supabase = await createClient();
-    
-    // Check all tables
-    const tables = ['events', 'users', 'saved_events'] as const;
-    const tableChecks: Record<string, boolean> = {};
+const STALE_AFTER_MS: Readonly<Record<string, number>> = {
+  "compute-user-scores": 12 * HOUR_MS,
+  "send-event-reminders": 30 * MINUTE_MS,
+  "send-feedback-requests": 60 * MINUTE_MS,
+};
 
-    // for each table, select 1 row and check if it exists
-    for (const table of tables) {
-      const { error } = await supabase
-        .from(table)
-        .select('*', { count: 'exact', head: true })
-        .limit(1);
+function version(): string {
+  return process.env.npm_package_version || "0.1.0";
+}
 
-      if (error) {
-        tableChecks[table] = false;
-        const responseTime = Date.now() - startTime;
-        return {
-          status: "unhealthy",
-          message: `Database table '${table}' check failed: ${error.message}`,
-          responseTime,
-          details: { 
-            table,
-            code: error.code,
-            checkedTables: tableChecks
-          }
-        };
-      }
-      tableChecks[table] = true;
-    }
-
-    const responseTime = Date.now() - startTime;
-    return {
-      status: "healthy",
-      message: "All database tables accessible",
-      responseTime,
-      details: {
-        tables: tableChecks
-      }
-    };
-  } catch (error: any) {
-    const responseTime = Date.now() - startTime;
-    return {
-      status: "unhealthy",
-      message: `Database connection failed: ${error.message}`,
-      responseTime,
-    };
+/** The error's code, else its name; never its text. */
+function codeOf(error: unknown): string {
+  if (error && typeof error === "object") {
+    const { code, name } = error as { code?: unknown; name?: unknown };
+    if (typeof code === "string" && code !== "") return code;
+    if (typeof name === "string" && name !== "") return name;
   }
+  return "unknown";
 }
 
-/**
- * Checks if Supabase Auth is properly configured, 
- * Supabase Auth is the authentication system for the application.
- */
-async function checkSupabaseAuth(): Promise<HealthCheck> {
-  const startTime = Date.now();
+function sha256(value: string): Buffer {
+  return createHash("sha256").update(value, "utf8").digest();
+}
+
+/** True only when a token is configured and the bearer equals it. */
+function bearerMatches(request: NextRequest): boolean {
+  const token = healthToken();
+  if (token === null) return false;
+  const header = request.headers.get("authorization") ?? "";
+  const match = /^Bearer\s+(.+)$/i.exec(header.trim());
+  if (!match) return false;
+  return timingSafeEqual(sha256(match[1].trim()), sha256(token));
+}
+
+// ─── The checks ─────────────────────────────────────────────────────────────
+
+async function checkDb(supabase: ServerSupabaseClient): Promise<HealthProbe> {
+  const started = Date.now();
   try {
-    const supabase = await createClient();
-    
-    // Try to get the current session (will return null if no user, but connection works)
-    // Check if the connection to the Supabase Auth service is working
-    const { data, error } = await supabase.auth.getSession();
-
-    const responseTime = Date.now() - startTime;
-
+    const { error } = await supabase
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .limit(1);
     if (error) {
-      return {
-        status: "unhealthy",
-        message: `Supabase Auth error: ${error.message}`,
-        responseTime,
-      };
+      log.warn("health check failed", { scope: "Health", check: "db", code: codeOf(error) });
+      return { status: "down", latency_ms: Date.now() - started };
     }
-
-    return {
-      status: "healthy",
-      message: "Supabase Auth is operational",
-      responseTime,
-    };
-  } catch (error: any) {
-    const responseTime = Date.now() - startTime;
-    return {
-      status: "unhealthy",
-      message: `Supabase Auth check failed: ${error.message}`,
-      responseTime,
-    };
+    return { status: "ok", latency_ms: Date.now() - started };
+  } catch (error) {
+    log.warn("health check failed", { scope: "Health", check: "db", code: codeOf(error) });
+    return { status: "down", latency_ms: Date.now() - started };
   }
 }
 
-/**
- * Checks if Azure OAuth is properly configured
- * Tests if Supabase can generate Azure OAuth URL
- */
-async function checkAzureOAuth(): Promise<HealthCheck> {
-  const startTime = Date.now();
+async function probe(check: "auth" | "storage", path: string): Promise<HealthProbe> {
+  const started = Date.now();
   try {
-    const supabase = await createClient();
-    
-    // Test if we can generate an OAuth URL for Azure
-    // This will fail if Azure provider is not configured in Supabase dashboard
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'azure',
-      options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/callback`,
-        skipBrowserRedirect: true, // Don't actually redirect, just test config
-      },
+    const response = await fetch(`${supabaseUrl()}${path}`, {
+      headers: { apikey: supabaseAnonKey() },
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+      cache: "no-store",
     });
-
-    const responseTime = Date.now() - startTime;
-
-    if (error) {
-      return {
-        status: "unhealthy",
-        message: `Azure OAuth not configured: ${error.message}`,
-        responseTime,
-        details: {
-          error: error.message,
-          hint: "Configure Azure OAuth provider in Supabase dashboard"
-        }
-      };
+    if (response.status !== 200) {
+      log.warn("health check failed", { scope: "Health", check, code: `HTTP_${response.status}` });
+      return { status: "down", latency_ms: Date.now() - started };
     }
-
-    // If we got a URL, Azure provider is configured
-    if (data?.url) {
-      return {
-        status: "healthy",
-        message: "Azure OAuth is configured and operational",
-        responseTime,
-        details: {
-          provider: "azure",
-          configured: true
-        }
-      };
-    }
-
-    // No error but no URL either - something is wrong
-    return {
-      status: "degraded",
-      message: "Azure OAuth returned no authorization URL",
-      responseTime,
-      details: {
-        warning: "OAuth configuration may be incomplete"
-      }
-    };
-
-  } catch (error: any) {
-    const responseTime = Date.now() - startTime;
-    return {
-      status: "unhealthy",
-      message: `Azure OAuth check failed: ${error.message}`,
-      responseTime,
-    };
+    return { status: "ok", latency_ms: Date.now() - started };
+  } catch (error) {
+    log.warn("health check failed", { scope: "Health", check, code: codeOf(error) });
+    return { status: "down", latency_ms: Date.now() - started };
   }
 }
 
-/**
- * Checks if required environment variables are set
- */
-function checkEnvironment(): HealthCheck {
-  const requiredEnvVars = [
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-  ];
+type CronRow = {
+  jobname: string;
+  schedule: string;
+  active: boolean;
+  last_start: string | null;
+  last_status: string | null;
+};
 
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-
-  if (missingVars.length > 0) {
-    return {
-      status: "unhealthy",
-      message: `Missing required environment variables`,
-      details: { missing: missingVars }
-    };
-  }
-
+function toJob(row: CronRow, now: number): HealthCronJob {
+  const threshold = STALE_AFTER_MS[row.jobname];
+  const started = row.last_start === null ? Number.NaN : Date.parse(row.last_start);
+  const stale =
+    threshold === undefined || Number.isNaN(started) ? null : now - started > threshold;
   return {
-    status: "healthy",
-    message: "All required environment variables are set",
-    details: {
-      variables_checked: requiredEnvVars.length
-    }
+    jobname: row.jobname,
+    schedule: row.schedule,
+    active: row.active,
+    last_start: Number.isNaN(started) ? null : new Date(started).toISOString(),
+    last_status: row.last_status ?? null,
+    stale,
   };
 }
 
 /**
- * Checks system memory usage
- * Note: Thresholds are set for production. Development mode typically uses more memory.
+ * `cron_job_status()` is service_role only (C4), so it is read through the
+ * door. PGRST202 (production before the DI-23 repair) or any other failure is
+ * `unknown`, never a 500.
  */
-function checkMemory(): HealthCheck {
+async function checkPgCron(): Promise<HealthPgCron> {
   try {
-    const memUsage = process.memoryUsage();
-    const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
-    const heapTotalMB = Math.round(memUsage.heapTotal / 1024 / 1024);
-    const rssMB = Math.round(memUsage.rss / 1024 / 1024);
-    const heapPercentage = Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100);
-    const externalMB = Math.round(memUsage.external / 1024 / 1024);
-
-    let status: "healthy" | "degraded" | "unhealthy" = "healthy";
-    let message = "Memory usage is normal";
-
-    // More lenient thresholds - heap is dynamic and will grow/shrink
-    // In production, consider monitoring RSS instead
-    if (heapUsedMB > 512 && heapPercentage > 95) {
-      // Only critical if we're using a lot of actual memory AND at high percentage
-      status = "unhealthy";
-      message = "Memory usage is critical";
-    } else if (heapUsedMB > 256 && heapPercentage > 90) {
-      status = "degraded";
-      message = "Memory usage is high";
+    const { data, error } = await getElevatedClient().rpc("cron_job_status");
+    if (error) {
+      log.warn("health check failed", { scope: "Health", check: "pg_cron", code: codeOf(error) });
+      return { status: "unknown", jobs: [] };
     }
-
-    return {
-      status,
-      message,
-      details: {
-        heapUsed: `${heapUsedMB}MB`,
-        heapTotal: `${heapTotalMB}MB`,
-        heapPercentage: `${heapPercentage}%`,
-        rss: `${rssMB}MB`,
-        external: `${externalMB}MB`,
-      }
-    };
-  } catch (error: any) {
-    return {
-      status: "degraded",
-      message: `Memory check failed: ${error.message}`,
-    };
+    const now = Date.now();
+    const jobs = ((data ?? []) as CronRow[]).map((row) => toJob(row, now));
+    const known = jobs.filter((job) => job.jobname in STALE_AFTER_MS);
+    const status: HealthPgCron["status"] =
+      known.length === 0
+        ? "unknown"
+        : known.some((job) => job.stale === true)
+          ? "stale"
+          : known.some((job) => job.stale === null)
+            ? "unknown"
+            : "ok";
+    return { status, jobs };
+  } catch (error) {
+    log.warn("health check failed", { scope: "Health", check: "pg_cron", code: codeOf(error) });
+    return { status: "unknown", jobs: [] };
   }
 }
 
 /**
- * Main health check endpoint
+ * The newest scraper-sourced insert, by any path (C23). Read through the door:
+ * a pending instagram event is visible only to admins through RLS, and the
+ * token caller has no session.
  */
-export async function GET() {
+/** Every field unknown: the summary read failed. Informational only. */
+const WEBHOOK_UNKNOWN: HealthWebhook = {
+  last_ingest_at: null,
+  last_delivery_at: null,
+  last_success_at: null,
+  last_failure_at: null,
+  last_error_code: null,
+  pending_review: null,
+  stale_pending: null,
+};
+
+async function checkWebhook(): Promise<HealthWebhook> {
   try {
-    const timestamp = new Date().toISOString();
-    const uptime = Math.floor((Date.now() - serverStartTime) / 1000); // in seconds
-
-    // Run all health checks in parallel
-    const [database, supabase_auth, azure_oauth, environment, memory] = await Promise.all([
-      checkDatabase(),
-      checkSupabaseAuth(),
-      checkAzureOAuth(), // Now properly tests Azure OAuth configuration
-      Promise.resolve(checkEnvironment()),
-      Promise.resolve(checkMemory()),
-    ]);
-
-    // Server check (if we got here, server is up)
-    const server: HealthCheck = {
-      status: "healthy",
-      message: "Server is running",
-    };
-
-    // Determine overall health status
-    const checks = { server, database, supabase_auth, azure_oauth, environment, memory };
-    let overallStatus: "healthy" | "degraded" | "unhealthy" = "healthy";
-
-    // If any check is unhealthy, overall is unhealthy
-    if (Object.values(checks).some(check => check.status === "unhealthy")) {
-      overallStatus = "unhealthy";
-    }
-    // If any check is degraded (and none unhealthy), overall is degraded
-    else if (Object.values(checks).some(check => check.status === "degraded")) {
-      overallStatus = "degraded";
-    }
-
-    const response: HealthResponse = {
-      status: overallStatus,
-      timestamp,
-      uptime,
-      version: process.env.npm_package_version || "0.1.0",
-      checks,
-    };
-
-    // Return 200 for healthy/degraded and 503 only for unhealthy.
-    const httpStatus = overallStatus === "unhealthy" ? 503 : 200;
-
-    return NextResponse.json(response, { status: httpStatus });
-  } catch (error: any) {
-    // If the health check itself fails, return a minimal unhealthy response
-    return NextResponse.json(
-      {
-        status: "unhealthy",
-        timestamp: new Date().toISOString(),
-        uptime: Math.floor((Date.now() - serverStartTime) / 1000),
-        version: "unknown",
-        error: `Health check failed: ${error.message}`,
-      },
-      { status: 503 }
-    );
+    return await ingestionSummary();
+  } catch (error) {
+    log.warn("health check failed", { scope: "Health", check: "webhook", code: codeOf(error) });
+    return WEBHOOK_UNKNOWN;
   }
 }
 
+function overall(checks: HealthReport["checks"]): HealthStatus {
+  if (checks.db.status === "down") return "down";
+  if (
+    checks.auth.status === "down" ||
+    checks.storage.status === "down" ||
+    checks.pg_cron.status === "stale"
+  ) {
+    return "degraded";
+  }
+  return "ok";
+}
+
+async function report(supabase: ServerSupabaseClient): Promise<NextResponse> {
+  const [db, auth, storage, pg_cron, webhook] = await Promise.all([
+    checkDb(supabase),
+    probe("auth", "/auth/v1/health"),
+    probe("storage", "/storage/v1/status"),
+    checkPgCron(),
+    checkWebhook(),
+  ]);
+  const checks = { db, auth, storage, pg_cron, webhook };
+  const status = overall(checks);
+  const body: HealthReport = {
+    status,
+    version: version(),
+    ts: new Date().toISOString(),
+    checks,
+  };
+  return NextResponse.json(body, { status: status === "ok" ? 200 : 503 });
+}
+
+export const GET = withRoute({ cache: "private", action: "check health" }, async (
+  request: NextRequest
+) => {
+  if (bearerMatches(request)) {
+    return report(await createClient());
+  }
+
+  const ctx = await createRequestContext();
+  const active = requireActiveUser(ctx);
+  const admin = active.ok ? requireRole(ctx, "admin") : active;
+  if (admin.ok) {
+    return report(ctx.supabase);
+  }
+
+  const body: HealthLiveness = { status: "ok", version: version() };
+  return NextResponse.json(body);
+});

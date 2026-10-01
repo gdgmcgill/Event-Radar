@@ -68,24 +68,24 @@ describe("admin/organizer-requests/[id] PATCH", () => {
     );
   }
 
-  it("the update is filtered by id and status = pending", async () => {
-    asAdmin({ ...pending, "organizer_requests.update": { data: [{ id: REQUEST_ID }] } });
+  it("submits the decision and authenticated admin to one atomic transaction", async () => {
+    asAdmin(pending);
+    mockElevated = makeFake({ answers: { "rpc:review_organizer_request_atomic": { data: "ok" } } });
     const res = await review();
     expect(res.status).toBe(200);
-    const [update] = callsTo(mockCookie, "organizer_requests", "update");
-    expect(update.filters).toEqual([
-      { op: "eq", column: "id", value: REQUEST_ID },
-      { op: "eq", column: "status", value: "pending" },
-    ]);
+    expect(writes(mockCookie)).toEqual([]);
+    expect(mockElevated.calls).toHaveLength(1);
+    expect(mockElevated.calls[0].payload).toEqual({ p_actor_id: ADMIN.id, p_request_id: REQUEST_ID, p_status: "approved" });
   });
 
-  it("losing the race answers 409 and runs no side effect", async () => {
-    asAdmin({ ...pending, "organizer_requests.update": { data: [] } });
+  it("losing the transactional pending check answers 409 without external side effects", async () => {
+    asAdmin(pending);
+    mockElevated = makeFake({ answers: { "rpc:review_organizer_request_atomic": { data: "conflict" } } });
     const res = await review();
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: "This request has already been reviewed" });
-    expect(writes(mockCookie)).toEqual(["organizer_requests.update"]);
-    expect(writes(mockElevated)).toEqual([]);
+    expect(writes(mockCookie)).toEqual([]);
+    expect(mockElevated.calls).toHaveLength(1);
   });
 });
 

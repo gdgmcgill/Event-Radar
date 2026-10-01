@@ -6,7 +6,8 @@
  *   - on the Node.js server runtime, register() resolves when the Supabase URL,
  *     the anon key and the service-role key are all set, and rejects with a
  *     MissingEnvError naming the first missing variable when any one of them
- *     is unset or blank, after logging one "[Config] refusing to start:" line;
+ *     is unset or blank, after logging one JSON line (scope "Config", msg
+ *     "refusing to start", the error's name and message; plan 06-12, DEC-74);
  *   - it checks nothing during `next build` (NEXT_PHASE is
  *     "phase-production-build"), because CI builds with no service key;
  *   - it checks nothing outside the Node.js runtime (NEXT_RUNTIME "edge", or
@@ -17,6 +18,16 @@
  *     degradation, and the server still starts; no pair with
  *     RATE_LIMIT_REQUIRE_DISTRIBUTED=true refuses to start; no pair outside
  *     production logs nothing here (the store selection warns instead).
+ *
+ *   - Sentry (plan 06-16, DEC-76): register() initializes Sentry first, with
+ *     the decided posture; no usable SENTRY_DSN means init with enabled false
+ *     and exactly ONE info line "Sentry disabled" (scope "Sentry", a reason,
+ *     never the value); a throwing init never fails boot; onRequestError
+ *     hands Next's error to Sentry's captureRequestError inside a scope
+ *     tagged request_id when the request carries a UUID-shaped x-request-id.
+ *     `@sentry/nextjs` is mocked for the whole file: these rows test
+ *     register()'s logic, and src/server/__tests__/sentry.test.ts drives the
+ *     real SDK through an in-memory transport.
  *
  * These tests are the authority on register()'s behaviour. What Next itself
  * does with a rejecting register() is measured separately, in
@@ -30,6 +41,28 @@
 // global scope with every other import-free test file under tsc.
 export {};
 
+type SentryMock = {
+  init: jest.Mock;
+  withScope: jest.Mock;
+  captureRequestError: jest.Mock;
+  scope: { setTag: jest.Mock };
+};
+
+jest.mock("@sentry/nextjs", () => {
+  const scope = { setTag: jest.fn() };
+  return {
+    scope,
+    init: jest.fn(),
+    withScope: jest.fn((callback: (s: typeof scope) => unknown) => callback(scope)),
+    captureRequestError: jest.fn(),
+  };
+});
+
+/** The mock instance the most recent load() wired into the module under test. */
+function sentryMock(): SentryMock {
+  return jest.requireMock("@sentry/nextjs") as SentryMock;
+}
+
 const MANAGED_KEYS = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
@@ -42,6 +75,8 @@ const MANAGED_KEYS = [
   "KV_REST_API_TOKEN",
   "VERCEL_ENV",
   "RATE_LIMIT_REQUIRE_DISTRIBUTED",
+  "SENTRY_DSN",
+  "VERCEL_GIT_COMMIT_SHA",
 ] as const;
 
 type ManagedKey = (typeof MANAGED_KEYS)[number];
@@ -55,12 +90,15 @@ const REQUIRED = [
 const env = process.env as Record<string, string | undefined>;
 let saved: Partial<Record<ManagedKey, string | undefined>> = {};
 let errorSpy: jest.SpyInstance;
+let logSpy: jest.SpyInstance;
 
 beforeEach(() => {
   saved = {};
   for (const key of MANAGED_KEYS) saved[key] = env[key];
   for (const key of MANAGED_KEYS) delete env[key];
   errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+  // The "Sentry disabled" info line goes to console.log (plan 06-16).
+  logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
   jest.resetModules();
 });
 
@@ -70,12 +108,30 @@ afterEach(() => {
     else env[key] = saved[key];
   }
   errorSpy.mockRestore();
+  logSpy.mockRestore();
 });
 
 function setAllRequired(): void {
   env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321";
   env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-value";
   env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key-value";
+}
+
+/** The Nth console.error call, parsed: the logger writes one JSON line (DEC-74). */
+function loggedLine(index = 0): Record<string, unknown> {
+  const call = errorSpy.mock.calls[index] as unknown[];
+  expect(call).toHaveLength(1);
+  return JSON.parse(String(call[0])) as Record<string, unknown>;
+}
+
+/** The refusal line: level error, scope Config, the error's name and message. */
+function expectRefusal(name: string, message: string): void {
+  expect(loggedLine()).toMatchObject({
+    level: "error",
+    scope: "Config",
+    msg: "refusing to start",
+    error: { name, message },
+  });
 }
 
 async function load(): Promise<{
@@ -110,8 +166,8 @@ describe("register() on the Node.js server runtime", () => {
       await expect(outcome).rejects.toThrow(
         `Missing required environment variable: ${variable}`
       );
-      expect(errorSpy).toHaveBeenCalledWith(
-        "[Config] refusing to start:",
+      expectRefusal(
+        "MissingEnvError",
         `Missing required environment variable: ${variable}`
       );
     }
@@ -192,8 +248,9 @@ describe("register() and the rate-limit store", () => {
     const { register } = await load();
     await expect(register()).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalledTimes(1);
-    const line = String(errorSpy.mock.calls[0][0]);
-    expect(line).toMatch(/^\[RateLimit\] /);
+    const logged = loggedLine();
+    expect(logged).toMatchObject({ level: "error", scope: "RateLimit" });
+    const line = String(logged.msg);
     for (const name of [
       "UPSTASH_REDIS_REST_URL",
       "UPSTASH_REDIS_REST_TOKEN",
@@ -217,8 +274,8 @@ describe("register() and the rate-limit store", () => {
       `Missing required environment variable: ${FOUR_NAMES}`
     );
     expect(errorSpy).toHaveBeenCalledTimes(1);
-    expect(errorSpy).toHaveBeenCalledWith(
-      "[Config] refusing to start:",
+    expectRefusal(
+      "MissingEnvError",
       `Missing required environment variable: ${FOUR_NAMES}`
     );
   });
@@ -245,8 +302,8 @@ describe("register() and the rate-limit store", () => {
     const { InvalidEnvError } = await import("@/lib/env");
     const outcome = register();
     await expect(outcome).rejects.toBeInstanceOf(InvalidEnvError);
-    expect(errorSpy).toHaveBeenCalledWith(
-      "[Config] refusing to start:",
+    expectRefusal(
+      "InvalidEnvError",
       'Invalid environment variable: RATE_LIMIT_REQUIRE_DISTRIBUTED (expected "true" or "false")'
     );
   });
@@ -279,12 +336,15 @@ describe("register() and an unusable Upstash URL", () => {
     const { register } = await load();
     await expect(register()).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalledTimes(1);
-    const line = String(errorSpy.mock.calls[0][0]);
-    expect(line).toMatch(/^\[RateLimit\] /);
+    const logged = loggedLine();
+    expect(logged).toMatchObject({ level: "error", scope: "RateLimit" });
+    const line = String(logged.msg);
     expect(line).toContain("UPSTASH_REDIS_REST_URL or KV_REST_API_URL");
     expect(line).toContain("in-memory store");
     expect(line).not.toContain(PASSWORD);
     expect(line).not.toContain("up-token");
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(PASSWORD);
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("up-token");
   });
 
   it("a KV_URL-style value in KV_REST_API_URL outside production is reported too", async () => {
@@ -319,5 +379,162 @@ describe("register() and an unusable Upstash URL", () => {
     const { register } = await load();
     await expect(register()).resolves.toBeUndefined();
     expect(errorSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Sentry (plan 06-16, DEC-76) ─────────────────────────────────────────────
+
+/** Every console.log line that is the logger's "Sentry disabled" line. */
+function disabledLines(): Record<string, unknown>[] {
+  return logSpy.mock.calls
+    .map((call) => {
+      try {
+        return JSON.parse(String(call[0])) as Record<string, unknown>;
+      } catch {
+        return {};
+      }
+    })
+    .filter((line) => line.msg === "Sentry disabled");
+}
+
+describe("register() and Sentry", () => {
+  const DSN = "https://0123abcd@o42.ingest.us.sentry.io/4507";
+
+  beforeEach(() => {
+    env.NEXT_RUNTIME = "nodejs";
+    setAllRequired();
+  });
+
+  it("no SENTRY_DSN: init once with enabled false and the posture; exactly one info line; boot resolves", async () => {
+    const { register } = await load();
+    await expect(register()).resolves.toBeUndefined();
+    const { init } = sentryMock();
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(init.mock.calls[0][0]).toMatchObject({
+      enabled: false,
+      sendDefaultPii: false,
+      tracesSampleRate: 0,
+      environment: "development",
+    });
+    expect(disabledLines()).toEqual([
+      expect.objectContaining({
+        level: "info",
+        msg: "Sentry disabled",
+        scope: "Sentry",
+        reason: "SENTRY_DSN is not set",
+      }),
+    ]);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it("a SENTRY_DSN that is not an https DSN: disabled with its reason, and the value is never logged", async () => {
+    env.SENTRY_DSN = "http://0123abcd@o42.ingest.us.sentry.io/4507";
+    const { register } = await load();
+    await expect(register()).resolves.toBeUndefined();
+    expect(sentryMock().init.mock.calls[0][0]).toMatchObject({ enabled: false });
+    const lines = disabledLines();
+    expect(lines).toHaveLength(1);
+    expect(lines[0].reason).toBe("SENTRY_DSN is not an https Sentry DSN");
+    const everything = JSON.stringify(logSpy.mock.calls) + JSON.stringify(errorSpy.mock.calls);
+    expect(everything).not.toContain("0123abcd");
+  });
+
+  it("a usable SENTRY_DSN: init once with enabled true, that dsn, VERCEL_ENV and the commit sha; no disabled line", async () => {
+    env.SENTRY_DSN = DSN;
+    env.VERCEL_ENV = "preview";
+    env.VERCEL_GIT_COMMIT_SHA = "abc123";
+    const { register } = await load();
+    await expect(register()).resolves.toBeUndefined();
+    const { init } = sentryMock();
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(init.mock.calls[0][0]).toMatchObject({
+      dsn: DSN,
+      enabled: true,
+      sendDefaultPii: false,
+      tracesSampleRate: 0,
+      environment: "preview",
+      release: "abc123",
+    });
+    expect(typeof init.mock.calls[0][0].beforeSend).toBe("function");
+    expect(disabledLines()).toEqual([]);
+  });
+
+  it("Sentry is initialized before the boot check, so a refusal still happens after it", async () => {
+    delete env.NEXT_PUBLIC_SUPABASE_URL;
+    const { register, MissingEnvError } = await load();
+    await expect(register()).rejects.toBeInstanceOf(MissingEnvError);
+    expect(sentryMock().init).toHaveBeenCalledTimes(1);
+  });
+
+  it("a throwing Sentry.init never fails boot: one warn line, and register resolves", async () => {
+    env.SENTRY_DSN = DSN;
+    const { register } = await load();
+    // load() wired this instance in; register() imports the config from the
+    // same module registry, so it sees this implementation.
+    sentryMock().init.mockImplementation(() => {
+      throw new Error("sdk exploded");
+    });
+    await expect(register()).resolves.toBeUndefined();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(errorSpy.mock.calls[0][0]))).toMatchObject({
+      level: "warn",
+      scope: "Sentry",
+      msg: "Sentry init failed; continuing without error reporting",
+    });
+  });
+
+  it('checks nothing and initializes nothing when NEXT_PHASE is "phase-production-build"', async () => {
+    env.NEXT_PHASE = "phase-production-build";
+    const { register } = await load();
+    await expect(register()).resolves.toBeUndefined();
+    expect(sentryMock().init).not.toHaveBeenCalled();
+  });
+
+  it('initializes nothing when NEXT_RUNTIME is "edge" (no edge config, DEC-76)', async () => {
+    env.NEXT_RUNTIME = "edge";
+    const { register } = await load();
+    await expect(register()).resolves.toBeUndefined();
+    expect(sentryMock().init).not.toHaveBeenCalled();
+  });
+});
+
+describe("onRequestError", () => {
+  const ERROR_REQUEST = (headers: Record<string, string | string[]>) => ({
+    path: "/events/abc?invite=x",
+    method: "GET",
+    headers,
+  });
+  const CONTEXT = {
+    routerKind: "App Router" as const,
+    routePath: "/events/[id]",
+    routeType: "render" as const,
+    renderSource: "server-rendering" as const,
+    revalidateReason: undefined,
+    renderType: "dynamic" as const,
+  };
+
+  async function loadHook(): Promise<(typeof import("./instrumentation"))["onRequestError"]> {
+    const { onRequestError } = await import("./instrumentation");
+    return onRequestError;
+  }
+
+  it("hands the error to captureRequestError inside a scope tagged with a UUID-shaped x-request-id", async () => {
+    const onRequestError = await loadHook();
+    const error = new Error("render failed");
+    const request = ERROR_REQUEST({ "x-request-id": "3f0c2b1a-9d8e-4f7a-8b6c-5d4e3f2a1b0c" });
+    await onRequestError(error, request, CONTEXT);
+    const { withScope, captureRequestError, scope } = sentryMock();
+    expect(withScope).toHaveBeenCalledTimes(1);
+    expect(scope.setTag).toHaveBeenCalledWith("request_id", "3f0c2b1a-9d8e-4f7a-8b6c-5d4e3f2a1b0c");
+    expect(captureRequestError).toHaveBeenCalledWith(error, request, CONTEXT);
+  });
+
+  it("captures without a request_id tag when the header is absent or not UUID-shaped", async () => {
+    const onRequestError = await loadHook();
+    await onRequestError(new Error("a"), ERROR_REQUEST({}), CONTEXT);
+    await onRequestError(new Error("b"), ERROR_REQUEST({ "x-request-id": "forged\nline" }), CONTEXT);
+    const { captureRequestError, scope } = sentryMock();
+    expect(captureRequestError).toHaveBeenCalledTimes(2);
+    expect(scope.setTag).not.toHaveBeenCalled();
   });
 });

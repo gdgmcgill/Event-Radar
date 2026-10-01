@@ -5,6 +5,7 @@ import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
+import type { ClubFollowRequestInit } from "@/contracts/clubs";
 import { useFollowedClubIds } from "@/hooks/useClubs";
 
 interface FollowButtonProps {
@@ -54,7 +55,7 @@ export function FollowButton({
     try {
       const res = await fetch(`/api/clubs/${clubId}/follow`, {
         method: wasFollowing ? "DELETE" : "POST",
-      });
+      } satisfies ClubFollowRequestInit);
       if (!res.ok) throw new Error("Failed to toggle follow");
       // Revalidate the SWR cache so followedIds stays in sync
       mutate();

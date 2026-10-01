@@ -15,12 +15,17 @@
  */
 
 import { assertEquals, assertExists } from "jsr:@std/assert";
-import { load } from "jsr:@std/dotenv";
 import crypto from "node:crypto";
 
-// Load test environment variables
-// Load from the root directory
-await load({ envPath: ".env.test", export: true });
+// Never load .env.test: a stale hosted URL would make cleanup destructive.
+// scripts/test-edge-local.ts injects credentials read from the local CLI only.
+const testUrl = new URL(Deno.env.get("SUPABASE_URL") || "http://127.0.0.1:54321");
+if (!["localhost", "127.0.0.1"].includes(testUrl.hostname) || testUrl.port !== "54321") {
+  throw new Error("REFUSED: webhook tests only support local Supabase on port 54321");
+}
+if (!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || !Deno.env.get("WEBHOOK_SECRET")) {
+  throw new Error("Run with: npx tsx scripts/test-edge-local.ts");
+}
 
 // Helper function to compute HMAC SHA-256 signature
 function computeHMAC(payload: string, secret: string): string {
@@ -42,7 +47,7 @@ function createRequest(
     headers[headerName] = signature;
   }
 
-  return new Request("http://localhost:54321/functions/v1/events-webhook", {
+  return new Request(`${testUrl.origin}/functions/v1/events-webhook`, {
     method: "POST",
     headers,
     body,
@@ -75,7 +80,7 @@ async function cleanupTestData(organizerName: string) {
 }
 
 Deno.test("CORS preflight request", async () => {
-  const request = new Request("http://localhost:54321/functions/v1/events-webhook", {
+  const request = new Request(`${testUrl.origin}/functions/v1/events-webhook`, {
     method: "OPTIONS",
   });
 
@@ -111,7 +116,12 @@ Deno.test("Missing signature header returns 401", async () => {
   assertEquals(body.error, "Missing signature header");
 });
 
-Deno.test("Invalid signature returns 401", async () => {
+// Plan 06-03 (F-039, DEC-64): this signature is the WRONG LENGTH (23 characters,
+// not 64). Before 06-03 the function passed it to crypto.timingSafeEqual, which
+// throws on unequal lengths, so this test received 500 Internal server error.
+// verifySignature now length-checks first and the answer is 401. The expectation
+// holds only once the owner redeploys the function (DI-81).
+Deno.test("Wrong-length signature returns 401 (was 500 before 06-03)", async () => {
   const payload = {
     event_count: 1,
     events: [{
@@ -128,10 +138,86 @@ Deno.test("Invalid signature returns 401", async () => {
 
   const request = createRequest(payload, invalidSignature);
   const response = await fetch(request);
-  
+
   assertEquals(response.status, 401);
   const responseBody = await response.json();
   assertEquals(responseBody.error, "Invalid signature");
+});
+
+Deno.test("Wrong signature of the right length returns 401", async () => {
+  const payload = {
+    event_count: 1,
+    events: [{
+      title: "Test Event",
+      description: "Test Description",
+      category: "workshop",
+      date: "2024-12-31",
+      location: "Test Location",
+      organizer: "Test Organizer",
+    }],
+  };
+
+  const request = createRequest(payload, "0".repeat(64));
+  const response = await fetch(request);
+
+  assertEquals(response.status, 401);
+  const responseBody = await response.json();
+  assertEquals(responseBody.error, "Invalid signature");
+});
+
+// Plan 06-03 (F-039, DEC-64): each row now carries content_hash, so the unique
+// partial index idx_events_content_hash refuses a replayed event with 23505 and
+// the function reports it per event as "duplicate". Before 06-03 the second send
+// answered 200 and inserted a second set of pending rows. Holds once the owner
+// redeploys the function (DI-81).
+Deno.test("Replayed payload is reported as duplicate, not inserted again", async () => {
+  const webhookSecret = Deno.env.get("WEBHOOK_SECRET")!;
+  const organizerName = `Test Organizer ${Date.now()}`;
+
+  try {
+    const payload = {
+      event_count: 2,
+      events: [
+        {
+          title: "Replay Event A",
+          description: "Replay Description",
+          date: "2024-12-31",
+          time: "14:00",
+          location: "Test Location",
+          organizer: organizerName,
+        },
+        {
+          title: "Replay Event B",
+          description: "Replay Description",
+          date: "2024-12-31",
+          time: "16:00",
+          location: "Test Location",
+          organizer: organizerName,
+        },
+      ],
+    };
+
+    const bodyString = JSON.stringify(payload);
+    const signature = computeHMAC(bodyString, webhookSecret);
+
+    const first = await fetch(createRequest(payload, signature));
+    assertEquals(first.status, 200);
+    const firstBody = await first.json();
+    assertEquals(firstBody.events.length, 2);
+    assertExists(firstBody.events[0].content_hash);
+
+    const replay = await fetch(createRequest(payload, signature));
+    assertEquals(replay.status, 400);
+    const replayBody = await replay.json();
+    assertEquals(replayBody.success, false);
+    assertEquals(replayBody.message, "Failed to process all events");
+    assertEquals(replayBody.errors, [
+      { index: 0, error: "duplicate" },
+      { index: 1, error: "duplicate" },
+    ]);
+  } finally {
+    await cleanupTestData(organizerName);
+  }
 });
 
 
@@ -140,7 +226,7 @@ Deno.test("Invalid JSON payload returns 400", async () => {
   const invalidJson = "{ invalid json }";
   const signature = computeHMAC(invalidJson, webhookSecret);
 
-  const request = new Request("http://localhost:54321/functions/v1/events-webhook", {
+  const request = new Request(`${testUrl.origin}/functions/v1/events-webhook`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -168,6 +254,37 @@ Deno.test("Invalid payload structure returns 400", async () => {
   const body = await response.json();
   assertEquals(body.error, "Invalid payload structure. Expected event_count (number) and events (array)");
 });
+
+// M0 / DI-83 intentionally changes characterization rows 7, 11 and 12 from
+// accidental 500s to validation 400s. Each fails before any database insert.
+for (const [label, payload, expected] of [
+  ["null envelope", null, {
+    error: "Invalid payload structure. Expected event_count (number) and events (array)",
+  }],
+  ["null event", { event_count: 1, events: [null] }, {
+    error: "Invalid events found",
+    details: [{ index: 0, errors: [
+      "title is required and must be a non-empty string",
+      "description is required and must be a non-empty string",
+      "date is required and must be a string",
+      "location is required and must be a non-empty string",
+    ] }],
+  }],
+  ["non-string tag", { event_count: 1, events: [{
+    title: "Malformed tags", description: "Test", date: "2030-01-01",
+    location: "Test", tags: [1],
+  }] }, {
+    error: "Invalid events found",
+    details: [{ index: 0, errors: ["tags must contain only strings"] }],
+  }],
+] as const) {
+  Deno.test(`DI-83: ${label} returns 400`, async () => {
+    const secret = Deno.env.get("WEBHOOK_SECRET")!;
+    const response = await fetch(createRequest(payload, computeHMAC(JSON.stringify(payload), secret)));
+    assertEquals(response.status, 400);
+    assertEquals(await response.json(), expected);
+  });
+}
 
 Deno.test("Event count mismatch returns 400", async () => {
   const webhookSecret = Deno.env.get("WEBHOOK_SECRET")!;
@@ -250,6 +367,8 @@ Deno.test("Valid webhook with organizer processes successfully", async () => {
     assertEquals(body.events[0].organizer, organizerName);
     assertExists(body.events[0].start_date);
     assertExists(body.events[0].end_date);
+    // Plan 06-03: every webhook row carries its dedupe key.
+    assertExists(body.events[0].content_hash);
   } finally {
     // Ensure response body is consumed even if test fails
     if (response && !response.bodyUsed) {
@@ -407,7 +526,7 @@ Deno.test("Supports x-hub-signature-256 header format", async () => {
     // Format: sha256=<signature>
     const signatureWithPrefix = `sha256=${signature}`;
 
-    const request = new Request("http://localhost:54321/functions/v1/events-webhook", {
+    const request = new Request(`${testUrl.origin}/functions/v1/events-webhook`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -499,3 +618,81 @@ Deno.test("Event tags and category are properly processed", async () => {
   }
 });
 
+// ─── M3 P1-07: the delivery log ──────────────────────────────────────────────
+
+async function deliveriesFor(runId: string): Promise<Array<Record<string, unknown>>> {
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const response = await fetch(
+    `${testUrl.origin}/rest/v1/ingestion_deliveries?run_id=eq.${runId}&order=received_at.asc`,
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+  );
+  assertEquals(response.status, 200);
+  return await response.json();
+}
+
+async function cleanupDeliveries(runId: string) {
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const response = await fetch(`${testUrl.origin}/rest/v1/ingestion_deliveries?run_id=eq.${runId}`, {
+    method: "DELETE",
+    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+  });
+  await response.body?.cancel();
+}
+
+Deno.test("M3 P1-07: heartbeat and failed runs are recorded; unsigned requests are not", async () => {
+  const secret = Deno.env.get("WEBHOOK_SECRET")!;
+  const runId = crypto.randomUUID();
+  const run = { id: runId, producer: "edge-test@1", status: "ok", items_seen: 0 };
+  try {
+    const unsigned = await fetch(createRequest({ event_count: 0, events: [], run }, "0".repeat(64)));
+    assertEquals(unsigned.status, 401);
+    await unsigned.body?.cancel();
+    assertEquals((await deliveriesFor(runId)).length, 0);
+
+    const heartbeat = { event_count: 0, events: [], run };
+    const ok = await fetch(createRequest(heartbeat, computeHMAC(JSON.stringify(heartbeat), secret)));
+    assertEquals(ok.status, 200);
+    assertEquals(await ok.json(), { recorded: true });
+
+    const failed = { event_count: 0, events: [], run: { ...run, status: "failed", error_code: "apify_http_401" } };
+    const failedResponse = await fetch(createRequest(failed, computeHMAC(JSON.stringify(failed), secret)));
+    assertEquals(failedResponse.status, 200);
+    await failedResponse.body?.cancel();
+
+    const rows = await deliveriesFor(runId);
+    assertEquals(rows.map((row) => [row.producer, row.outcome, row.error_code]), [
+      ["edge-test@1", "heartbeat", null],
+      ["edge-test@1", "failed", "apify_http_401"],
+    ]);
+  } finally {
+    await cleanupDeliveries(runId);
+  }
+});
+
+Deno.test("M3 P1-07: a replayed batch is recorded as duplicate", async () => {
+  const secret = Deno.env.get("WEBHOOK_SECRET")!;
+  const runId = crypto.randomUUID();
+  const organizerName = `Delivery Organizer ${Date.now()}`;
+  const payload = {
+    event_count: 1,
+    events: [{ title: "Delivery Event", description: "Replay", date: "2030-01-01", location: "Campus", organizer: organizerName }],
+    run: { id: runId, producer: "edge-test@1", status: "ok", items_seen: 1 },
+  };
+  try {
+    const signature = computeHMAC(JSON.stringify(payload), secret);
+    const first = await fetch(createRequest(payload, signature));
+    assertEquals(first.status, 200);
+    await first.body?.cancel();
+    const replay = await fetch(createRequest(payload, signature));
+    assertEquals(replay.status, 400);
+    await replay.body?.cancel();
+    const rows = await deliveriesFor(runId);
+    assertEquals(rows.map((row) => [row.outcome, row.inserted, row.duplicates, row.event_count]), [
+      ["succeeded", 1, 0, 1],
+      ["duplicate", 0, 1, 1],
+    ]);
+  } finally {
+    await cleanupTestData(organizerName);
+    await cleanupDeliveries(runId);
+  }
+});

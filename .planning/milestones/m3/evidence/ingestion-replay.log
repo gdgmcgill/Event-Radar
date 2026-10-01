@@ -1,0 +1,14 @@
+# M3 P1-07 Task 16 step 2: replay of the same command (2026-09-29T21:45:27Z)
+# command: npx tsx scripts/ingest/run-local.ts --handles mcgillhacks,mcgillwics,mcgillesports --days 45
+# before: instagram pending events = 6
+local webhook: starting
+local webhook: ready
+run 6072873c-9f35-4dc5-9692-6d0034125d9c: handles=3 days=45
+apify: requesting profiles
+classified: items=3 profiles_with_posts=3 posts=36 in_window=8 events=6 discarded=2
+batch 1/1: events=6 status=400 inserted=0 duplicates=6 failed=0
+summary: events=6 inserted=0 duplicates=6 failed=0 ok
+producer exit code: 0
+exit=0
+# after: instagram pending events = 6 (unchanged)
+# after: ingestion_deliveries = succeeded x1 (inserted 6), duplicate x1 (inserted 0, duplicates 6)

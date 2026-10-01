@@ -3,12 +3,16 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { parseBody } from "@/server/body";
+import { ExperimentUpdateBody } from "@/contracts/admin";
+import type { TablesUpdate } from "@/lib/supabase/types";
+import { logRouteError, withRoute } from "@/server/route";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export const GET = withRoute({ cache: "private", action: "fetch experiment" }, async (_request: NextRequest, { params }: RouteParams) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -34,6 +38,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     .eq("experiment_id", id);
 
   if (variantsError) {
+    logRouteError(variantsError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -49,6 +54,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       .in("variant_id", variantIds);
 
     if (assignmentsError) {
+      logRouteError(assignmentsError);
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
@@ -72,9 +78,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       total_assignments: totalAssignments,
     },
   });
-}
+});
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export const PATCH = withRoute({ cache: "private", action: "update experiment" }, async (request: NextRequest, { params }: RouteParams) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -83,25 +89,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const supabase = ctx.supabase;
 
   const { id } = await params;
-  const body = await request.json();
+  // status (the table's four values), description and end_date, each only
+  // when sent (src/contracts/admin.ts).
+  const parsed = await parseBody(request, ExperimentUpdateBody);
+  if (!parsed.ok) return parsed.response;
+  const { status, description, end_date } = parsed.data;
 
-  const updateData: Record<string, unknown> = {
+  // Typed as the experiments update (DI-53).
+  const updateData: TablesUpdate<"experiments"> = {
     updated_at: new Date().toISOString(),
   };
 
-  if ("status" in body) {
-    updateData.status = body.status;
-    if (body.status === "running") {
+  if (status !== undefined) {
+    updateData.status = status;
+    if (status === "running") {
       updateData.start_date = new Date().toISOString();
     }
   }
 
-  if ("description" in body) {
-    updateData.description = body.description;
+  if (description !== undefined) {
+    updateData.description = description;
   }
 
-  if ("end_date" in body) {
-    updateData.end_date = body.end_date;
+  if (end_date !== undefined) {
+    updateData.end_date = end_date;
   }
 
   const { data: experiment, error } = await supabase
@@ -112,13 +123,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     .single();
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ experiment });
-}
+});
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export const DELETE = withRoute({ cache: "private", action: "delete experiment" }, async (_request: NextRequest, { params }: RouteParams) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -154,8 +166,9 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     .eq("id", id);
 
   if (deleteError) {
+    logRouteError(deleteError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
-}
+});

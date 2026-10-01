@@ -35,6 +35,7 @@ let mockAuthError: { message: string } | null = null;
 let mockQueryResults: Map<string, { data: unknown; error: unknown }>;
 
 const mockSupabase = {
+  rpc: jest.fn(() => Promise.resolve({ data: [{ going: 0, interested: 0 }], error: null })),
   auth: {
     getUser: jest.fn(() =>
       Promise.resolve({

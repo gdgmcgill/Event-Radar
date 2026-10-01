@@ -4,6 +4,10 @@ import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
 import { ok } from "@/server/http";
+import { readQuery } from "@/server/body";
+import { CalendarQuery } from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * GET /api/calendar/events
@@ -12,7 +16,7 @@ import { ok } from "@/server/http";
  * Optional query params for date-range filtering:
  *   ?from=2026-01-01&to=2026-03-31
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch calendar events" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const auth = requireUser(ctx);
@@ -20,8 +24,9 @@ export async function GET(request: NextRequest) {
     const user = auth.user;
     const supabase = ctx.supabase;
 
-    const from = request.nextUrl.searchParams.get("from");
-    const to = request.nextUrl.searchParams.get("to");
+    // The query contract (plan 06-08, REFAC-15): from and to as sent. The
+    // route answers no 400 for its query, so it reads through readQuery.
+    const { from, to } = readQuery(request.nextUrl.searchParams, CalendarQuery);
 
     // Fetch saved event IDs
     const { data: savedRows } = await supabase
@@ -64,7 +69,11 @@ export async function GET(request: NextRequest) {
     const { data: events, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Calendar events query failed", { error });
+      return NextResponse.json(
+        { error: "Failed to fetch calendar events" },
+        { status: 500 }
+      );
     }
 
     // Transform DB rows → frontend Event shape (passes through start_date/end_date directly)
@@ -81,10 +90,10 @@ export async function GET(request: NextRequest) {
 
     return ok({ events: annotated });
   } catch (error) {
-    console.error("Calendar events error:", error);
+    log.error("Calendar events error", { error });
     return NextResponse.json(
       { error: "Failed to fetch calendar events" },
       { status: 500 }
     );
   }
-}
+});

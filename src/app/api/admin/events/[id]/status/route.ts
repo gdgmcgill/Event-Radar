@@ -1,3 +1,4 @@
+import { isEventDuplicateReviewRequired, EVENT_DUPLICATE_REVIEW_MESSAGE } from "@/server/discovery/eventDuplicate";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
@@ -5,13 +6,16 @@ import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { getElevatedClient } from "@/server/db/elevated";
 import { logAdminAction } from "@/lib/audit";
-import { REJECTION_CATEGORIES, type RejectionCategory } from "@/types";
-import { readJsonObject } from "@/server/body";
+import { REJECTION_CATEGORIES } from "@/types";
+import { parseBody, parseWith } from "@/server/body";
+import { EventStatusBody, ModerationReason } from "@/contracts/admin";
+import { logRouteError, withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update event status" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -20,14 +24,11 @@ export async function PATCH(
   const user = auth.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { status, category, message } = body;
-
-  if (!["approved", "rejected", "suspended"].includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-  }
+  // The status first; the reason is checked after the transition guard below,
+  // as before (src/contracts/admin.ts).
+  const statusBody = await parseBody(request, EventStatusBody);
+  if (!statusBody.ok) return statusBody.response;
+  const requestedStatus = statusBody.data.status;
 
   // The event read and update and the moderation review run on the caller's
   // cookie client: the admin policies on events and moderation_reviews permit
@@ -56,44 +57,18 @@ export async function PATCH(
   };
 
   const allowed = allowedTransitions[event.status] || [];
-  if (!allowed.includes(status)) {
+  if (!allowed.includes(requestedStatus)) {
     return NextResponse.json(
-      { error: `Cannot transition from '${event.status}' to '${status}'` },
+      { error: `Cannot transition from '${event.status}' to '${requestedStatus}'` },
       { status: 409 }
     );
   }
 
-  // Validate rejection fields
-  if (status === "rejected") {
-    if (!category || !message?.trim()) {
-      return NextResponse.json(
-        { error: "Rejection requires category and message" },
-        { status: 400 }
-      );
-    }
-    if (!(category in REJECTION_CATEGORIES)) {
-      return NextResponse.json(
-        { error: "Invalid rejection category" },
-        { status: 400 }
-      );
-    }
-  }
-
-  // Validate suspension fields (same requirements as rejection)
-  if (status === "suspended") {
-    if (!category || !message?.trim()) {
-      return NextResponse.json(
-        { error: "Suspension requires category and message" },
-        { status: 400 }
-      );
-    }
-    if (!(category in REJECTION_CATEGORIES)) {
-      return NextResponse.json(
-        { error: "Invalid suspension category" },
-        { status: 400 }
-      );
-    }
-  }
+  // Validate rejection and suspension fields (category and message, in the
+  // same order and texts as before).
+  const decision = parseWith(ModerationReason, statusBody.data);
+  if (!decision.ok) return decision.response;
+  const { status, category, message } = decision.data;
 
   // Update event status
   const { error: updateError } = await supabase
@@ -105,6 +80,8 @@ export async function PATCH(
     .eq("id", id);
 
   if (updateError) {
+    if (isEventDuplicateReviewRequired(updateError)) return NextResponse.json({ error: EVENT_DUPLICATE_REVIEW_MESSAGE }, { status: 400 });
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -114,7 +91,7 @@ export async function PATCH(
       target_type: "event",
       target_id: id,
       action: "rejection",
-      category: category as RejectionCategory,
+      category,
       message: message.trim(),
       author_id: user.id,
     });
@@ -123,7 +100,7 @@ export async function PATCH(
       target_type: "event",
       target_id: id,
       action: "suspension",
-      category: category as RejectionCategory,
+      category,
       message: message.trim(),
       author_id: user.id,
     });
@@ -162,7 +139,7 @@ export async function PATCH(
       metadata: { event_title: event.title },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   // Send notification to event creator
@@ -177,7 +154,7 @@ export async function PATCH(
           event_id: id,
         });
       } else if (status === "suspended") {
-        const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
+        const categoryLabel = REJECTION_CATEGORIES[category];
         await notifyEventCreator({
           user_id: event.created_by,
           type: "event_suspended",
@@ -186,7 +163,7 @@ export async function PATCH(
           event_id: id,
         });
       } else {
-        const categoryLabel = REJECTION_CATEGORIES[category as RejectionCategory];
+        const categoryLabel = REJECTION_CATEGORIES[category];
         await notifyEventCreator({
           user_id: event.created_by,
           type: "event_rejected",
@@ -197,11 +174,11 @@ export async function PATCH(
       }
     }
   } catch (notifErr) {
-    console.error("[Admin] Failed to send notification:", notifErr);
+    log.error("Failed to send notification", { scope: "Admin", error: notifErr });
   }
 
   return NextResponse.json({ success: true });
-}
+});
 
 interface CreatorNotification {
   user_id: string;
@@ -235,13 +212,14 @@ async function notifyEventCreator(row: CreatorNotification): Promise<void> {
     .eq("type", row.type)
     .maybeSingle();
   if (readError) {
-    console.error("[Admin] Failed to read existing notification:", readError);
+    log.error("Failed to read existing notification", { scope: "Admin", error: readError });
     return;
   }
 
+  const { title, message } = row;
   const fresh = {
-    title: row.title,
-    message: row.message,
+    title,
+    message,
     read: false,
     created_at: new Date().toISOString(),
   };
@@ -249,6 +227,6 @@ async function notifyEventCreator(row: CreatorNotification): Promise<void> {
     ? await elevated.from("notifications").update(fresh).eq("id", existing.id)
     : await elevated.from("notifications").insert({ ...row, ...fresh });
   if (writeError) {
-    console.error("[Admin] Failed to send notification:", writeError);
+    log.error("Failed to send notification", { scope: "Admin", error: writeError });
   }
 }

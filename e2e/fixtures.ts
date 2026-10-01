@@ -71,8 +71,8 @@ export const BANNED_PATH = "/banned";
  *
  * At the Desktop Chrome viewport the shell renders `<SignInButton variant=
  * "default" />` in the top right for guests only (`AppShell.tsx`), and its label
- * is "Sign In with McGill Email". Its ABSENCE is how a spec knows the injected
+ * is "Sign In". Its ABSENCE is how a spec knows the injected
  * cookies produced a session the application itself accepted — a client-side
  * `getUser()` would only prove the client was happy.
  */
-export const SIGN_IN_AFFORDANCE = /sign in with mcgill email/i;
+export const SIGN_IN_AFFORDANCE = /^sign in$/i;

@@ -8,8 +8,9 @@
  * raw-interpolation assertions in the first describe moved, deliberately, to
  * the escaped, double-quoted form. The F-059 echo describe did NOT move: the
  * echo branch is F-059's and Phase 5's; 04-08 only removed its trigger (a
- * comma can no longer break the tree). The history below describes the
- * defect as it was pinned by 04-04.
+ * comma can no longer break the tree). The F-059 echo describe moved in 06-14
+ * (the list route's 500 answers "Failed to fetch events"; defect-ledger row).
+ * The history below describes the defect as it was pinned by 04-04.
  *
  * Subject: `src/app/api/events/route.ts` GET, lines 214-243 (the fuzzy RPC and
  * its ILIKE fallback) and lines 280-307 (the error path).
@@ -164,17 +165,17 @@ describe("F-082 — FIXED in 04-08: the search term reaches the or() logic tree 
   });
 });
 
-describe("F-059 echo — a PGRST100 from the events query is returned to the caller verbatim (stays after 04-08; Phase 5)", () => {
-  // Not moved by 04-08. The echo branch is F-059 (Phase 5). 04-08 removed its
-  // trigger — a comma can no longer produce PGRST100 — so the error below is
-  // injected through the fake; the fixture is the message measured before
-  // the fix, which is why it still quotes the unquoted tree.
-  it("returns 500 whose error is the PostgREST message, internal logic tree included", async () => {
+describe("F-059 fixed (06-14) — a PGRST100 from the events query answers the generic text, no logic tree", () => {
+  // Moved by 06-14 (defect-ledger row, F-059): the list route's 500 no longer
+  // echoes the caught error. 04-08 removed the trigger — a comma can no
+  // longer produce PGRST100 — so the error is still injected through the
+  // fake; the fixture is the message measured before 04-08.
+  it("returns 500 Failed to fetch events, the PostgREST message nowhere in the body", async () => {
     const { res } = await get("a,b", { errors: { events: PGRST100 } });
     expect(res.status).toBe(500);
     const body = (await res.json()) as { error: string };
-    expect(body).toEqual({ error: PGRST100.message });
-    expect(body.error).toContain("failed to parse logic tree");
-    expect(body.error).toContain("title.ilike.%a,b%");
+    expect(body).toEqual({ error: "Failed to fetch events" });
+    expect(JSON.stringify(body)).not.toContain("failed to parse logic tree");
+    expect(JSON.stringify(body)).not.toContain("title.ilike");
   });
 });

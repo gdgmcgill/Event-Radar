@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { Plus, Play, Pause, CheckCircle, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { ExperimentCreateBodyInput } from "@/contracts/admin";
 
 interface ExperimentVariant {
   id: string;
@@ -57,14 +58,22 @@ export default function ExperimentsPage() {
     { name: "treatment", config: '{"lambda": 0.3}', weight: 50 },
   ]);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const fetchExperiments = useCallback(async () => {
-    const res = await fetch("/api/admin/experiments");
-    if (res.ok) {
+    setLoadError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/experiments");
+      if (!res.ok) throw new Error("Experiments request failed");
       const data = await res.json();
       setExperiments(data.experiments);
+    } catch {
+      setLoadError("Could not load experiments. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -73,25 +82,35 @@ export default function ExperimentsPage() {
   }, []);
 
   const handleCreate = async () => {
+    setCreateError(null);
+    let variants: ExperimentCreateBodyInput["variants"];
+    try {
+      variants = formVariants.map((v) => ({
+        name: v.name,
+        config: JSON.parse(v.config || "{}"),
+        weight: v.weight,
+      }));
+    } catch {
+      setCreateError("Each variant configuration must be valid JSON. Correct it and try again.");
+      return;
+    }
+
     setCreating(true);
-    const variants = formVariants.map((v) => ({
-      name: v.name,
-      config: JSON.parse(v.config || "{}"),
-      weight: v.weight,
-    }));
-
-    const res = await fetch("/api/admin/experiments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: formName,
-        description: formDescription,
-        target_metric: formMetric,
-        variants,
-      }),
-    });
-
-    if (res.ok) {
+    try {
+      const res = await fetch("/api/admin/experiments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formName,
+          description: formDescription,
+          target_metric: formMetric,
+          variants,
+        } satisfies ExperimentCreateBodyInput),
+      });
+      if (!res.ok) {
+        setCreateError("Could not create the experiment. Check the fields and try again.");
+        return;
+      }
       setShowCreate(false);
       setFormName("");
       setFormDescription("");
@@ -99,9 +118,12 @@ export default function ExperimentsPage() {
         { name: "control", config: "{}", weight: 50 },
         { name: "treatment", config: '{"lambda": 0.3}', weight: 50 },
       ]);
-      fetchExperiments();
+      await fetchExperiments();
+    } catch {
+      setCreateError("Could not reach the server. Your entries are still here; please try again.");
+    } finally {
+      setCreating(false);
     }
-    setCreating(false);
   };
 
   const addVariant = () => {
@@ -139,7 +161,7 @@ export default function ExperimentsPage() {
             Manage recommendation experiments and view results
           </p>
         </div>
-        <Button onClick={() => setShowCreate(!showCreate)}>
+        <Button onClick={() => { setCreateError(null); setShowCreate(!showCreate); }}>
           <Plus className="w-4 h-4 mr-2" />
           New Experiment
         </Button>
@@ -149,10 +171,12 @@ export default function ExperimentsPage() {
       {showCreate && (
         <div className="mb-8 p-6 border rounded-lg bg-white dark:bg-gray-900 dark:border-gray-700">
           <h2 className="text-lg font-semibold mb-4">Create Experiment</h2>
+          {createError && <p role="alert" className="mb-4 text-sm text-destructive">{createError}</p>}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
+              <label htmlFor="experiment-name" className="block text-sm font-medium mb-1">Name</label>
               <input
+                id="experiment-name"
                 type="text"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
@@ -161,8 +185,9 @@ export default function ExperimentsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Description</label>
+              <label htmlFor="experiment-description" className="block text-sm font-medium mb-1">Description</label>
               <textarea
+                id="experiment-description"
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
                 placeholder="What this experiment tests..."
@@ -171,8 +196,9 @@ export default function ExperimentsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Target Metric</label>
+              <label htmlFor="experiment-metric" className="block text-sm font-medium mb-1">Target Metric</label>
               <select
+                id="experiment-metric"
                 value={formMetric}
                 onChange={(e) => setFormMetric(e.target.value)}
                 className="px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"
@@ -194,6 +220,7 @@ export default function ExperimentsPage() {
                   <div key={idx} className="flex gap-3 items-start">
                     <input
                       type="text"
+                      aria-label={`Variant ${idx + 1} name`}
                       value={v.name}
                       onChange={(e) => updateVariant(idx, "name", e.target.value)}
                       placeholder="Variant name"
@@ -201,6 +228,7 @@ export default function ExperimentsPage() {
                     />
                     <input
                       type="text"
+                      aria-label={`Variant ${idx + 1} configuration`}
                       value={v.config}
                       onChange={(e) => updateVariant(idx, "config", e.target.value)}
                       placeholder='{"lambda": 0.7}'
@@ -208,6 +236,7 @@ export default function ExperimentsPage() {
                     />
                     <input
                       type="number"
+                      aria-label={`Variant ${idx + 1} weight`}
                       value={v.weight}
                       onChange={(e) => updateVariant(idx, "weight", parseInt(e.target.value) || 1)}
                       className="w-20 px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"
@@ -235,7 +264,12 @@ export default function ExperimentsPage() {
       )}
 
       {/* Experiments Table */}
-      {experiments.length === 0 ? (
+      {loadError ? (
+        <div role="alert" className="space-y-3 py-8">
+          <p>{loadError}</p>
+          <Button variant="outline" onClick={() => void fetchExperiments()}>Retry loading experiments</Button>
+        </div>
+      ) : experiments.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           <FlaskConical className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>No experiments yet. Create one to get started.</p>

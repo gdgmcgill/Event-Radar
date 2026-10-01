@@ -2,36 +2,56 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 6
+current_phase: 06
 current_phase_name: Slices 6–7 — Async Edge, Contracts, Caching, Observability
 status: verifying
-stopped_at: Completed 05-16-PLAN.md
-last_updated: "2026-09-25T20:57:43.286Z"
-last_activity: 2026-09-25
-last_activity_desc: Phase 5 complete, transitioned to Phase 6
+stopped_at: M1–M2 implemented and locally verified (baseline 2,003 and enabled 15 browser tests green); awaiting owner commit; deployment deferred
+last_updated: "2026-09-29T05:30:00+00:00"
+last_activity: 2026-09-29
+last_activity_desc: M1–M2 final baseline browser gate green after page-smoke redirect-fetch fix; local GoTrue TIME_WAIT exhaustion diagnosed
 progress:
   total_phases: 8
-  completed_phases: 5
-  total_plans: 62
-  completed_plans: 62
-  percent: 63
+  completed_phases: 6
+  total_plans: 80
+  completed_plans: 80
+  percent: 75
 ---
 
 # Project State
+
+## Current product work — M3
+
+The owner authorized M3 after M1–M2 (`c5c1bc6`). P1-06–09 are implemented on `codex/m3-useful-discovery` and verified locally: editorial homepage and listing details, authored resources, public submissions/reports/company intake feeding moderation, and an observable McGill ingestion path with a real local producer run. All new public surfaces sit behind `discovery_ui`. Deployment remains deferred. See [M3 report](milestones/m3/REPORT.md) and [M3 decisions](milestones/m3/DECISIONS.md); the computer-use demo is recorded separately in `milestones/m3/COMPUTER-USE-VERIFICATION.md`.
+
+Next product milestone: M4 — launch discovery and the Weekly Drop. Owner launch content, the hosted producer schedule, `INTAKE_HASH_SECRET` in hosted environments and the M1–M2 hosted inputs remain assigned release dependencies.
+
+## Product work — M1–M2 (complete locally)
+
+The owner explicitly declared M0 complete and authorized M1–M2 on 2026-09-28. P1-00–05 are implemented on `codex/m1-m2-opportunity-platform` from `de0854b`; deployment remains deferred. See [implementation report](milestones/m1-m2/REPORT.md), [computer-use verification](milestones/m1-m2/COMPUTER-USE-VERIFICATION.md), and [execution decisions](milestones/m1-m2/DECISIONS.md). This supersedes the old product prerequisite status below without claiming unobserved hosted certification. The historical foundation phase bookkeeping is retained; M1/M2 are product milestones, not renamed foundation phases.
+
+M3 followed; see above. Hosted provider/sender, real curator identity and owner content inputs remain assigned release dependencies, not claims of completed configuration.
+
+
+## M0 continuation — 2026-09-27
+
+Product milestone M0 is being implemented on `codex/m0-foundation-certification`, starting from review commit `2e4c4ff`. This continues the existing foundation program; it does not start M1 or relax McGill admission. Phase 6 gap/review repairs and additional database/API hardening are implemented locally, and the final local verification suite passed (1,800 browser tests; 3,667 unit tests; 626 database assertions).
+
+Current evidence and unresolved requirements: [M0 report](milestones/m0/REPORT.md). Local implementation, verified tests, hosted deployment, and owner sign-off are separate states. No production migration, push to main, deployed certification, or owner risk acceptance has occurred. The historical entries below are retained as provenance and are superseded by the M0 report for current status.
+
+Computer-use follow-up (2026-09-28): verified local discovery, admin gates/login/logout, saves/RSVPs and experiments; fixed four observed UI issues. See [browser verification](milestones/m0/COMPUTER-USE-VERIFICATION.md). Targeted checks pass; deployment remains deferred by the user and M0 certification remains pending.
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-09-13)
 
 **Core value:** Every critical workflow in the existing app is verified correct, secure, and reproducible across all user roles before any new product feature is started. If a foundation change breaks a workflow that worked before, the program has failed.
-**Current focus:** Phase 05 — Slices 3–5 — Auth, Club Authorization, Admin Containment
+**Current focus:** Product M3 local completion; M4 follows. See [M3 report](milestones/m3/REPORT.md). The position and metrics below are historical foundation bookkeeping.
 
 ## Current Position
 
-Phase: 6 — Slices 6–7 — Async Edge, Contracts, Caching, Observability
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-09-25 — Phase 5 complete, transitioned to Phase 6
+Phase6 executed 18/18 plans; M0 repairs are implemented and locally verified at `aabca3b`.
+Status: M0 IN PROGRESS — local verification green; stated requirement gaps, hosted certification and operational sign-off pending.
+Last activity: 2026-09-27 — foundation repairs, reproducible datasets, expanded RLS/API/browser certification.
 
 Progress: [███████░░░] 73%
 
@@ -116,6 +136,24 @@ Progress: [███████░░░] 73%
 | Phase 05 P17 | 15min | 2 tasks | 15 files |
 | Phase 05 P18 | 16min | 3 tasks | 14 files |
 | Phase 05 P19 | 18min | 3 tasks | 12 files |
+| Phase 06 P01 | 14min | 3 tasks | 10 files |
+| Phase 06 P02 | 11 min | 3 tasks | 10 files |
+| Phase 06 P03 | 14min | 3 tasks | 25 files |
+| Phase 06 P04 | 20min | 3 tasks | 32 files |
+| Phase 06 P05 | 25min | 3 tasks | 7 files |
+| Phase 06 P06 | 18min | 2 tasks | 6 files |
+| Phase 06 P07 | 26min | 3 tasks | 12 files |
+| Phase 06 P08 | 21min | 2 tasks | 20 files |
+| Phase 06 P09 | 18min | 2 tasks | 31 files |
+| Phase 06 P10 | 22min | 2 tasks | 29 files |
+| Phase 06 P11 | 23min | 2 tasks | 57 files |
+| Phase 06 P12 | 19min | 3 tasks | 28 files |
+| Phase 06 P13 | 17min | 2 tasks | 56 files |
+| Phase 06 P14 | 21min | 2 tasks | 64 files |
+| Phase 06 P15 | 22min | 3 tasks | 12 files |
+| Phase 06 P16 | 575min | 3 tasks | 26 files |
+| Phase 06 P17 | 22min | 2 tasks | 27 files |
+| Phase 06 P18 | 34min | 3 tasks | 18 files |
 
 ## Accumulated Context
 
@@ -302,6 +340,60 @@ Recent decisions affecting current work:
 - [Phase 05]: 05-19: DI-25 not bumped: four admin payloads fail tsc on supabase-js 2.116.0 (DI-53, Phase 6)
 - [Phase 05]: 05-19: REFAC-18 recorded PARTIAL (works across serverless instances unproven until Upstash is provisioned); REFAC-13 PARTIAL on the cron routes; REFAC-11 Complete
 - [Phase 05]: 05-19: CLAUDE.md not edited by the executor; stale facts recorded in DI-46 for the owner
+- [Phase 06]: DEC-60/61: zod 4.6.5 and @sentry/nextjs 10.75.3 exact pins, installed only if the live integrity equals the bundle INTEGRITY line; Sentry with SENTRYCLI_SKIP_DOWNLOAD=1 (06-01)
+- [Phase 06]: Phase 6 floor on f186621: Playwright 97/0 (not 91; +6 from 86fd2a2), Jest 1651+1 skipped, pgTAP 11/200 (06-01)
+- [Phase 06]: F-093 and F-094 registered; F-084 to 07, F-078/F-038/F-041 to 08; DI-60 vacant, DI-61..DI-77 disposed, next DI-82 (06-01)
+- [Phase 06]: 06-02: shared fakeSupabase.ts not extended; upsert and hint-conditional PGRST200 are test-local wrappers so no existing suite shifts
+- [Phase 06]: 06-02: PRESERVE files pin no error.message 500s (F-059) and no headers on 500s (06-12); only bytes slice 6 keeps
+- [Phase 06]: 06-02: F-017 fix shape known in advance - student fixture lands in control (lambda 1), admin in diverse (lambda 0)
+- [Phase 06]: 06-03: webhook rows 7, 11 and 12 (JSON null body, null events[] element, non-string tag) stay 500; only the two DEC-64 changes (wrong-length 401, replay duplicate) were made — The plan names exactly two intentional changes; turning these into 400s is the webhook's share of F-094, left to the plan that owns F-094's 400 moves (the zod contract makes it a one-line change)
+- [Phase 06]: 06-03: tsconfig.json gains allowImportingTsExtensions so the Deno-style ./x.ts imports in supabase/functions/_shared type-check in the root program — Deno needs explicit .ts extensions; tsc refused them (TS5097) once a Jest suite imported the handler; valid because noEmit is true; tsc, ts-jest and next build all pass
+- [Phase 06]: 06-03: the webhook handler keeps today's header selection and refuses a selected signature still starting with sha256=, so accepted inputs are exactly today's — verifySignature strips sha256= per the plan; unguarded, x-signature/x-webhook-signature would newly accept a prefixed digest, a third behaviour change contradicting characterization row 5
+- [Phase 06]: 06-04: parseBody/parseQuery report the first zod issue in schema key order with today's text, and emit field only for keys named in fieldFor; a non-string feedback subject answers a new 400 "Subject must be a string" — Keeps every PRESERVE byte (DEC-65, C10); the subject threw a 500 before and no text existed to keep
+- [Phase 06]: 06-04: no 400 added where a slice-6 handler coerced silently (top_k, diversity, cursor, event_ids, period, recommendation_rank comparison); a truthy non-string event_id now answers the route's presence 400 instead of a PostgREST 22P02 500 — C11 forbids new 400s on silent coercion; F-094 makes wrongly typed fields that failed later a 400
+- [Phase 06]: 06-04: the async-edge e2e seeds the student's score row through the local service client, because POST /api/recommendations/batch always answers 500 through PostgREST (pg_safeupdate refuses compute_user_scores' unqualified DELETE); registered as DI-82 — The fix changes compute_user_scores' md5-pinned body (DEC-68), which belongs to the plan owning that function, not a route plan
+- [Phase 06]: 06-05: 20260926120000_async_edge_definer_hardening applied locally — two pg_cron jobs byte-identical to cron-job.json; EXECUTE revoked from PUBLIC/anon/authenticated on compute_user_scores, send_event_reminders, send_feedback_requests; search_path pinned via ALTER FUNCTION (md5 pins unchanged); friends RPCs bound to caller or service_role; reminders only for approved non-deleted events; cron_job_status() service_role only — DEC-70 executed; pgTAP 031/070 red before (9/13, 31/47), green after unseeded and seeded; M1-M4 each turn named rows red; LOCAL ONLY until DI-23
+- [Phase 06]: 06-05: DI-82 (batch route 500 under PostgREST safeupdate) left for 06-06 — The fix changes compute_user_scores' body, which DEC-68 pins by md5 and pgTAP 070 row 1 now enforces; the plan text never directs a body change, so the fix belongs to the slice close as DEFECT-then-fix with the pin re-derived
+- [Phase 06]: 06-06: F-037 marked Fixed on the observed local run history — After the cron routes' deletion, send-event-reminders and send-feedback-requests each ran once at 02:00:00Z and succeeded with 0 failed runs (floor.slice-6-after.txt block 16b); probe 1 right after the 33-second Playwright run found 0 runs and is recorded
+- [Phase 06]: 06-06: REFAC-14 marked Complete — All four clauses MET by committed evidence (slice-6-close.md section 3); the webhook redeploy (DI-81) is F-039's deployment-record clause, not a REFAC-14 clause, and the deployed function already requires credentials and fails closed
+- [Phase 06]: 06-06: DI-82 dispositioned to Phase 7, compute_user_scores() unchanged — 06-06 forbids source changes and 06-05 never directs a change; target is a fix-forward migration writing the unqualified deletes as DELETE ... WHERE true, 070 row 1 md5 re-derived under a signed DEC-68 amendment, a DEFECT row moved on the real stack
+- [Phase 06]: 06-06: the contracts gate's 'no slice-6 file' means the four slice-6 contract families — recommendations, interactions, feedback, notifications have 0 allow-list entries; the two admin/reports entries belong to the admin family that 06-10 adopts
+- [Phase 06]: 06-07: the shared fakeSupabase.ts is not extended; admin/organizers and events/happening-now are driven through a test-local withContainsAndNot wrapper (contains delegates to overlaps, exact for a one-element array; not is recorded through or) — PRESERVE suites (writeHandlerTable's fake-gap outcomes) pin the throw the missing contains/ilike/not produce; extending the fake would shift them. The 06-02 precedent, fakeSupabase.ts git diff empty
+- [Phase 06]: 06-07: field is pinned where the handlers emit it today, which is more than C10's four sites: clubs POST and clubs/[id] PATCH 'Invalid value for <field>' carry field, and so does the end_date-only branch of events/[id] PATCH — Measured on the unmodified handlers; bad-request-characterization.test.ts FIELD_SITES lists every measured site, so 06-08 and 06-09 must name these keys in parseBody's fieldFor or the PRESERVE rows go red
+- [Phase 06]: 06-07: the F-059 worklist is census C7 as 34 driven sites plus 6 listed lines (40); events/route.ts:448 is a body site, not the benign-error-only line floor.before.txt's C7 cell called it — Measured: the text reaches the 500 body through safeMessage (route.ts:470-473) unless it starts with '{'; the 6 listed lines are the status:244 notification copy, two callback log lines, the callback redirect Location (pinned by route.test.ts:269) and two internally caught callback throws
+- [Phase 06]: 06-07: of 110 console spy sites (56 files) 13 are exact-argument (kind B); only src/lib/eventTags.test.ts is a PRESERVE file with B assertions, so 06-14 moves its two [tags] assertions to a -defect file citing F-058; the other 11 B sites are edited in place by 06-12 (8), 06-13 (2) and 06-14 (1) — The logger writes warn and error through console.error and info and debug through console.log, so the 97 A sites need no edit; the three B sites spying on console.warn (upstashStore :96, eventTags :190 and :267) must switch to console.error; research's 42/68 was exact at f215fb7 and the +14 files are silencing-only
+- [Phase 06]: 06-08: A non-string text field answers a 400 (F-094): create's required text, edit's '<Field> must be a string', appeal's required text, report's 'Message must be a string'; rows already refused by a ladder rule keep their outcome — DEC-65 says a non-string field answers 400; new texts only where none existed (06-04 precedent 'Subject must be a string'); keeping ladder refusals avoids changing a correct 403/400
+- [Phase 06]: 06-08: readQuery(params, schema) for a query contract with no 400; calendar/events reads through it; 06-09/06-10 use it for their no-400 query routes — parseQuery( in a no-400 route made the unedited PRESERVE P0 coverage check count it as able to answer 400; a route should not carry a 400 branch it can never take
+- [Phase 06]: 06-08: RSVP POST parses RsvpBody (user_id), then the handler's mismatch 403, then RsvpStatus via parseWith; parseForm keeps each route's texts, order and unreadable answer, and exports checkFile for checks that follow a guard — Today's order puts the 403 between user_id and status, and clubs/logo and clubs/banner check type and size after the ownership gate; one monolithic schema would reorder 403 and 400
+- [Phase 06]: 06-09: DEC-66 club links are one rule on POST and PATCH (ClubLinkFields). An absolute http(s) URL is kept byte for byte. A scheme-less host path (not an absolute URL, and with https:// in front its host has a dot) is saved with https:// prefixed. Anything else, another scheme or a non-host value such as 'x', answers 400 'Invalid URL for <field>'. — The dotted-host definition keeps the PRESERVE order row 'bad URL beats bad email' (linkedin_url 'x') green unedited, and it stops POST storing non-URL values as relative links. Only the table row 'club PATCH: URL relative' and the club-links scheme-less POST pin moved (F-094 ledger).
+- [Phase 06]: 06-09: parseForm gained deferFileChecks. clubs/logo and clubs/banner check type and size after requireClubRole, and profile uploads keep them in parseForm. Each route keeps its own link check order: PATCH checks all types, then links; POST checks type then link, field by field. — Lesson 3: a 400 never moves ahead of a 403 or ahead of an earlier rule. parseForm always ran checkFile, which would have answered a non-owner's bad file with 400 before the ownership gate.
+- [Phase 06]: 06-10: split admin contracts where a rule sits between two input checks (status route: status, transition guard, ModerationReason; admin/users: roles, own-roles 403, name) — Keeps today's order where a 404/409 or 403 answers between two 400s, as 06-08 did for RSVP; the PRESERVE order rows pass unedited.
+- [Phase 06]: 06-10: CanonicalId canonicalizes the whole route id (and the caller's id) in ban POST and admin/users PATCH; a non-UUID id passes through with no new 400 — DI-64/DEC-66: Postgres matches a uuid in any case, so a string compare let an admin's own upper-case id past the self-check; lower-casing once makes the compare, lookup, write and audit target agree.
+- [Phase 06]: 06-10: admin/events/[id] PUT gained its first 400s (F-094), so one row was added to badRequestTable.ts (title must be a string); the PRESERVE test file is unedited — The unedited PRESERVE P0 counts any route calling parseBody( as able to answer a 400; the route really can now, so an additive pin (with a ledger row) is honest where readQuery would hide a real 400.
+- [Phase 06]: 06-11: each hook's development-only response check lives in a module-level function whose dynamic import() sits inside if (process.env.NODE_ENV !== "production"); no hook body holds an import() — Next inlines NODE_ENV so the branch and its import() are removed from production chunks (zod markers 0; a forced-live build finds them). An import() inside a hook body also made the React-Compiler lint rules skip the hook (an eslint-disable directive went unused), so module level keeps lint coverage.
+- [Phase 06]: 06-11: client senders reach contracts through import type only; bodiless mutations name a BodilessRequestInit alias per route, and FormData field names are type-only literals (ProfileImageFileField, ClubImageFormField, EventImageFileField) — A value import from a contract module pulls zod (and sanitize-html) into the client bundle, so the plan's field-name constant is exported but consumed as a type ('file' satisfies X). A bodiless alias makes every mutation file name its route's contract and turns an added body into a type error until the handler's contract declares one.
+- [Phase 06]: 06-11: response schemas are loose and list what each handler returns on success; the hooks keep their public data types (domain types from @/types), and the response types type only what a hook reads itself — Loose objects mean a warning signals a real drift, not an unlisted field. Typing SWR data with the looser contract types would ripple through every consumer component (index-signature unknowns), which is a rendered-code change the plan forbids; compile-time coupling is carried by request bodies, query keys and typed loaders instead.
+- [Phase 06]: 06-12: A1 holds in the direct form - request.headers.set on the proxy's NextRequest is forwarded by every NextResponse.next({ request }), the setAll one included; the proxy also stamps x-request-id on its pass-through and its own responses, and runs the unchanged ring body inside runWithRequest — Next's adapter builds the proxy request from a fresh mutable Headers; measured in a scratch Jest test and on the real runtime (evidence/logger-foundation.txt 2.1, 3.9). Moving the body into ring() keeps the createServerClient-getUser region, PROTECTED_ROUTES, the matcher and the rate-limit call byte-identical.
+- [Phase 06]: 06-12: the server-console census S2 keeps C7's broad .message rule and measures 42 sites in 22 route files (C7 said 40); the F-059 worklist is 35 response-body sites plus the callback redirect — updateError.message 500 bodies at clubs/[id]/appeal:83 and events/[id]/appeal:88 existed at the floor's base but were missing from C7's list; S1 reconciles exactly with C1 (160 - 2 cron - 12 converted = 146).
+- [Phase 06]: 06-13: Two PRESERVE tree scans (admin-guard-characterization P0, write-handlers-characterization P0) read export async function; their tree comparisons moved out of PRESERVE to admin-arm-tree-defect and write-arm-tree-defect (both export forms, plus a withRoute after-shape) with ledger rows — The plan's must-have form (export const VERB = withRoute(...)) and its unedited-PRESERVE criterion cannot both hold: the regex finds no verb once a file is wrapped. The ledger's move-out-of-PRESERVE protocol keeps the completeness check alive for 06-14 while P0's length and uniqueness and every behaviour row stay in PRESERVE unedited. Reversible by the owner if a different resolution is preferred.
+- [Phase 06]: 06-13: A withRoute action is the route's existing Failed-to phrase where one exists, else a verb-noun phrase for the handler; a caught-error body becomes the route's generic text (per-item popularity errors: Failed to update popularity; appeal: Failed to submit appeal; organizer requests: Failed to create/fetch organizer request(s); moderation: Failed to fetch moderation reviews) — DEC-75 wants one error vocabulary with the cause logged, never returned; reusing a route's own Failed-to text keeps existing client copy, and the new texts follow the same shape.
+- [Phase 06]: 06-13: Public club reads: clubs/featured 200 keeps its bytes (public, s-maxage=60, stale-while-revalidate=120); clubs, clubs/[id], clubs/new and clubs/trending now send public, s-maxage=60, stale-while-revalidate=300 from the origin, the vercel.json directives plus an explicit public token; a 404 on a public class stays shareable, a 500 is private, no-store — The class values were fixed in 06-12 (DEC-73, research C9); the probe on pre-fix and fixed sources shows the only byte change on a 200 is the explicit public token on the four inherited-rule routes, which 06-14's vercel.json removal needs.
+- [Phase 06]: 06-14: the auth callback's auth_failed redirect keeps message=<provider text> (PRESERVE-pinned; the callback changes only logging and the wrapper), allow-listed as one reasoned S2 entry — Auth callback PRESERVE suites must pass unedited and its behaviour stay byte-identical; the text goes to the caller's own redirect, not a JSON body; Phase 7 or the owner decides it
+- [Phase 06]: 06-14: withRoute gains a NextResponse overload so a NextResponse-only handler keeps Promise<NextResponse> — The callback PRESERVE suites read res.cookies, which Promise<Response> erased; no test or handler signature was changed and runtime is unchanged
+- [Phase 06]: 06-14: the recommendations/batch 500 drops details (F-059); its PRESERVE row moved out to batch-error-text-defect.test.ts under the ledger protocol — Fixing F-059 contradicts the PRESERVE pin; the ledger's move-out protocol (red, move, green, pre-fix red, cmp) keeps every other PRESERVE row unedited
+- [Phase 06]: 06-15: endpoints.json cache_policy_today is read from each export's withRoute class (header text from src/server/http.ts POLICIES); cache_policy_target stays verdict-derived with recorded CACHE_TARGET_OVERRIDES (C7, C8, C9, DEC-69) and never reads the wrapper — The census then compares two independent sources; vercel.json no longer contributes after 06-14, and an unwrapped live file is FATAL so today cannot fall back to a blanket value
+- [Phase 06]: 06-15: the classifier refreshes only the cache and env signals (DI-58 (b)), and rule V1 reads the zod contract boundary (parseBody/parseQuery/readQuery/parseForm/parseWith -> zod) — The generator regexes predate the seam: a blanket refresh flips uses_service_client on 20 elevated-door rows and rewrites rls_reliance; without the V1 clause 24 validated rows would regress manual -> none
+- [Phase 06]: 06-15: the cross-user cache test runs through a local shared-cache stand-in (e2e/helpers/sharedCacheProxy.ts, Node built-ins, memory only) with a positive control that must HIT and a negative control that must leak — Research Pitfall 10: without a shared cache, B never sees A passes trivially on next start; the controls prove the stand-in caches and distinguishes. The real-CDN probe stays an owner action (DI-81); F-025 stays Open at 08 (DEC-72)
+- [Phase 06]: 06-16: the Sentry transport proof runs the real SDK (A3) with the production options and only an in-memory transport substituted, plus a beforeSend positive control; no jest.mock fallback was needed — A mock would only prove the call shape; the real SDK proves the tag request_id equals x-request-id and that the scrubber removes cookies, bodies, query strings and emails from the envelope actually sent
+- [Phase 06]: 06-16: withSentryConfig from @sentry/nextjs/config with telemetry false; the Playwright harness blanks SENTRY_DSN, NEXT_PUBLIC_SENTRY_DSN and SENTRY_AUTH_TOKEN — No build and no harness run may send anything to a real Sentry project; the root export is deprecated for v11
+- [Phase 06]: 06-16: the CSP is built in headers() from the build environment: 'unsafe-eval' only under next dev, a non-*.supabase.co Supabase origin admitted with its ws twin, an https Sentry DSN's ingest origin in connect-src; all else byte-identical — Closes F-055's eval half and DI-21 without touching production's policy beyond eval; lets the harness run with bypassCSP false as a CSP regression suite (C13, DEC-77)
+- [Phase 06]: 06-17: requireAdminPage(redirectTo) returns an AdminPageContext (user and profile non-null); the moderation layout keeps its anonymous redirect to /admin-login and then calls requireAdminPage("/"), so both redirect targets are unchanged — DEC-44/DEC-79 require each layout to keep its targets; one helper with one target cannot express moderation's two, and getRequestContext is render-pass memoized so the extra anonymous check costs no second read
+- [Phase 06]: 06-17: the moderation reviews ban check runs on the admin path only (requireActiveUser when hasRole admin); the creator path is unchanged — DEC-79 and DI-55 name the admin path; applying requireActiveUser to creators would refuse banned or profile-less creators reading their own reviews, a behaviour change neither the plan nor a finding asks for
+- [Phase 06]: 06-17: the /health page parses /api/health with HealthReport and HealthLiveness from @/contracts/health and renders a liveness or unexpected body as such instead of crashing (C18) — The page is admin-gated, but a report can still be refused (a stale session) and the old page read fields that no longer exist; parsing at the boundary keeps the page correct on every body the route can send
+- [Phase 06]: 06-18: DI-83 (three malformed webhook payloads still 500) recorded as F-094's stated residue, owner Phase 8 with the CI redeploy; F-094 Fixed, REFAC-15 PARTIAL on that clause — The plan makes the supabase-js bump the last code change and does not name the webhook; F-094's criterion names route handlers and DEFECT suites, while REFAC-15's sentence says every handler, so the requirement is PARTIAL rather than rounded up.
+- [Phase 06]: 06-18: F-026, F-029, F-054, F-058, F-059, F-085, F-094 Fixed; F-025, F-055, F-028 Open at 08 with the unmet clause named; REFAC-21 PARTIAL (source maps, live Sentry event) — Each resolution is measured against its own validation criterion; the real-CDN probe, 'unsafe-inline', the two DEC-69 reads and the live Sentry event are owner-dependent (DI-81, DI-80).
+- [Phase 06]: 06-18: @supabase/supabase-js 2.116.0 exact taken as the last code change; the lockfile's four non-@supabase entries are dependencies @supabase packages added or dropped (@supabase/phoenix, iceberg-js, @types/phoenix, @types/ws, ws dev-only) — Worktree tsc 0 errors and Jest green on 2.116.0; integrities match the registry facts recorded before install; audit gate exit 0.
+- [Phase 06]: 06-18: CLAUDE.md corrections delivered as evidence/claude-md-corrections.patch and not applied — DI-46 carries no owner-signed authorization (DEC-81); git apply --check exits 0 so the owner can apply it after signing.
 
 ### Pending Todos
 
@@ -354,7 +446,9 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-09-25T06:22:35.423Z
-Stopped at: Completed 05-16-PLAN.md
+Current continuation: resume from [M0 report](milestones/m0/REPORT.md) and `codex/m0-foundation-certification`. The following pre-M0 note is historical; do not restart Phase5 work from it.
+
+Last session: 2026-09-27T18:35:44.860Z
+Stopped at: Completed 06-18-PLAN.md
 Next: execute 05-17-PLAN.md. 05-16 landed the F-006/F-007 migration locally (d7c2036, INTENTIONAL BEHAVIOUR CHANGE, local only until DI-23): authenticated UPDATE on users is limited to 11 profile columns, users INSERT and anon UPDATE are revoked, the own-row policy is TO authenticated WITH CHECK, update_saved_events_count() is SECURITY DEFINER, and admin_audit_log writes (INSERT/UPDATE/DELETE/TRUNCATE) are revoked from anon and authenticated. pgTAP 050 (23) and 055 (17) were red before the fix; now Files=9 Tests=156 unseeded and seeded; mutation check exit 0 (6 policies) and manual grant mutations M1-M4 red then green. Floor: Jest 1325/1325, tsc 0, Playwright five specs 32/32 and full 91/91 from a clean reset; the stack is reset and seeded, port 3000 free. Candidates for 05-19: users still grants DELETE/TRUNCATE to anon and authenticated (Phase 7 review); the dead 'Users can insert own profile' policy; GET /api/admin/reports 500 (PGRST200); /users/[id] soft 404 (root loading.tsx); ratchet prose stale at 0 of 2; duplicated site suffix in the public profile title; CLAUDE.md verifyAdmin mentions. F-006/F-007 stay Open to 08 (DEC-57). DI-42 (Upstash env) is an owner action before any push to `main`.
 Resume file: None

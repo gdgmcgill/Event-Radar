@@ -30,6 +30,10 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { uploadEventImage } from "@/lib/upload-utils";
 import { getESTNow } from "@/lib/timezone";
+import type {
+  CreateEventBodyInput,
+  EventUpdateBodyInput,
+} from "@/contracts/events";
 
 const iconMap: Record<string, LucideIcon> = {
   GraduationCap,
@@ -308,7 +312,7 @@ export function CreateEventForm({
       let res: Response;
 
       if (mode === "edit" && eventId) {
-        const updates: Record<string, unknown> = {};
+        const updates: EventUpdateBodyInput = {};
         const effectiveTitle = initialData?.pending_edits?.title ?? initialData?.title ?? "";
         if (formData.title !== effectiveTitle) updates.title = formData.title;
         if (formData.description !== initialData?.description) updates.description = formData.description;
@@ -345,7 +349,7 @@ export function CreateEventForm({
             is_free: formData.isFree,
             price: formData.isFree ? null : formData.price.trim() || null,
             rsvp_link: formData.rsvpLink.trim() || null,
-          }),
+          } satisfies CreateEventBodyInput),
         });
       }
 

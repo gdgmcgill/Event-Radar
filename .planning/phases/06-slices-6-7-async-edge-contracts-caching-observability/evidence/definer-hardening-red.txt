@@ -1,0 +1,340 @@
+# Definer hardening — RED against today's schema (plan 06-05 Task 1)
+# head=57cb55f (plans 06-01..06-04 complete); migration 20260926120000 NOT yet written
+# recorded: 2026-09-27T01:22Z · supabase CLI 2.115.0 · local stack only (no --linked, no production)
+#
+# Method: a fresh `supabase db reset --local` (unseeded), then `supabase test db --local`.
+# 031-cron-jobs.test.sql and 070-definer-functions.test.sql are the two new files; the other
+# eleven files are the Phase 3-5 floor and stay green.
+#
+# Reading.
+#   031 — FAILED 9/13: rows 1-4 (send-event-reminders: count, schedule, command, active) and
+#         9-13 (send-feedback-requests: the same four, plus the three-job catalog) are red because
+#         neither job exists locally (F-042). Rows 5-8 (compute-user-scores, declared by
+#         20260915230100) are green: they describe today's state.
+#   070 — FAILED 31/47. Red, as every post-migration assertion must be:
+#         6-7   F-093  a soft-deleted and a pending event each got a reminder_24h
+#         8     F-076  5 definer functions in public have no search_path entry
+#         9     F-076  non-vacuity: 11 definer functions today, cron_job_status() absent
+#         10-12, 14-16, 18-20  F-075  PUBLIC, anon, authenticated hold EXECUTE on all three writers
+#         22-24 F-075  anon calls compute/reminders/feedback: "caught: no exception"
+#         25-26, 29-30  F-074  PUBLIC and anon hold EXECUTE on both friends functions
+#         33-34 F-074  anon calls both friends functions: "caught: no exception"
+#         35, 37 F-074 A asking for B's friends (plain and event variant) gets 1 row (D)
+#         41-47 C4     cron_job_status() absent (has_function red; guarded rows FAIL, file runs on)
+#       Green, as they must be before the migration (they pin today's behaviour):
+#         1-2   md5(prosrc) compute = ed64959b44c9329a1212cde928810010, feedback = c69a62ad437efb7e875517f6b94c3b4b
+#         3-4   compute_user_scores() writes the fixture user's scores; every score equals the sum
+#               of its five breakdown parts (REFAC-14 invariant)
+#         5     the approved event 24 h out gets exactly one reminder_24h
+#         13, 17, 21  service_role keeps EXECUTE on the three writers
+#         27-28, 31-32  authenticated and service_role keep EXECUTE on the friends functions
+#         36, 38 A asking for A's own friends gets C (plain and event variant)
+#         39-40 service_role asking for B's friends gets D (the public-profile door read)
+#
+## 1. $ supabase db reset --local
+Resetting local database...
+WARN: config section [inbucket] is deprecated. Please use [local_smtp] instead.
+Recreating database...
+Initialising schema...
+Seeding globals from roles.sql...
+Applying migration 20260915214553_baseline.sql...
+Applying migration 20260915230000_fk_indexes_and_policy_gaps.sql...
+Applying migration 20260915230100_cron_compute_user_scores.sql...
+Applying migration 20260916000000_invitation_policy_fixes.sql...
+Applying migration 20260923120000_events_insert_club_scope.sql...
+Applying migration 20260923130000_users_grants_audit_log_insert.sql...
+Applying migration 20260925120000_events_guard_moderated_update.sql...
+Applying migration 20260925130000_events_guard_appeal_increment.sql...
+WARN: no files matched pattern: supabase/seed.sql
+Restarting containers...
+Finished supabase db reset on branch main.
+{"target":"local","version":"","message":"Reset local database."}
+A new version of Supabase CLI is available: v2.118.0 (currently installed v2.115.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
+exit=0
+
+## 2. $ supabase test db --local   (UNSEEDED, pre-migration) — verbatim
+Connecting to local database...
+psql:/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql:32: NOTICE:  extension "pgtap" already exists, skipping
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/000-setup.sql ............................ ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/010-fk-indexes.test.sql .................. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/020-rls-policy-gaps.test.sql ............. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/025-invitation-acceptance.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/030-cron-schedule.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/031-cron-jobs.test.sql ................... 
+# Failed test 1: "exactly one send-event-reminders job exists (F-042) — the migration is idempotent"
+#         have: 0
+#         want: 1
+# Failed test 2: "send-event-reminders runs every fifteen minutes, as it does in production"
+#         have: NULL
+#         want: */15 * * * *
+# Failed test 3: "send-event-reminders command is byte-identical to production (lower-case select)"
+#         have: NULL
+#         want: select public.send_event_reminders()
+# Failed test 4: "send-event-reminders is active"
+# Failed test 9: "exactly one send-feedback-requests job exists (F-042) — the migration is idempotent"
+#         have: 0
+#         want: 1
+# Failed test 10: "send-feedback-requests runs every thirty minutes, as it does in production"
+#         have: NULL
+#         want: */30 * * * *
+# Failed test 11: "send-feedback-requests command is byte-identical to production (upper-case SELECT)"
+#         have: NULL
+#         want: SELECT public.send_feedback_requests()
+# Failed test 12: "send-feedback-requests is active"
+# Failed test 13: "the local cron catalog holds exactly production's three jobs, one row per name"
+#     Results differ beginning at row 2:
+#         have: NULL
+#         want: (send-event-reminders)
+# Looks like you failed 9 tests of 13
+Failed 9/13 subtests 
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/040-seed-coverage.test.sql ............... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/050-users-privilege-escalation.test.sql .. ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/055-admin-audit-log-insert.test.sql ...... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/060-club-tenant-isolation.test.sql ....... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/065-events-moderated-update.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/066-events-appeal-increment.test.sql ..... ok
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql ........... 
+# Failed test 6: "a soft-deleted event gets no reminder (F-093)"
+#         have: 1
+#         want: 0
+# Failed test 7: "a pending (unapproved) event gets no reminder (F-093)"
+#         have: 1
+#         want: 0
+# Failed test 8: "every SECURITY DEFINER function in public pins search_path (F-076)"
+#         have: 5
+#         want: 0
+# Failed test 9: "the F-076 invariant covers at least twelve definer functions, cron_job_status() included"
+# Failed test 10: "PUBLIC cannot execute compute_user_scores() (F-075)"
+# Failed test 11: "anon cannot execute compute_user_scores() (F-075)"
+# Failed test 12: "authenticated cannot rescore every user (F-075)"
+# Failed test 14: "PUBLIC cannot execute send_event_reminders() (F-075)"
+# Failed test 15: "anon cannot send reminders (F-075)"
+# Failed test 16: "authenticated cannot send reminders (F-075)"
+# Failed test 18: "PUBLIC cannot execute send_feedback_requests() (F-075)"
+# Failed test 19: "anon cannot send feedback requests (F-075)"
+# Failed test 20: "authenticated cannot send feedback requests (F-075)"
+# Failed test 22: "anon calling compute_user_scores() is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 23: "anon calling send_event_reminders() is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 24: "anon calling send_feedback_requests() is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 25: "PUBLIC cannot execute get_friends(uuid) (F-074)"
+# Failed test 26: "anon cannot execute get_friends(uuid) (F-074)"
+# Failed test 29: "PUBLIC cannot execute get_friends_going_to_event(uuid, uuid) (F-074)"
+# Failed test 30: "anon cannot execute get_friends_going_to_event(uuid, uuid) (F-074)"
+# Failed test 33: "anon calling get_friends is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 34: "anon calling get_friends_going_to_event is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+# Failed test 35: "A asking for B's friends gets nothing (F-074: the IDOR is closed)"
+#         have: 1
+#         want: 0
+# Failed test 37: "A asking which of B's friends go to the event gets nothing (F-074)"
+#         have: 1
+#         want: 0
+# Failed test 41: "public.cron_job_status() exists (C4)"
+# Failed test 42: "PUBLIC cannot execute cron_job_status() — the default grant is explicitly revoked (C4)"
+# Failed test 43: "anon cannot execute cron_job_status() — job names and failure states stay private (C4)"
+# Failed test 44: "authenticated cannot execute cron_job_status() (C4)"
+# Failed test 45: "service_role can execute cron_job_status() — health reads it through the door"
+# Failed test 46: "an authenticated caller is refused cron_job_status() with 42501 — FUNCTION ABSENT"
+# Failed test 47: "as service_role, cron_job_status() lists the three jobs — FUNCTION ABSENT"
+# Looks like you failed 31 tests of 47
+Failed 31/47 subtests 
+
+Test Summary Report
+-------------------
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/031-cron-jobs.test.sql                 (Wstat: 0 Tests: 13 Failed: 9)
+  Failed tests:  1-4, 9-13
+/Users/adyan/Documents/GitHub/Event-Radar/supabase/tests/database/070-definer-functions.test.sql         (Wstat: 0 Tests: 47 Failed: 31)
+  Failed tests:  6-12, 14-16, 18-20, 22-26, 29-30, 33-35
+                37, 41-47
+Files=13, Tests=260,  1 wallclock secs ( 0.04 usr  0.02 sys +  0.05 cusr  0.04 csys =  0.15 CPU)
+Result: FAIL
+error running container: exit 1
+exit=1
+
+## 3. Rolled-back probe: anon can run the reminder writer today (F-075, C21)
+$ docker exec -i supabase_db_Event-Radar psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < t1-anon-probe.sql
+--- t1-anon-probe.sql ---
+\pset pager off
+BEGIN;
+SET ROLE anon;
+SELECT current_user;
+SELECT public.send_event_reminders();
+ROLLBACK;
+--- output ---
+Pager usage is off.
+BEGIN
+SET
+ current_user 
+--------------
+ anon
+(1 row)
+
+                         send_event_reminders                          
+-----------------------------------------------------------------------
+ {"1h": 0, "24h": 0, "checked_at": "2026-09-27T01:22:40.516665+00:00"}
+(1 row)
+
+ROLLBACK
+exit=0
+
+Reading: as `anon`, `SELECT public.send_event_reminders()` returns its jsonb summary — it RUNS.
+The transaction was rolled back, so nothing it could have written persists.
+
+## 4. Raw TAP stream per file (the pg_prove summary above prints only the failures)
+# $ { CREATE EXTENSION pgtap; SET search_path = public, extensions; cat <file>; DROP EXTENSION pgtap; } | docker exec -i supabase_db_Event-Radar psql -X -q -t -A -U postgres -d postgres -f -
+# (pgtap is dropped after, as `supabase test db` leaves it; each file ends in ROLLBACK)
+
+### 031-cron-jobs.test.sql
+1..13
+not ok 1 - exactly one send-event-reminders job exists (F-042) — the migration is idempotent
+# Failed test 1: "exactly one send-event-reminders job exists (F-042) — the migration is idempotent"
+#         have: 0
+#         want: 1
+not ok 2 - send-event-reminders runs every fifteen minutes, as it does in production
+# Failed test 2: "send-event-reminders runs every fifteen minutes, as it does in production"
+#         have: NULL
+#         want: */15 * * * *
+not ok 3 - send-event-reminders command is byte-identical to production (lower-case select)
+# Failed test 3: "send-event-reminders command is byte-identical to production (lower-case select)"
+#         have: NULL
+#         want: select public.send_event_reminders()
+not ok 4 - send-event-reminders is active
+# Failed test 4: "send-event-reminders is active"
+ok 5 - exactly one compute-user-scores job exists
+ok 6 - compute-user-scores runs every six hours, as it does in production
+ok 7 - compute-user-scores command is byte-identical to production
+ok 8 - compute-user-scores is active
+not ok 9 - exactly one send-feedback-requests job exists (F-042) — the migration is idempotent
+# Failed test 9: "exactly one send-feedback-requests job exists (F-042) — the migration is idempotent"
+#         have: 0
+#         want: 1
+not ok 10 - send-feedback-requests runs every thirty minutes, as it does in production
+# Failed test 10: "send-feedback-requests runs every thirty minutes, as it does in production"
+#         have: NULL
+#         want: */30 * * * *
+not ok 11 - send-feedback-requests command is byte-identical to production (upper-case SELECT)
+# Failed test 11: "send-feedback-requests command is byte-identical to production (upper-case SELECT)"
+#         have: NULL
+#         want: SELECT public.send_feedback_requests()
+not ok 12 - send-feedback-requests is active
+# Failed test 12: "send-feedback-requests is active"
+not ok 13 - the local cron catalog holds exactly production's three jobs, one row per name
+# Failed test 13: "the local cron catalog holds exactly production's three jobs, one row per name"
+#     Results differ beginning at row 2:
+#         have: NULL
+#         want: (send-event-reminders)
+# Looks like you failed 9 tests of 13
+exit=0 (psql; the file FAILS 9 of 13)
+
+### 070-definer-functions.test.sql
+1..47
+ok 1 - compute_user_scores body is unchanged — the scoring formula is pinned (REFAC-14, DEC-68)
+ok 2 - send_feedback_requests body is unchanged — only its search_path is pinned (C6)
+ok 3 - compute_user_scores() writes scores for the fixture user (interest {tech})
+ok 4 - every computed score equals the sum of its five breakdown parts (REFAC-14 invariant)
+ok 5 - the approved event 24 h out gets exactly one reminder_24h
+not ok 6 - a soft-deleted event gets no reminder (F-093)
+# Failed test 6: "a soft-deleted event gets no reminder (F-093)"
+#         have: 1
+#         want: 0
+not ok 7 - a pending (unapproved) event gets no reminder (F-093)
+# Failed test 7: "a pending (unapproved) event gets no reminder (F-093)"
+#         have: 1
+#         want: 0
+not ok 8 - every SECURITY DEFINER function in public pins search_path (F-076)
+# Failed test 8: "every SECURITY DEFINER function in public pins search_path (F-076)"
+#         have: 5
+#         want: 0
+not ok 9 - the F-076 invariant covers at least twelve definer functions, cron_job_status() included
+# Failed test 9: "the F-076 invariant covers at least twelve definer functions, cron_job_status() included"
+not ok 10 - PUBLIC cannot execute compute_user_scores() (F-075)
+# Failed test 10: "PUBLIC cannot execute compute_user_scores() (F-075)"
+not ok 11 - anon cannot execute compute_user_scores() (F-075)
+# Failed test 11: "anon cannot execute compute_user_scores() (F-075)"
+not ok 12 - authenticated cannot rescore every user (F-075)
+# Failed test 12: "authenticated cannot rescore every user (F-075)"
+ok 13 - service_role keeps compute_user_scores() — the batch route's elevated door
+not ok 14 - PUBLIC cannot execute send_event_reminders() (F-075)
+# Failed test 14: "PUBLIC cannot execute send_event_reminders() (F-075)"
+not ok 15 - anon cannot send reminders (F-075)
+# Failed test 15: "anon cannot send reminders (F-075)"
+not ok 16 - authenticated cannot send reminders (F-075)
+# Failed test 16: "authenticated cannot send reminders (F-075)"
+ok 17 - service_role keeps send_event_reminders()
+not ok 18 - PUBLIC cannot execute send_feedback_requests() (F-075)
+# Failed test 18: "PUBLIC cannot execute send_feedback_requests() (F-075)"
+not ok 19 - anon cannot send feedback requests (F-075)
+# Failed test 19: "anon cannot send feedback requests (F-075)"
+not ok 20 - authenticated cannot send feedback requests (F-075)
+# Failed test 20: "authenticated cannot send feedback requests (F-075)"
+ok 21 - service_role keeps send_feedback_requests()
+not ok 22 - anon calling compute_user_scores() is refused with 42501
+# Failed test 22: "anon calling compute_user_scores() is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+not ok 23 - anon calling send_event_reminders() is refused with 42501
+# Failed test 23: "anon calling send_event_reminders() is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+not ok 24 - anon calling send_feedback_requests() is refused with 42501
+# Failed test 24: "anon calling send_feedback_requests() is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+not ok 25 - PUBLIC cannot execute get_friends(uuid) (F-074)
+# Failed test 25: "PUBLIC cannot execute get_friends(uuid) (F-074)"
+not ok 26 - anon cannot execute get_friends(uuid) (F-074)
+# Failed test 26: "anon cannot execute get_friends(uuid) (F-074)"
+ok 27 - authenticated keeps get_friends(uuid) — six callsites pass the caller's own id
+ok 28 - service_role keeps get_friends(uuid) — the public profile reads through the door
+not ok 29 - PUBLIC cannot execute get_friends_going_to_event(uuid, uuid) (F-074)
+# Failed test 29: "PUBLIC cannot execute get_friends_going_to_event(uuid, uuid) (F-074)"
+not ok 30 - anon cannot execute get_friends_going_to_event(uuid, uuid) (F-074)
+# Failed test 30: "anon cannot execute get_friends_going_to_event(uuid, uuid) (F-074)"
+ok 31 - authenticated keeps get_friends_going_to_event(uuid, uuid)
+ok 32 - service_role keeps get_friends_going_to_event(uuid, uuid)
+not ok 33 - anon calling get_friends is refused with 42501
+# Failed test 33: "anon calling get_friends is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+not ok 34 - anon calling get_friends_going_to_event is refused with 42501
+# Failed test 34: "anon calling get_friends_going_to_event is refused with 42501"
+#       caught: no exception
+#       wanted: 42501
+not ok 35 - A asking for B's friends gets nothing (F-074: the IDOR is closed)
+# Failed test 35: "A asking for B's friends gets nothing (F-074: the IDOR is closed)"
+#         have: 1
+#         want: 0
+ok 36 - A asking for A's own friends gets C — the six own-id callsites are unchanged
+not ok 37 - A asking which of B's friends go to the event gets nothing (F-074)
+# Failed test 37: "A asking which of B's friends go to the event gets nothing (F-074)"
+#         have: 1
+#         want: 0
+ok 38 - A asking which of A's own friends go to the event gets C
+ok 39 - service_role asking for B's friends gets D — /users/[id] still lists a public profile's friends (C5)
+ok 40 - service_role asking which of B's friends go to the event gets D
+not ok 41 - public.cron_job_status() exists (C4)
+# Failed test 41: "public.cron_job_status() exists (C4)"
+not ok 42 - PUBLIC cannot execute cron_job_status() — the default grant is explicitly revoked (C4)
+# Failed test 42: "PUBLIC cannot execute cron_job_status() — the default grant is explicitly revoked (C4)"
+not ok 43 - anon cannot execute cron_job_status() — job names and failure states stay private (C4)
+# Failed test 43: "anon cannot execute cron_job_status() — job names and failure states stay private (C4)"
+not ok 44 - authenticated cannot execute cron_job_status() (C4)
+# Failed test 44: "authenticated cannot execute cron_job_status() (C4)"
+not ok 45 - service_role can execute cron_job_status() — health reads it through the door
+# Failed test 45: "service_role can execute cron_job_status() — health reads it through the door"
+not ok 46 - an authenticated caller is refused cron_job_status() with 42501 — FUNCTION ABSENT
+# Failed test 46: "an authenticated caller is refused cron_job_status() with 42501 — FUNCTION ABSENT"
+not ok 47 - as service_role, cron_job_status() lists the three jobs — FUNCTION ABSENT
+# Failed test 47: "as service_role, cron_job_status() lists the three jobs — FUNCTION ABSENT"
+# Looks like you failed 31 tests of 47
+exit=0 (psql; the file FAILS 31 of 47)

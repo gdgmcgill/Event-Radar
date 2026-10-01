@@ -13,7 +13,11 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { readQuery } from "@/server/body";
+import { CalculatePopularityQuery } from "@/contracts/admin";
 import { getElevatedClient } from "@/server/db/elevated";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * @swagger
@@ -40,7 +44,7 @@ import { getElevatedClient } from "@/server/db/elevated";
  *       500:
  *         description: Internal server error
  */
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "calculate popularity" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -48,8 +52,10 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const specificEventId = searchParams.get("event_id");
+    const { event_id: specificEventId } = readQuery(
+      request.nextUrl.searchParams,
+      CalculatePopularityQuery
+    );
 
     // The recompute writes event_popularity_scores, which are service-role
     // only by design (F-010). REGISTRY.md row: popularity recompute.
@@ -74,7 +80,7 @@ export async function POST(request: NextRequest) {
         .eq("status", "approved");
 
       if (eventsError) {
-        console.error("Error fetching events:", eventsError);
+        log.error("Error fetching events", { error: eventsError });
         return NextResponse.json(
           { error: "Failed to fetch events" },
           { status: 500 }
@@ -101,21 +107,21 @@ export async function POST(request: NextRequest) {
             );
 
             if (rpcError) {
-              console.error(`Error updating event ${eventId}:`, rpcError);
+              log.error("Error updating event popularity", { eventId, error: rpcError });
               results.failed++;
               results.errors.push({
                 event_id: eventId,
-                error: rpcError.message,
+                error: "Failed to update popularity",
               });
             } else {
               results.success++;
             }
           } catch (err) {
-            console.error(`Unexpected error for event ${eventId}:`, err);
+            log.error("Unexpected error updating event popularity", { eventId, error: err });
             results.failed++;
             results.errors.push({
               event_id: eventId,
-              error: err instanceof Error ? err.message : "Unknown error",
+              error: "Failed to update popularity",
             });
           }
         })
@@ -134,19 +140,19 @@ export async function POST(request: NextRequest) {
       calculated_at: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Unexpected error calculating popularity:", error);
+    log.error("Unexpected error calculating popularity", { error: error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * GET /api/admin/calculate-popularity
  * Get statistics about popularity score calculations
  */
-export async function GET(_request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch statistics" }, async (_request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -169,7 +175,7 @@ export async function GET(_request: NextRequest) {
       .select("last_calculated_at, popularity_score, trending_score");
 
     if (statsError) {
-      console.error("Error fetching stats:", statsError);
+      log.error("Error fetching stats", { error: statsError });
       return NextResponse.json(
         { error: "Failed to fetch statistics" },
         { status: 500 }
@@ -211,10 +217,10 @@ export async function GET(_request: NextRequest) {
       average_trending_score: Math.round(avgTrending * 100) / 100,
     });
   } catch (error) {
-    console.error("Unexpected error fetching statistics:", error);
+    log.error("Unexpected error fetching statistics", { error: error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

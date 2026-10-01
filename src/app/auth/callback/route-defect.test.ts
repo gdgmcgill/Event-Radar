@@ -149,7 +149,7 @@ function location(res: Response): URL {
 function onboardedMcGillUser() {
   mockExchangeCodeForSession.mockResolvedValue({ error: null });
   mockGetUser.mockResolvedValue({
-    data: { user: { id: "u-returning", email: MCGILL_EMAIL, user_metadata: {} } },
+    data: { user: { id: "u-returning", email: MCGILL_EMAIL, email_confirmed_at: "2026-01-01T00:00:00Z", user_metadata: {} } },
     error: null,
   });
   mockSingle.mockResolvedValue({
@@ -253,15 +253,16 @@ describe("GET /auth/callback (DEFECT — F-077, F-004; FIXED in 05-05)", () => {
     const adminAddress = "boss@mcgill.ca";
     process.env.ADMIN_EMAILS = adminAddress;
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "u-admin", email: adminAddress, user_metadata: {} } },
+      data: { user: { id: "u-admin", email: adminAddress, email_confirmed_at: "2026-01-01T00:00:00Z", user_metadata: {} } },
       error: null,
     });
     const GET = await loadRoute();
 
     const res = await GET(callbackRequest("?code=abc"));
 
-    expect(mockUpdate).not.toHaveBeenCalled();
-    expect(mockUpdateEq).not.toHaveBeenCalled();
+    // P1-02 permits verified-email sync, never metadata role assignment.
+    expect(mockUpdate).toHaveBeenCalledWith({ email: adminAddress, updated_at: expect.any(String) });
+    expect(mockUpdate.mock.calls.every(([payload]) => !("roles" in payload))).toBe(true);
     expect(mockUpsert).toHaveBeenCalledTimes(1);
     expect(location(res).origin).toBe(ORIGIN);
     expect(location(res).pathname).toBe("/");

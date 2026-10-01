@@ -41,6 +41,9 @@
  *   once after the boundary was written (plan 03-03) and exactly once more to
  *   absorb src/lib/audit.ts when the scope widened (plan 04-03), with the
  *   before/after diff recorded in that plan's evidence/boundary-widening.txt.
+ *   Plan 06-03 ran it a third time, after deleting the last two entries (the
+ *   dead /api/cron/* handlers), to empty the list; the empty-list rendering
+ *   and the empty PASS line were added then (C14, evidence/cron-deletion.txt).
  *
  * DEPENDENCIES
  *   None. Node built-ins only — no package, no dev-dependency, nothing added
@@ -255,6 +258,28 @@ function renderAllowlist(entries) {
   const rows = entries
     .map((p) => `  "${p.replaceAll("\\", "\\\\")}",`)
     .join("\n");
+  // An empty list renders as `[]` on one line, not `[` + a blank row + `]`,
+  // so the generated file reads as what it is (plan 06-03).
+  const list = entries.length === 0 ? "[]" : `[\n${rows}\n]`;
+  const countSentence =
+    entries.length === 0
+      ? ` * escaped -> 0. The list below is empty, so nothing needs escaping today;
+ * the rule stands for the file's history and for the ratchet's census.`
+      : ` * escaped -> 0. ${dynamic} of the ${entries.length} entries below are dynamic routes, so this is
+ * the majority case, not an edge case.`;
+  const emptyNote =
+    entries.length === 0
+      ? `
+ *
+ * THE LIST IS EMPTY (plan 06-03). The last two entries, the dead
+ * /api/cron/* handlers, were deleted (F-002, F-037, DEC-63). ESLint 9 throws
+ * on a flat-config object whose \`files\` is an empty array (C14), so the
+ * override block that spread this list into \`files\` was removed from
+ * eslint.config.mjs in the same commit: the boundary now applies to every
+ * file under src/** with no exception. The file is kept because
+ * scripts/check-elevated-ratchet.mjs still reads it: committed=0, and any
+ * live callsite is a failure.`
+      : "";
 
   return `/**
  * GENERATED — do not hand-edit.
@@ -291,17 +316,14 @@ function renderAllowlist(entries) {
  * dynamic segment like [id] is read as a CHARACTER CLASS matching one of 'i'
  * or 'd' — so an unescaped entry matches NOTHING and the file silently stays
  * under the rule. Measured on this tree: unescaped -> 12 errors leak through;
- * escaped -> 0. ${dynamic} of the ${entries.length} entries below are dynamic routes, so this is
- * the majority case, not an edge case.
+${countSentence}${emptyNote}
  *
  * The header carries no timestamp on purpose: a generated file that
  * regenerates byte-for-byte is one a reviewer can verify. The date the
  * original census was taken is recorded in
  * .planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/elevated-callsite-census.txt
  */
-export const LEGACY_ELEVATED_CALLSITES = [
-${rows}
-];
+export const LEGACY_ELEVATED_CALLSITES = ${list};
 `;
 }
 
@@ -341,6 +363,12 @@ if (added.length > 0) {
   console.error("src/server/db/elevated/REGISTRY.md. The allow-list may only shrink,");
   console.error("so do NOT regenerate it to make this pass.");
   process.exit(1);
+}
+
+if (committed.length === 0 && live.length === 0) {
+  // The end state (plan 06-03): no legacy callsite remains and none may appear.
+  console.log("PASS: the allow-list is empty and the live census is empty");
+  process.exit(0);
 }
 
 console.log("PASS: the live census is a subset of the committed allow-list");

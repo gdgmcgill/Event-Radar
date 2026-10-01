@@ -6,7 +6,6 @@ import {
   Info,
   User,
   LayoutDashboard,
-  Users,
   Building2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -30,7 +29,6 @@ export const baseNavItems: NavItem[] = [
   { name: "Home", path: "/", icon: Home },
   { name: "My Events", path: "/calendar", icon: Calendar },
   { name: "Clubs", path: "/clubs", icon: Building2 },
-  { name: "Friends", path: "/friends", icon: Users },
   { name: "Create Event", path: "/create-event", icon: Plus },
   { name: "Notifications", path: "/notifications", icon: Bell },
 ];

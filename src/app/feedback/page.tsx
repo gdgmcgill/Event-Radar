@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CONTACT_EMAILS } from "@/lib/contact";
 import { MessageSquare, Bug, Lightbulb, CheckCircle } from "lucide-react";
-
-type FeedbackType = "bug" | "feature" | "general";
+import type { FeedbackBodyInput, FeedbackType } from "@/contracts/feedback";
 
 const FEEDBACK_TYPES: {
   value: FeedbackType;
@@ -52,7 +51,11 @@ export default function FeedbackPage() {
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, subject, message }),
+        body: JSON.stringify({
+          type,
+          subject,
+          message,
+        } satisfies FeedbackBodyInput),
       });
 
       if (res.ok) {

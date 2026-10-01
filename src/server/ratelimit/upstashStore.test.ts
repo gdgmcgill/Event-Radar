@@ -86,6 +86,13 @@ function result(overrides: Partial<LimitResult>): LimitResult {
 let errorSpy: jest.SpyInstance;
 let warnSpy: jest.SpyInstance;
 
+/** The Nth console.error call, parsed: the logger writes one JSON line (DEC-74). */
+function errorLine(index = 0): Record<string, unknown> {
+  const call = errorSpy.mock.calls[index] as unknown[];
+  expect(call).toHaveLength(1);
+  return JSON.parse(String(call[0])) as Record<string, unknown>;
+}
+
 beforeEach(() => {
   mockLimit.mockReset();
   mockRatelimitCtor.mockClear();
@@ -229,28 +236,29 @@ describe("UpstashRateLimitStore.consume", () => {
       resetAtMs: 5_000_000 + WINDOW_MS,
     });
     expect(errorSpy).toHaveBeenCalledTimes(1);
-    expect(errorSpy).toHaveBeenCalledWith(
-      "[RateLimit] store timeout; request allowed",
-      {
-        key: "GET:/api/events:10.0.0.3",
-      }
-    );
+    expect(errorLine()).toMatchObject({
+      level: "error",
+      scope: "RateLimit",
+      msg: "store timeout; request allowed",
+      limit: 300, windowMs: WINDOW_MS,
+    });
+    expect(JSON.stringify(errorLine())).not.toContain("10.0.0.3");
     nowSpy.mockRestore();
   });
 
-  it("a store error allows the request and logs the error message, never throwing", async () => {
+  it("a store error allows the request and logs only the error class, never throwing", async () => {
     const store = new UpstashRateLimitStore(CONFIG);
     mockLimit.mockRejectedValueOnce(new Error("fetch failed"));
     const decision = await store.consume("POST:/api/x:10.0.0.4", 30, WINDOW_MS);
     expect(decision.allowed).toBe(true);
     expect(decision.limit).toBe(30);
-    expect(errorSpy).toHaveBeenCalledWith(
-      "[RateLimit] store error; request allowed",
-      {
-        key: "POST:/api/x:10.0.0.4",
-        error: "fetch failed",
-      }
-    );
+    expect(errorLine()).toMatchObject({
+      level: "error",
+      scope: "RateLimit",
+      msg: "store error; request allowed",
+      limit: 30, windowMs: WINDOW_MS,
+      error: "Error",
+    });
   });
 });
 
@@ -295,8 +303,16 @@ describe("getRateLimitStore() selection", () => {
     };
   }
 
+  // Since 06-12 the warning is a logger line: level "warn", which the logger
+  // writes to console.error (DEC-74), scope "RateLimit", this text as msg.
   const MEMORY_WARNING =
-    "[RateLimit] Upstash not configured; using the in-memory store (not shared across instances)";
+    "Upstash not configured; using the in-memory store (not shared across instances)";
+
+  function warnLines(): Record<string, unknown>[] {
+    return errorSpy.mock.calls
+      .map((call: unknown[]) => JSON.parse(String(call[0])) as Record<string, unknown>)
+      .filter((line) => line.level === "warn");
+  }
 
   it("configured: returns one UpstashRateLimitStore built from the pair, and warns nothing", () => {
     env.UPSTASH_REDIS_REST_URL = CONFIG.url;
@@ -313,6 +329,7 @@ describe("getRateLimitStore() selection", () => {
       enableTelemetry: false,
     });
     expect(warnSpy).not.toHaveBeenCalled();
+    expect(warnLines()).toHaveLength(0);
   });
 
   it("configured through the Marketplace KV names: returns the Upstash store", () => {
@@ -332,8 +349,12 @@ describe("getRateLimitStore() selection", () => {
     expect(store).toBeInstanceOf(memory.MemoryRateLimitStore);
     expect(index.getRateLimitStore()).toBe(store);
     expect(index.rateLimitStoreKind()).toBe("memory");
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy).toHaveBeenCalledWith(MEMORY_WARNING);
+    expect(warnLines()).toHaveLength(1);
+    expect(warnLines()[0]).toMatchObject({
+      level: "warn",
+      scope: "RateLimit",
+      msg: MEMORY_WARNING,
+    });
     expect(mockRedisCtor).not.toHaveBeenCalled();
   });
 
@@ -346,7 +367,7 @@ describe("getRateLimitStore() selection", () => {
     expect(index.getRateLimitStore()).toBeInstanceOf(
       memory.MemoryRateLimitStore
     );
-    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnLines()).toHaveLength(1);
     expect(mockRedisCtor).not.toHaveBeenCalled();
   });
 
@@ -373,4 +394,15 @@ describe("getRateLimitStore() selection", () => {
     expect(res?.headers.get("X-RateLimit-Limit")).toBe("30");
     expect(mockLimit).toHaveBeenCalledWith("POST:/api/events/x/save:10.9.9.9");
   });
+});
+
+
+it("does not log endpoint URLs or credentials echoed by a failed Redis request", async () => {
+  const endpoint = "https://private-redis.example.test?token=secret-value";
+  mockLimit.mockRejectedValueOnce(new TypeError(`fetch failed: ${endpoint}`));
+  const decision = await new UpstashRateLimitStore(CONFIG).consume("test-key", 30, WINDOW_MS);
+  expect(decision.allowed).toBe(true);
+  expect(errorLine()).toMatchObject({ error: "TypeError" });
+  expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(endpoint);
+  expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("secret-value");
 });

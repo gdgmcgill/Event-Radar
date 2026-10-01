@@ -1,3 +1,4 @@
+import { isEventDuplicateReviewRequired, EVENT_DUPLICATE_REVIEW_MESSAGE } from "@/server/discovery/eventDuplicate";
 /**
  * GET /api/events/:id - Fetch a single event by ID
  * PATCH /api/events/:id - Edit an event (role-based permissions)
@@ -12,7 +13,14 @@ import { hasRole } from "@/lib/roles";
 import type { TablesUpdate } from "@/lib/supabase/types";
 import { transformEventFromDB } from "@/lib/tagMapping";
 import type { NextRequest } from "next/server";
-import { validateEventDates, isValidISODate } from "@/lib/dateValidation";
+import { parseBody } from "@/server/body";
+import {
+  EDITABLE_EVENT_FIELDS,
+  EVENT_UPDATE_FIELD_KEYS,
+  EventUpdateBody,
+} from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 interface RouteParams {
   params: Promise<{
@@ -73,10 +81,10 @@ interface RouteParams {
  *      500:
  *        description: Internal server error
  */
-export async function GET(
+export const GET = withRoute({ cache: "private", action: "fetch event" }, async (
   request: NextRequest,
   { params }: RouteParams
-) {
+) => {
   try {
     const { id } = await params;
     const ctx = await createRequestContext();
@@ -96,14 +104,14 @@ export async function GET(
       .single();
 
     if (error) {
-      console.error("Supabase error fetching event:", error);
+      log.error("Supabase error fetching event", { eventId: id, error });
       if (error.code === "PGRST116") {
         return NextResponse.json(
           { error: "Event not found" },
           { status: 404 }
         );
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to fetch event" }, { status: 500 });
     }
 
     if (!data) {
@@ -137,34 +145,20 @@ export async function GET(
       event as unknown as Record<string, unknown>;
     return NextResponse.json({ event: publicEvent });
   } catch (error) {
-    console.error("Error fetching event:", error);
+    log.error("Error fetching event", { error });
     return NextResponse.json(
       { error: "Failed to fetch event" },
       { status: 500 }
     );
   }
-}
-
-const EDITABLE_FIELDS = [
-  "title",
-  "description",
-  "start_date",
-  "end_date",
-  "location",
-  "tags",
-  "image_url",
-  "category",
-  "is_free",
-  "price",
-  "rsvp_link",
-] as const;
+});
 
 const MODERATED_FIELDS = ["title", "image_url"] as const;
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update event" }, async (
   request: NextRequest,
   { params }: RouteParams
-) {
+) => {
   try {
     const ctx = await createRequestContext();
 
@@ -244,15 +238,24 @@ export async function PATCH(
       );
     }
 
-    // Build update payload from allowed fields only
-    const body = await request.json();
+    // The contract (plan 06-08, REFAC-15), read where the raw body was, after
+    // the 404 and permission checks: only the whitelisted keys, as sent;
+    // "No valid fields to update" first, then today's date rules with field
+    // on start_date and end_date (the end_date-only branch included). F-094:
+    // a non-JSON or non-object body, or a non-string title, description or
+    // location, is a 400 (INTENTIONAL BEHAVIOUR CHANGE).
+    const parsed = await parseBody(request, EventUpdateBody, {
+      fieldFor: EVENT_UPDATE_FIELD_KEYS,
+    });
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
     // DI-25: typed with the generated update type. The body's values are
     // carried as they arrive; the column set is EDITABLE_FIELDS plus
     // pending_edits, all of which are columns of events.
     const directUpdates: TablesUpdate<"events"> = {};
     const pendingEdits: Record<string, string> = {};
 
-    for (const field of EDITABLE_FIELDS) {
+    for (const field of EDITABLE_EVENT_FIELDS) {
       if (!(field in body)) continue;
 
       const needsModeration =
@@ -278,37 +281,6 @@ export async function PATCH(
       }
     }
 
-    if (Object.keys(directUpdates).length === 0 && Object.keys(pendingEdits).length === 0) {
-      return NextResponse.json(
-        { error: "No valid fields to update" },
-        { status: 400 }
-      );
-    }
-
-    // Validate date fields when present in the direct update payload
-    if ("start_date" in directUpdates) {
-      const dateError = validateEventDates(
-        directUpdates.start_date,
-        "end_date" in directUpdates ? directUpdates.end_date : undefined
-      );
-      if (dateError) {
-        return NextResponse.json(
-          { error: dateError.message, field: dateError.field },
-          { status: 400 }
-        );
-      }
-    } else if ("end_date" in directUpdates) {
-      if (!isValidISODate(directUpdates.end_date)) {
-        return NextResponse.json(
-          {
-            error: 'end_date must be a valid ISO 8601 date (e.g. "2026-03-15" or "2026-03-15T11:00:00Z")',
-            field: "end_date",
-          },
-          { status: 400 }
-        );
-      }
-    }
-
     // Write pending edits if any — merge with existing pending edits
     if (Object.keys(pendingEdits).length > 0) {
       const existingPending = (event.pending_edits as Record<string, unknown>) ?? {};
@@ -327,8 +299,9 @@ export async function PATCH(
       .single();
 
     if (error) {
-      console.error("Error updating event:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      if (isEventDuplicateReviewRequired(error)) return NextResponse.json({ error: EVENT_DUPLICATE_REVIEW_MESSAGE }, { status: 400 });
+      log.error("Error updating event", { eventId: id, error });
+      return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
     }
 
     const hasPendingEdits = Object.keys(pendingEdits).length > 0;
@@ -340,18 +313,18 @@ export async function PATCH(
       pending_fields: hasPendingEdits ? Object.keys(pendingEdits).filter(k => k !== "submitted_at") : [],
     });
   } catch (error) {
-    console.error("Error in edit event:", error);
+    log.error("Error in edit event", { error });
     return NextResponse.json(
       { error: "Failed to update event" },
       { status: 500 }
     );
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withRoute({ cache: "private", action: "delete event" }, async (
   request: NextRequest,
   { params }: RouteParams
-) {
+) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -398,12 +371,13 @@ export async function DELETE(
       .eq("id", id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      log.error("Error deleting event", { eventId: id, error });
+      return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting event:", error);
+    log.error("Error deleting event", { error });
     return NextResponse.json({ error: "Failed to delete event" }, { status: 500 });
   }
-}
+});

@@ -3,8 +3,10 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function POST() {
+export const POST = withRoute({ cache: "private", action: "run batch scoring" }, async () => {
   try {
     // Protected: only admins can manually trigger batch scoring
     const ctx = await createRequestContext();
@@ -20,9 +22,9 @@ export async function POST() {
     const { error } = await supabase.rpc("compute_user_scores");
 
     if (error) {
-      console.error("Batch scoring error:", error);
+      log.error("Batch scoring error", { error });
       return NextResponse.json(
-        { error: "Batch scoring failed", details: error.message },
+        { error: "Batch scoring failed" },
         { status: 500 }
       );
     }
@@ -33,10 +35,10 @@ export async function POST() {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Batch trigger error:", error);
+    log.error("Batch trigger error", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

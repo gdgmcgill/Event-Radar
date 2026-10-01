@@ -1,0 +1,11 @@
+PASS node src/proxy.test.ts
+PASS node src/contracts/__tests__/events.test.ts
+PASS node src/contracts/__tests__/users.test.ts
+PASS node src/contracts/__tests__/clubs.test.ts
+PASS node src/proxy-request-id.test.ts
+
+Test Suites: 5 passed, 5 total
+Tests:       338 passed, 338 total
+Snapshots:   0 total
+Time:        1.191 s
+Ran all test suites matching src/contracts/__tests__/users.test.ts|src/contracts/__tests__/events.test.ts|src/contracts/__tests__/clubs.test.ts|src/proxy-request-id.test.ts|src/proxy.test.ts.

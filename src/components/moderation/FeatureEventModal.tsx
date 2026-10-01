@@ -11,6 +11,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FEATURED_DURATION_PRESETS } from "@/lib/constants";
+import type {
+  FeaturedCreateBodyInput,
+  FeaturedUpdateBodyInput,
+} from "@/contracts/admin";
 import { Star, Calendar, Clock, AlertCircle } from "lucide-react";
 
 interface FeatureEventModalProps {
@@ -134,7 +138,7 @@ export function FeatureEventModal({
         priority,
         starts_at: new Date(startsAt).toISOString(),
         ends_at: new Date(endsAt).toISOString(),
-      };
+      } satisfies FeaturedCreateBodyInput;
 
       const url = existing
         ? `/api/admin/featured/${existing.id}`
@@ -144,7 +148,9 @@ export function FeatureEventModal({
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        // POST reads FeaturedCreateBody; PATCH reads FeaturedUpdateBody and
+        // ignores event_id, so one payload satisfies both contracts.
+        body: JSON.stringify(payload satisfies FeaturedUpdateBodyInput),
       });
 
       if (!res.ok) {

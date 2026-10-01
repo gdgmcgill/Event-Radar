@@ -1,5 +1,4 @@
 import coreWebVitals from "eslint-config-next/core-web-vitals";
-import { LEGACY_ELEVATED_CALLSITES } from "./eslint.elevated-allowlist.mjs";
 
 // The credential's two sanctioned homes: src/lib/supabase/ DEFINES the
 // service-role factory, src/server/db/elevated/ is the one door to it. Neither
@@ -14,7 +13,8 @@ const ELEVATED_KEY_MESSAGE =
   "Do not read SUPABASE_SERVICE_ROLE_KEY outside src/lib/supabase/. Service-role access must go through src/server/db/elevated/ and be recorded in its REGISTRY.md.";
 
 const eslintConfig = [
-  { ignores: [".claude/**", ".next/**", "AI/**", "node_modules/**", "demo-video/**"] },
+  // Playwright trace reports bundle third-party JavaScript, not repository source.
+  { ignores: [".claude/**", ".next/**", "AI/**", "node_modules/**", "demo-video/**", "playwright-report/**", "test-results/**", "playwright/.auth/**"] },
   ...coreWebVitals,
   {
     // REFAC-05: src/server/db/elevated/ is the only door to the service-role
@@ -104,26 +104,6 @@ const eslintConfig = [
           message: ELEVATED_MESSAGE,
         },
       ],
-    },
-  },
-  {
-    // THE RATCHET — the sanctioned relaxation, in one reviewable generated file.
-    // It holds the legacy callsites that pre-date the boundary. It may only
-    // SHRINK: Phases 4-6 delete rows as each route moves to the seam, and
-    // scripts/check-elevated-ratchet.mjs fails if the live census ever contains
-    // an entry this list does not.
-    //
-    // The rule is NOT downgraded to "warn" and no legacy callsite carries an
-    // inline disable comment. Both would zero the error count while removing
-    // the control; this list is the one relaxation, and it is auditable.
-    files: LEGACY_ELEVATED_CALLSITES,
-    // It turns off every boundary rule, including the no-restricted-syntax
-    // companion: two legacy entries (calculate-popularity, auth/callback) read
-    // the service-role key inline and one (clubs/[id]) imports the service
-    // module dynamically. They leave this list the same way as the rest.
-    rules: {
-      "@typescript-eslint/no-restricted-imports": "off",
-      "no-restricted-syntax": "off",
     },
   },
 ];

@@ -12,15 +12,18 @@
  * decides nothing. That route is REFAC-22's, in Phase 6.
  *
  * Tests cover:
- *   - the set of files containing a `getSession(` call is exactly
- *     `["src/app/api/health/route.ts"]`, so a new call anywhere turns this red
+ *   - the set of files containing a `getSession(` call is EMPTY, so a call
+ *     anywhere turns this red (tightened by 06-17: the health route's call
+ *     was the last, and REFAC-22 removed it; before 06-17 the expected set
+ *     was exactly `["src/app/api/health/route.ts"]`)
  *   - the two authorization seams, `src/server/context.ts` and `src/proxy.ts`,
  *     each call `auth.getUser(`
  *
  * This gate holds before and after the whole of Phase 5: no plan in the phase
  * adds a `getSession(` call or removes either `getUser(` call. If Phase 6
  * removes the health route's call, the expected set becomes empty in that
- * commit.
+ * commit, which is what plan 06-17 Task 1 did: the one assertion was
+ * tightened from that single file to none, never loosened.
  *
  * The gate only reads files. It modifies nothing under `src/`.
  */
@@ -57,13 +60,13 @@ function read(relPath: string): string {
 }
 
 describe("session accessor gate (PRESERVE — REFAC-11 clause 1)", () => {
-  it("the only production file calling getSession( is the non-gating api/health route", () => {
+  it("no production file calls getSession( (the health route's was the last, removed by 06-17)", () => {
     const callers = productionSources(SRC_DIR)
       .filter((file) => fs.readFileSync(file, "utf8").includes("getSession("))
       .map(rel)
       .sort();
 
-    expect(callers).toEqual(["src/app/api/health/route.ts"]);
+    expect(callers).toEqual([]);
   });
 
   it.each(["src/server/context.ts", "src/proxy.ts"])(

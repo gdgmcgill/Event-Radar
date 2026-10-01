@@ -104,6 +104,15 @@ jest.mock("@/lib/supabase/server", () => ({
   createClient: jest.fn(() => Promise.resolve(mockSupabase)),
 }));
 
+// This suite exercises the authorized dashboard's audit data shape. The actual
+// guard, including standalone page execution, is covered by docs-gate-defect.
+jest.mock("@/server/context", () => ({
+  getRequestContext: jest.fn().mockResolvedValue({ user: { id: "authorized-audit-admin" } }),
+}));
+jest.mock("@/server/authz/requireAdminPage", () => ({
+  requireAdminPage: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("@/lib/supabase/service", () => ({
   createServiceClient: jest.fn(() => mockElevatedSupabase),
 }));
@@ -324,7 +333,14 @@ describe("F-072 / F-073 — admin_audit_log.admin_email does not exist (FIXED in
     ).resolves.toBeUndefined();
 
     expect(errorSpy).toHaveBeenCalledTimes(1);
-    expect(errorSpy).toHaveBeenCalledWith("[Audit] admin_audit_log insert rejected", {
+    // One JSON line from the logger since 06-12 (F-058, DEC-74): the same
+    // fields, scope "Audit" in place of the "[Audit]" prefix.
+    const call = errorSpy.mock.calls[0] as unknown[];
+    expect(call).toHaveLength(1);
+    expect(JSON.parse(String(call[0]))).toMatchObject({
+      level: "error",
+      scope: "Audit",
+      msg: "admin_audit_log insert rejected",
       action: "banned",
       targetType: "user",
       targetId: "00000000-0000-0000-0000-000000000003",

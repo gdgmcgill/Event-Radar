@@ -3,6 +3,8 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { getElevatedClient } from "@/server/db/elevated";
+import { logRouteError, withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -11,7 +13,7 @@ interface RouteParams {
 /**
  * POST /api/users/[id]/follow — Follow a user
  */
-export async function POST(_request: NextRequest, { params }: RouteParams) {
+export const POST = withRoute({ cache: "private", action: "follow user" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -38,6 +40,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       .select("id");
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Failed to follow user" }, { status: 500 });
     }
 
@@ -61,12 +64,16 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ following: true, isFriend }, { status: 201 });
     }
 
-    // Fetch target user name for notification
-    const { data: targetUser } = await supabase
-      .from("users")
-      .select("name")
-      .eq("id", targetId)
-      .single();
+    // DI-65: only a newly established mutual relationship needs the peer's
+    // display name. The cookie client cannot read another user's profile;
+    // select only the name, scoped to that exact reciprocal follow target.
+    let targetName: string | null = null;
+    if (isFriend) {
+      const { data: targetUser, error: nameError } = await getElevatedClient()
+        .from("users").select("name").eq("id", targetId).maybeSingle();
+      targetName = targetUser?.name ?? null;
+      if (nameError) log.warn("Friend notification name unavailable", { code: nameError.code });
+    }
 
     const { data: currentUser } = await supabase
       .from("users")
@@ -93,7 +100,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
             user_id: user.id,
             type: "new_friend",
             title: "New Friend!",
-            message: `You and ${targetUser?.name ?? "someone"} are now friends.`,
+            message: `You and ${targetName ?? "someone"} are now friends.`,
           },
         ]
       : [
@@ -110,19 +117,20 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       .from("notifications")
       .insert(notifications);
     if (notifyError) {
-      console.error("Error inserting follow notifications:", notifyError);
+      log.error("Error inserting follow notifications", { error: notifyError });
     }
 
     return NextResponse.json({ following: true, isFriend }, { status: 201 });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Failed to follow user" }, { status: 500 });
   }
-}
+});
 
 /**
  * DELETE /api/users/[id]/follow — Unfollow a user
  */
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export const DELETE = withRoute({ cache: "private", action: "unfollow user" }, async (_request: NextRequest, { params }: RouteParams) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -141,11 +149,13 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       .eq("following_id", targetId);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json({ error: "Failed to unfollow user" }, { status: 500 });
     }
 
     return NextResponse.json({ following: false, isFriend: false });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Failed to unfollow user" }, { status: 500 });
   }
-}
+});

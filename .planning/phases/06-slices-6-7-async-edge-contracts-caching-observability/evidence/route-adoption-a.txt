@@ -1,0 +1,279 @@
+route-adoption-a.txt — plan 06-13 (route adoption sweep A: admin, moderation, clubs, organizer-requests, my-clubs)
+Phase 06 · recorded 2026-09-27 · base 23de4e9 · Task 1 commit 217593b · Task 2 commit: the commit that adds this file
+Every command below was run from the repo root; exit codes verbatim. Scratch outputs are summarized, never edited.
+
+== 1. Adoption, per family ==
+Task 1 (admin + moderation): 25 files, 34 handlers, every one cache "private".
+  src/app/api/admin/analytics/events/route.ts: GET private "fetch event analytics"
+  src/app/api/admin/analytics/users/route.ts: GET private "fetch user analytics"
+  src/app/api/admin/audit-log/route.ts: GET private "fetch audit log"
+  src/app/api/admin/calculate-popularity/route.ts: POST private "calculate popularity", GET private "fetch statistics"
+  src/app/api/admin/clubs/[id]/route.ts: PATCH private "update club status"
+  src/app/api/admin/clubs/route.ts: GET private "fetch admin clubs"
+  src/app/api/admin/events/[id]/edits/route.ts: PATCH private "review event edits"
+  src/app/api/admin/events/[id]/route.ts: PUT private "update event", DELETE private "delete event"
+  src/app/api/admin/events/[id]/status/route.ts: PATCH private "update event status"
+  src/app/api/admin/events/route.ts: GET private "fetch admin events", POST private "create event"
+  src/app/api/admin/experiments/[id]/results/route.ts: GET private "fetch experiment results"
+  src/app/api/admin/experiments/[id]/route.ts: GET private "fetch experiment", PATCH private "update experiment", DELETE private "delete experiment"
+  src/app/api/admin/experiments/route.ts: GET private "fetch experiments", POST private "create experiment"
+  src/app/api/admin/featured/[id]/route.ts: PATCH private "update featured event", DELETE private "delete featured event"
+  src/app/api/admin/featured/route.ts: GET private "fetch featured events", POST private "create featured event"
+  src/app/api/admin/organizer-requests/[id]/route.ts: PATCH private "review organizer request"
+  src/app/api/admin/organizer-requests/route.ts: GET private "fetch organizer requests"
+  src/app/api/admin/organizers/route.ts: GET private "fetch organizers"
+  src/app/api/admin/reports/[id]/route.ts: PATCH private "update report"
+  src/app/api/admin/reports/route.ts: GET private "fetch reports"
+  src/app/api/admin/stats/route.ts: GET private "fetch stats"
+  src/app/api/admin/users/[id]/ban/route.ts: POST private "ban user", DELETE private "unban user"
+  src/app/api/admin/users/[id]/route.ts: PATCH private "update user"
+  src/app/api/admin/users/route.ts: GET private "fetch users"
+  src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts: GET private "fetch moderation reviews"
+Task 2 (clubs + organizer-requests + my-clubs): 18 files, 26 handlers.
+  src/app/api/clubs/[id]/analytics/route.ts: GET private "fetch club analytics"
+  src/app/api/clubs/[id]/appeal/route.ts: POST private "submit appeal"
+  src/app/api/clubs/[id]/events/route.ts: GET private "fetch events"
+  src/app/api/clubs/[id]/follow/route.ts: GET private "check follow status", POST private "follow club", DELETE private "unfollow club"
+  src/app/api/clubs/[id]/invites/route.ts: GET private "fetch invitations", POST private "create invitation"
+  src/app/api/clubs/[id]/members/role/route.ts: PATCH private "update role"
+  src/app/api/clubs/[id]/members/route.ts: GET private "fetch members", DELETE private "remove member"
+  src/app/api/clubs/[id]/route.ts: GET public-60-300 "fetch club", PATCH private "update club", DELETE private "delete club"
+  src/app/api/clubs/[id]/transfer/route.ts: POST private "transfer ownership"
+  src/app/api/clubs/banner/route.ts: POST private "upload banner"
+  src/app/api/clubs/featured/route.ts: GET public-60-120 "fetch featured clubs"
+  src/app/api/clubs/friends/route.ts: GET private "fetch friends' clubs"
+  src/app/api/clubs/logo/route.ts: POST private "upload logo"
+  src/app/api/clubs/new/route.ts: GET public-60-300 "fetch new clubs"
+  src/app/api/clubs/route.ts: GET public-60-300 "fetch clubs", POST private "create club"
+  src/app/api/clubs/trending/route.ts: GET public-60-300 "fetch trending clubs"
+  src/app/api/my-clubs/route.ts: GET private "fetch your clubs"
+  src/app/api/organizer-requests/route.ts: POST private "create organizer request", GET private "fetch organizer requests"
+Total: 43 files, 60 handlers. Public classes: /api/clubs GET, /api/clubs/[id] GET, /api/clubs/new GET,
+/api/clubs/trending GET -> public-60-300; /api/clubs/featured GET -> public-60-120 (its own header removed; the class emits it);
+/api/clubs/[id]/events GET -> private (DEC-69). Every other export, and every non-GET verb, private.
+Form: `export const VERB = withRoute({ cache, action }, async (<same parameter list>) => { … })`; the parameter list of every
+export is unchanged (tsc exit 0 with the tests' handler-typed calls); authz order untouched (the wrapper wraps, it does not reorder).
+
+== 2. Logging and caught-error bodies ==
+S1 (console calls) converted: Task 1 34 (calculate-popularity 6, clubs/[id] 4, clubs 1, events/[id] 2, events/[id]/status 4,
+  events 1, featured/[id] 2, featured 1, organizer-requests/[id] 2, reports/[id] 1, users/[id]/ban 10); Task 2 4
+  (clubs/[id]/appeal 1, clubs/[id] 1, clubs/[id]/transfer 2). Total 38. Each is log.error(msg, { scope?, ids, error }):
+  the old [Prefix] became `scope`, the (requestId …) text became the requestId field, errors are passed whole (the logger
+  reduces an Error to { name, message, code } and redacts emails and named secret keys); no email, body or token field.
+S2 (caught-error text lines) removed: Task 1 4 (calculate-popularity 2 -> "Failed to update popularity" in results.errors;
+  moderation reviews 1 -> "Failed to fetch moderation reviews"; admin/events/[id]/status 1: the notification copy now reads
+  `const { title, message } = row`, never a response, no behaviour change); Task 2 5 (clubs/[id]/appeal 2 -> "Failed to submit
+  appeal"; clubs/featured 1 -> "Failed to fetch featured clubs"; organizer-requests 2 -> "Failed to create organizer request"
+  / "Failed to fetch organizer requests"). Total 9. Each removed body logs the error first.
+
+== 3. Census and allow-list, before -> after ==
+cache-headers-census PENDING_WRAP: 91 (base) -> 66 (Task 1, -25) -> 48 (Task 2, -18). None of the five families remain.
+server-console allow-list: 70 entries / 188 sites (base) -> 56 / 150 (Task 1) -> 50 / 141 (Task 2); 47 sites retired =
+  38 S1 + 9 S2. No entry for admin, moderation, clubs, organizer-requests or my-clubs remains.
+$ node scripts/check-server-console.mjs
+committed=141 live=141 delta=0
+PASS: the live census is within the committed allow-list
+scc exit 0
+Plan acceptance one-liners (both exit 0):
+  census: node -e '…s.slice(s.indexOf("PENDING_WRAP"),s.indexOf("]",…))…' exit 0 (Task 1) — NOTE: vacuous as written: the first
+  "PENDING_WRAP" is in the docblock and the next "]" is the one in `string[]`, so the slice never reaches the array. A strict
+  check over `const PENDING_WRAP … ];` was run instead: PENDING_WRAP entries 48, no admin|moderation|clubs|organizer-requests|
+  my-clubs path, exit 0.
+  allow-list (Task 1 regex and Task 2 regex): exit 0 and exit 0.
+  featured: grep -c public-60-120 = 2, grep -ci cache-control = 0; clubs/[id]/events: `export const GET = withRoute({ cache: "private"` present.
+
+== 4. Pins moved (defect-ledger.md rows 127-210; 84 rows) ==
+Task 1 (ledger lines 127-182, 56 rows, commit 217593b):
+  F-026 cache-headers-defect C1 -> C4 and C2 -> C5: 16 routes x 2 = 32 rows (private, no-store; UUID x-request-id; no Vary)
+  F-058 uncaught-throw-defect U1 -> U3: 18 rows (JSON 500 "Failed to <action>"), plus U0 (reads both export forms): 1 row
+  F-059 error-text-defect E1 -> E2: 3 rows, plus E0 (live census 31 + 5; RETIRED status:244): 1 row
+  F-058 admin-guard-characterization P0 tree comparison moved out of PRESERVE to admin-arm-tree-defect T0/T1: 1 row
+Task 2 (ledger lines 183-210, 28 rows, commit filled by the plan's docs commit):
+  F-026 C1 -> C4 and C2 -> C5: 8 routes x 2 = 16 rows; F-058 U1 -> U3: 4 rows + U0 adoption row 1; F-059 E1 -> E2: 4 rows,
+  E2 addition clubs/[id]/appeal:83 (updateError, outside C7): 1 row, E0 (27 + 5, E2 8 rows): 1 row;
+  F-058 write-handlers-characterization P0 enumeration moved out of PRESERVE to write-arm-tree-defect T0/T1: 1 row
+Untagged suites edited in place (no ledger row, per the ledger's rule): review05/admin-event-notification (2 rows),
+  review05/club-transfer (1 row): each now parses the JSON line and asserts level, scope, msg (and the error's message).
+
+== 5. The five-step protocol ==
+Task 1 step 2 (fix applied, DEFECT suites unedited): npx jest --ci src/__tests__/api src/server src/app/api -> exit 1
+Test Suites: 6 failed, 1 skipped, 68 passed, 74 of 75 total
+Tests:       83 failed, 1 skipped, 1508 passed, 1592 total
+   16  C1: signed in, no private, no-store today
+   16  C2: anonymous, no private, no-store today
+    1  Console
+    1  E0: the rows plus NOT_DRIVEN are census C7
+    3  E1: a caught error's text reaches the response body today
+    1  P0: the admin arm table equals the tree
+    1  U0: the arm list is the tree
+   18  U1: a throwing dependency rejects the handler promise (no JSON body)
+    1  a failed notification write is logged; the decision still answers 200
+    1  a failed read of the existing notification is logged and nothing is written
+    1  cache census: src/app/api/admin/analytics/events/route.ts
+    1  cache census: src/app/api/admin/analytics/users/route.ts
+    1  cache census: src/app/api/admin/audit-log/route.ts
+    1  cache census: src/app/api/admin/calculate-popularity/route.ts
+    1  cache census: src/app/api/admin/clubs/[id]/route.ts
+    1  cache census: src/app/api/admin/clubs/route.ts
+    1  cache census: src/app/api/admin/events/[id]/edits/route.ts
+    1  cache census: src/app/api/admin/events/[id]/route.ts
+    1  cache census: src/app/api/admin/events/[id]/status/route.ts
+    1  cache census: src/app/api/admin/events/route.ts
+    1  cache census: src/app/api/admin/experiments/[id]/results/route.ts
+    1  cache census: src/app/api/admin/experiments/[id]/route.ts
+    1  cache census: src/app/api/admin/experiments/route.ts
+    1  cache census: src/app/api/admin/featured/[id]/route.ts
+    1  cache census: src/app/api/admin/featured/route.ts
+    1  cache census: src/app/api/admin/organizer-requests/[id]/route.ts
+    1  cache census: src/app/api/admin/organizer-requests/route.ts
+    1  cache census: src/app/api/admin/organizers/route.ts
+    1  cache census: src/app/api/admin/reports/[id]/route.ts
+    1  cache census: src/app/api/admin/reports/route.ts
+    1  cache census: src/app/api/admin/stats/route.ts
+    1  cache census: src/app/api/admin/users/[id]/ban/route.ts
+    1  cache census: src/app/api/admin/users/[id]/route.ts
+    1  cache census: src/app/api/admin/users/route.ts
+    1  cache census: src/app/api/moderation/reviews/[targetType]/[targetId]/route.ts
+Task 1 step 3 (moved): same command -> exit 0
+Test Suites: 1 skipped, 75 passed, 75 of 76 total
+Tests:       1 skipped, 1679 passed, 1680 total
+Task 1 step 4 (25 pre-fix route files swapped in, moved suites run, fixed files restored): jest exit 1; cmp: 25 files restored, differences=0
+Test Suites: 5 failed, 5 total
+Tests:       90 failed, 109 passed, 199 total
+   16  C4: adopted, signed in: private, no-store and a request id (F-026 fixed)
+   16  C5: adopted, anonymous: private, no-store and a request id (F-026 fixed)
+    1  E0: the rows plus NOT_DRIVEN are census C7
+    3  E2: fixed, the caller gets the route's generic text (F-059 fixed)
+   33  T1 (F-058 fixed): every admin arm wears withRoute with the private class
+    1  U0: the arm list is the tree
+   18  U3: adopted, the same throw answers a JSON 500 (F-058 fixed)
+    1  a failed notification write is logged; the decision still answers 200
+    1  a failed read of the existing notification is logged and nothing is written
+Task 2 step 2: npx jest --ci src/__tests__ src/server src/app/api src/contracts -> exit 1
+Test Suites: 6 failed, 1 skipped, 90 passed, 96 of 97 total
+Tests:       45 failed, 1 skipped, 2604 passed, 2650 total
+    8  C1: signed in, no private, no-store today
+    8  C2: anonymous, no private, no-store today
+    1  Console
+    1  E0: the rows plus NOT_DRIVEN are census C7
+    4  E1: a caught error's text reaches the response body today
+    1  P0 the descriptor table equals the route tree
+    4  U1: a throwing dependency rejects the handler promise (no JSON body)
+    1  a failed audit insert still answers success but is logged
+    1  cache census: src/app/api/clubs/[id]/analytics/route.ts
+    1  cache census: src/app/api/clubs/[id]/appeal/route.ts
+    1  cache census: src/app/api/clubs/[id]/events/route.ts
+    1  cache census: src/app/api/clubs/[id]/follow/route.ts
+    1  cache census: src/app/api/clubs/[id]/invites/route.ts
+    1  cache census: src/app/api/clubs/[id]/members/role/route.ts
+    1  cache census: src/app/api/clubs/[id]/members/route.ts
+    1  cache census: src/app/api/clubs/[id]/route.ts
+    1  cache census: src/app/api/clubs/[id]/transfer/route.ts
+    1  cache census: src/app/api/clubs/banner/route.ts
+    1  cache census: src/app/api/clubs/featured/route.ts
+    1  cache census: src/app/api/clubs/friends/route.ts
+    1  cache census: src/app/api/clubs/logo/route.ts
+    1  cache census: src/app/api/clubs/new/route.ts
+    1  cache census: src/app/api/clubs/route.ts
+    1  cache census: src/app/api/clubs/trending/route.ts
+    1  cache census: src/app/api/my-clubs/route.ts
+    1  cache census: src/app/api/organizer-requests/route.ts
+Task 2 step 3: same command -> exit 0
+Test Suites: 1 skipped, 97 passed, 97 of 98 total
+Tests:       1 skipped, 2701 passed, 2702 total
+Task 2 step 4 (18 pre-fix files): jest exit 1; cmp: 18 files restored, differences=0
+Test Suites: 5 failed, 5 total
+Tests:       41 failed, 139 passed, 180 total
+    8  C4: adopted, signed in: private, no-store and a request id (F-026 fixed)
+    8  C5: adopted, anonymous: private, no-store and a request id (F-026 fixed)
+    1  E0: the rows plus NOT_DRIVEN are census C7
+    5  E2: fixed, the caller gets the route's generic text (F-059 fixed)
+   13  T1 (F-058 fixed): the 06-13 write arms wear withRoute with the private class
+    1  U0: the arm list is the tree
+    4  U3: adopted, the same throw answers a JSON 500 (F-058 fixed)
+    1  a failed audit insert still answers success but is logged
+Step 5, PRESERVE suites on these surfaces (full run below), all PASS:
+  unedited: bad-request-characterization, club-gates-characterization, service-role-routing (PRESERVE+DEFECT),
+    review05/club-links-defect (PRESERVE+DEFECT), contracts/__tests__ admin, clubs, events, users; tables adminArmTable.ts,
+    writeHandlerTable.ts, badRequestTable.ts unedited (git diff --quiet 23de4e9 exit 0)
+  moved out of (removal only + a docblock pointer): admin-guard-characterization P0's tree comparison (P0 length/uniqueness
+    and P1-P3 unedited), write-handlers-characterization P0's enumeration (uniqueness/count and P1-P5 unedited). See deviations.
+
+== 6. Public club reads: headers probe (throwaway jest file, deleted; fakes from badRequestTable, anonymous) ==
+pre-06-13 sources:
+PROBE clubs GET [ok] status=200 cache-control=null vary=null x-request-id=none
+PROBE clubs GET [db-error] status=500 cache-control=null vary=null x-request-id=none
+PROBE clubs/[id] GET [ok] status=200 cache-control=null vary=null x-request-id=none
+PROBE clubs/[id] GET [db-error] status=404 cache-control=null vary=null x-request-id=none
+PROBE clubs/new GET [ok] status=200 cache-control=null vary=null x-request-id=none
+PROBE clubs/new GET [db-error] status=200 cache-control=null vary=null x-request-id=none
+PROBE clubs/trending GET [ok] status=200 cache-control=null vary=null x-request-id=none
+PROBE clubs/trending GET [db-error] status=200 cache-control=null vary=null x-request-id=none
+PROBE clubs/featured GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=120" vary=null x-request-id=none
+PROBE clubs/featured GET [db-error] status=500 cache-control=null vary=null x-request-id=none
+Tests:       5 passed, 5 total
+06-13 sources:
+PROBE clubs GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE clubs GET [db-error] status=500 cache-control="private, no-store" vary=null x-request-id=uuid
+PROBE clubs/[id] GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE clubs/[id] GET [db-error] status=404 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE clubs/new GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE clubs/new GET [db-error] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE clubs/trending GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE clubs/trending GET [db-error] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=300" vary=null x-request-id=uuid
+PROBE clubs/featured GET [ok] status=200 cache-control="public, s-maxage=60, stale-while-revalidate=120" vary=null x-request-id=uuid
+PROBE clubs/featured GET [db-error] status=500 cache-control="private, no-store" vary=null x-request-id=uuid
+Tests:       5 passed, 5 total
+Reading: clubs/featured 200 is byte-identical (public, s-maxage=60, stale-while-revalidate=120). The four public-60-300 GETs set
+no header at the origin before; production gave them vercel.json's `s-maxage=60, stale-while-revalidate=300` (removed in 06-14);
+the class now sends `public, s-maxage=60, stale-while-revalidate=300` (same directives, explicit `public`, DEC-73). A 500 is
+private, no-store; a 404 on a public class stays shareable (the 06-12 rule: Vercel caches 404s). No Vary on any response.
+
+== 7. Gates at the Task 2 tree ==
+$ npx jest --ci  (after Task 1) -> exit 0
+Test Suites: 1 skipped, 123 passed, 123 of 124 total
+Tests:       1 skipped, 3182 passed, 3183 total
+$ npx jest --ci  (after Task 2) -> exit 0
+Test Suites: 1 skipped, 124 passed, 124 of 125 total
+Tests:       1 skipped, 3234 passed, 3235 total
+$ npx tsc --noEmit -> exit 0 (no output; also exit 0 after Task 1)
+$ npm run lint -> exit 0
+✖ 17 problems (0 errors, 17 warnings)  (all 17 pre-existing; after Task 1 the same)
+$ node scripts/check-contracts.mjs && node scripts/check-contracts.mjs --client
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+contracts exit 0
+client files=38 violations=0
+contracts --client exit 0
+$ node scripts/check-characterization-tags.mjs --all -> exit 0: ok 56 files (54 + admin-arm-tree-defect + write-arm-tree-defect)
+$ node scripts/check-elevated-ratchet.mjs -> exit 0
+committed=0 live=0 delta=0
+Task 1 verify: npx jest --ci src/__tests__/api src/server -> exit 0
+Test Suites: 1 skipped, 72 passed, 72 of 73 total
+Tests:       1 skipped, 1649 passed, 1650 total
+
+== 8. Playwright, from a fresh reset and seed ==
+port 3000 before: lsof -nP -iTCP:3000 -sTCP:LISTEN exit=1 (free); the harness builds and starts its own server (never reused)
+$ supabase db reset --local -> exit 0
+{"target":"local","version":"","message":"Reset local database."}
+$ npx tsx scripts/seed/load.ts -> exit 0
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+$ npx playwright test e2e/specs/admin-guard.spec.ts e2e/specs/admin-write-paths.spec.ts e2e/specs/admin-moderation-queue.spec.ts
+    e2e/specs/admin-audit-row.spec.ts e2e/specs/club-owner-surfaces.spec.ts e2e/specs/club-authorization.spec.ts
+    e2e/specs/club-invitation-acceptance.spec.ts e2e/specs/async-edge.spec.ts
+Running 52 tests using 1 worker
+  52 passed (22.8s)
+playwright exit 0
+first run green (one run; no retry was needed). port 3000 after: exit=1 (free).
+
+== 9. Measured against the plan ==
+- Files: 43 (plan: about 43). Handlers: 60. Console S1 38 and S2 9 in these families.
+- Two PRESERVE tree scans (admin-guard-characterization P0, write-handlers-characterization P0) read `export async function`
+  and cannot pass once the exports are `export const VERB = withRoute(…)`; their tree comparisons moved to new DEFECT suites
+  with ledger rows (the plan expected these suites to pass unedited).
+- error-text E0's census C7 skips `updateError.message` (its `dateError.message` exclusion matches by substring): the reason
+  06-12 measured S2 at 42 against C7's 40. The clubs appeal instance is pinned as an E2 addition; events appeal's is 06-14's.
+- No PRESERVE console pin needed moving in these families (all 22 console spies in the 06-13 group are kind A), so
+  admin-console-defect.test.ts and clubs-console-defect.test.ts were not created (the plan made them conditional).

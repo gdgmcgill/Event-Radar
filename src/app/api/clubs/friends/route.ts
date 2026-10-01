@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { logRouteError, withRoute } from "@/server/route";
 
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch friends' clubs" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -89,10 +90,11 @@ export async function GET() {
       .slice(0, 15);
 
     return NextResponse.json({ clubs: enriched });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch friends' clubs" },
       { status: 500 }
     );
   }
-}
+});

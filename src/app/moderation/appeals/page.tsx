@@ -5,6 +5,13 @@ import { RejectionModal } from "@/components/moderation/RejectionModal";
 import { AppealBadge } from "@/components/moderation/AppealBadge";
 import { ReviewThread } from "@/components/moderation/ReviewThread";
 import type { RejectionCategory } from "@/types";
+import type {
+  AdminClubDecisionBodyInput,
+  EventStatusBodyInput,
+} from "@/contracts/admin";
+
+/** Both endpoints an appeal decision goes to read the same decision shape. */
+type AppealDecisionBody = EventStatusBodyInput & AdminClubDecisionBodyInput;
 import {
   CheckCircle,
   XCircle,
@@ -99,7 +106,7 @@ export default function AppealsPage() {
       const res = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
+        body: JSON.stringify({ status: "approved" } satisfies AppealDecisionBody),
       });
       if (res.ok) {
         setItems((prev) => prev.filter((i) => i.id !== item.id));
@@ -123,7 +130,11 @@ export default function AppealsPage() {
       const res = await fetch(endpoint, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rejected", category, message }),
+        body: JSON.stringify({
+          status: "rejected",
+          category,
+          message,
+        } satisfies AppealDecisionBody),
       });
       if (res.ok) {
         setItems((prev) => prev.filter((i) => i.id !== rejectingItem.id));

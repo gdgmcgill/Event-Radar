@@ -1,6 +1,6 @@
 /**
  * OAuth callback handler
- * Processes the OAuth callback from Supabase/Azure and creates user profile
+ * Processes OAuth or a verified email-OTP session and synchronizes the profile
  *
  * Uses the request/response cookie pattern (same as middleware) instead of
  * the cookies() API. Accumulates all cookies across multiple setAll calls
@@ -17,9 +17,8 @@
  *     the user out and redirects to `/?error=profile_sync_failed`.
  *   - `next` is honoured only when it stays on the request origin
  *     (`safeNextPath`); anything else lands on `/`.
- *   - Both service-role uses (deleting a rejected non-McGill auth user, and
- *     the profile upsert and read) go through `getElevatedClient()`, with a
- *     row each in `src/server/db/elevated/REGISTRY.md`.
+ *   - Profile synchronization uses the elevated door. P1-02 removes the
+ *     domain-rejection/account-deletion path; admission requires verified email.
  */
 
 import { createServerClient } from "@supabase/ssr";
@@ -27,8 +26,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
 import { supabaseAnonKey, supabaseUrl } from "@/lib/env";
-import { isMcGillEmail } from "@/lib/utils";
 import { getElevatedClient } from "@/server/db/elevated";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
+import { readQuery } from "@/server/body";
+import { AuthCallbackQuery } from "@/contracts/auth";
 
 /**
  * The redirect target for `next`, or `/` when `next` could leave the origin
@@ -53,29 +55,34 @@ function safeNextPath(next: string | null, origin: string): string {
   }
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "complete sign-in" }, async (request: NextRequest) => {
   let stage = "init";
   try {
   stage = "parse_request";
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
-  const next = safeNextPath(
-    requestUrl.searchParams.get("next"),
-    requestUrl.origin
-  );
-  const errorParam = requestUrl.searchParams.get("error");
-  const errorDescription = requestUrl.searchParams.get("error_description");
+  const query = readQuery(requestUrl.searchParams, AuthCallbackQuery);
+  const code = query.code;
+  const next = safeNextPath(query.next, requestUrl.origin);
+  const errorParam = query.error;
+  const errorDescription = query.error_description;
 
   // Handle OAuth provider errors
   if (errorParam) {
-    console.error("[Callback] OAuth error:", errorParam, errorDescription);
+    log.error("OAuth provider error", {
+      scope: "Callback",
+      oauthError: errorParam,
+      description: errorDescription,
+    });
     return NextResponse.redirect(
       new URL(`/?error=${encodeURIComponent(errorParam)}`, requestUrl.origin)
     );
   }
 
-  if (!code) {
-    console.error("[Callback] No code parameter found");
+  // Email OTP is verified by Supabase before this shared completion path.
+  // The marker is not proof: getUser + email_confirmed_at below are mandatory.
+  const verifiedOtpSession = query.verified;
+  if (!code && !verifiedOtpSession) {
+    log.error("No code parameter found", { scope: "Callback" });
     return NextResponse.redirect(
       new URL(`/?error=no_code`, requestUrl.origin)
     );
@@ -119,14 +126,20 @@ export async function GET(request: NextRequest) {
 
   // Exchange the authorization code for a session
   stage = "exchange_code_for_session";
-  console.log("[Callback] Exchanging code for session, origin:", requestUrl.origin);
-  const { error: exchangeError } =
-    await supabase.auth.exchangeCodeForSession(code);
+  log.info("Exchanging code for session", {
+    scope: "Callback",
+    origin: requestUrl.origin,
+  });
+  const { error: exchangeError } = code
+    ? await supabase.auth.exchangeCodeForSession(code)
+    : { error: null };
 
   if (exchangeError) {
-    console.error("[Callback] Code exchange FAILED:", exchangeError.message, exchangeError);
+    log.error("Code exchange failed", { scope: "Callback", error: exchangeError });
+    // M0 / DI-98: provider details belong in server diagnostics, never browser
+    // history or Referer URLs. The stable public error is enough for the UI.
     return NextResponse.redirect(
-      new URL(`/?error=auth_failed&message=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin)
+      new URL("/?error=auth_failed", requestUrl.origin)
     );
   }
 
@@ -138,7 +151,7 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    console.error("[Callback] Get user FAILED:", userError?.message);
+    log.error("Get user failed", { scope: "Callback", error: userError });
     return NextResponse.redirect(
       new URL(`/?error=not_authenticated`, requestUrl.origin)
     );
@@ -146,24 +159,11 @@ export async function GET(request: NextRequest) {
 
   const email = user.email ?? "";
 
-  // Enforce McGill domain
-  if (!isMcGillEmail(email)) {
-    stage = "enforce_mcgill_email";
-    console.error("[Callback] Not a McGill email:", email);
+  // P1-02: any verified email may enter. Never delete an account because of
+  // its domain; user-editable metadata cannot establish email verification.
+  if (!email || !user.email_confirmed_at) {
     await supabase.auth.signOut();
-
-    // Delete the orphaned auth.users row — exchangeCodeForSession() already
-    // created it before we could check the email. Service role is required
-    // because the anon client cannot call auth admin methods (REGISTRY.md).
-    try {
-      await getElevatedClient().auth.admin.deleteUser(user.id);
-    } catch (err) {
-      console.error("[Callback] Failed to delete non-McGill auth user:", err);
-    }
-
-    return NextResponse.redirect(
-      new URL(`/?error=not_mcgill`, requestUrl.origin)
-    );
+    return redirectWithCookies(new URL("/?error=email_not_verified", requestUrl.origin));
   }
 
   // Extract user metadata
@@ -196,13 +196,25 @@ export async function GET(request: NextRequest) {
       upsertPayload,
       {
         onConflict: "id",
-        ignoreDuplicates: false,
+        ignoreDuplicates: true,
       }
     );
 
     if (upsertError) {
-      throw new Error(`profile upsert failed: ${upsertError.message}`);
+      log.error("Profile upsert failed", {
+        scope: "Callback",
+        userId: user.id,
+        error: upsertError,
+      });
+      throw new Error("profile upsert failed");
     }
+
+    // P1-02: an existing profile keeps its chosen name/avatar, roles, bans,
+    // completion and saved state. Only the authoritative verified address is
+    // synchronized; OAuth metadata never overwrites returning-user choices.
+    const { error: emailSyncError } = await elevated.from("users")
+      .update({ email, updated_at: new Date().toISOString() }).eq("id", user.id);
+    if (emailSyncError) throw new Error("profile email sync failed");
 
     // `roles` is read and unused; the column list is pinned (DEC-38 (e)).
     const { data: profile, error: profileError } = await elevated
@@ -212,14 +224,21 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (profileError || !profile) {
-      throw new Error(
-        `profile read failed: ${profileError?.message ?? "no row"}`
-      );
+      log.error("Profile read failed", {
+        scope: "Callback",
+        userId: user.id,
+        error: profileError ?? "no row",
+      });
+      throw new Error("profile read failed");
     }
 
     needsOnboarding = !profile.onboarding_completed;
   } catch (err) {
-    console.error("[Callback] Profile sync failed; signing out:", err);
+    log.error("Profile sync failed; signing out", {
+      scope: "Callback",
+      userId: user.id,
+      error: err,
+    });
     await supabase.auth.signOut();
     return redirectWithCookies(
       new URL("/?error=profile_sync_failed", requestUrl.origin)
@@ -228,20 +247,30 @@ export async function GET(request: NextRequest) {
 
   // Build the final redirect response and attach ALL accumulated cookies
   stage = "build_redirect_response";
-  const redirectUrl = needsOnboarding
+  // A requested destination (including recruiter workspaces) is not trapped
+  // in student onboarding. Student mutations retain their own completion gate.
+  const redirectUrl = needsOnboarding && next === "/"
     ? new URL("/onboarding", requestUrl.origin)
     : new URL(next, requestUrl.origin);
 
-  console.log("[Callback] Redirecting to:", redirectUrl.toString());
-  console.log("[Callback] Accumulated cookies:", allCookies.size, [...allCookies.keys()]);
+  // The target is not logged: it carries the `next` value.
+  log.info("Redirecting", {
+    scope: "Callback",
+    needsOnboarding,
+    accumulatedCookies: allCookies.size,
+    cookieNames: [...allCookies.keys()],
+  });
 
   const response = redirectWithCookies(redirectUrl);
 
   // Log cookie names in a runtime-safe way. `headers.getSetCookie()` is not
   // available in all server runtimes and can throw, which would break login.
   const cookieNames = response.cookies.getAll().map((cookie) => cookie.name);
-  console.log("[Callback] Response cookies count:", cookieNames.length);
-  console.log("[Callback] Response cookies:", cookieNames);
+  log.info("Response cookies", {
+    scope: "Callback",
+    count: cookieNames.length,
+    cookieNames,
+  });
 
   // Set onboarding cookie if user needs onboarding
   stage = "set_onboarding_cookie";
@@ -258,10 +287,10 @@ export async function GET(request: NextRequest) {
   return response;
 
   } catch (err) {
-    console.error("[Callback] Unhandled error at stage:", stage, err);
+    log.error("Unhandled error", { scope: "Callback", stage, error: err });
     const origin = new URL(request.url).origin;
     return NextResponse.redirect(
       new URL(`/?error=callback_error&stage=${encodeURIComponent(stage)}`, origin)
     );
   }
-}
+});

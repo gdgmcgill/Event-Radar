@@ -1,0 +1,514 @@
+# Slice 6 characterization — plan 06-02
+# base (06-01 close): f215fb7   Task 1: 6c38659   Task 2: f7bffbf
+# recorded: 2026-09-25 (UTC); executor on the main working tree, no Docker used by this plan
+#
+# Contents
+#   § 1  Measurement: every pinned value was printed by a temporary harness before it was
+#        written (harness files deleted, never committed); outputs verbatim
+#   § 2  Mutation check M1 (default λ) and M2 (one 400 check): mutate, run, restore, cmp
+#   § 3  events-webhook behaviour from source (Deno is not installed locally), the table 06-03's
+#        Jest suite reproduces, with the two deliberate changes named
+#   § 4  Cron caller census
+#   § 5  The eight new suites, verbose
+#   § 6  Tag gate --all
+#   § 7  Full Jest run against the before-floor
+#
+# Suite count. The plan says "nine suites (five PRESERVE, four DEFECT)" and a tag-gate count of
+# "at least 43". Its own file list has eight test files and one helper module
+# (recommendationFixtures.ts, not a test). Measured: 8 new suites, 4 PRESERVE
+# (recommendations-characterization, recommendations-family-characterization,
+# notifications-characterization, interactions-feedback-characterization) and 4 DEFECT
+# (experiment-assignment-defect F-017, notifications-count-defect F-028,
+# slice6-malformed-input-defect F-094, admin-reports-defect F-092). Tag gate: ok 42 = 34 + 8.
+
+## § 1  Measurement (temporary harnesses, output verbatim)
+
+### 1.1 GET /api/recommendations over the fixture (src/__tests__/api/recommendations/zz-measure.test.ts, deleted)
+# columns: label: status source λ(diversity_metadata.lambda) v(experiment_variant_id) ids scores
+#          first explanation, Cache-Control, body keys, non-select calls on the cookie fake
+anon: 200 anonymous λ=null v=undefined ids=Event Three,Event Five,Event Four,Event Two,Event One scores=0,0,0,0,0 expl="Trending on campus" cc=private, no-store keys=recommendations|source|total_events writes=
+anon top2: 200 anonymous λ=null v=undefined ids=Event Three,Event Five scores=0,0 expl="Trending on campus" cc=private, no-store keys=recommendations|source|total_events writes=
+student none: 200 popular_fallback λ=null v=undefined ids=Event Three,Event Five,Event Four,Event Two,Event One scores=0,0,0,0,0 expl="Trending on campus" cc=private, no-store keys=recommendations|source|total_events writes=
+student hidden: 200 popular_fallback λ=null v=undefined ids=Event Three,Event Five,Event Four,Event Two,Event One scores=0,0,0,0,0 expl="Trending on campus" cc=private, no-store keys=recommendations|source|total_events writes=
+student all: 200 personalized λ=0.7 v=null ids=Event One,Event Three,Event Two,Event Four,Event Five scores=0.9,0.8,0.85,0.6,0.5 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=
+d0: 200 personalized λ=0 v=null ids=Event One,Event Three,Event Four,Event Five,Event Two scores=0.9,0.8,0.6,0.5,0.85 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=
+d1: 200 personalized λ=1 v=null ids=Event One,Event Two,Event Three,Event Four,Event Five scores=0.9,0.85,0.8,0.6,0.5 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=
+d5: 200 personalized λ=1 v=null ids=Event One,Event Two,Event Three,Event Four,Event Five scores=0.9,0.85,0.8,0.6,0.5 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=
+d-1: 200 personalized λ=0 v=null ids=Event One,Event Three,Event Four,Event Five,Event Two scores=0.9,0.8,0.6,0.5,0.85 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=
+dabc: 200 personalized λ=0.7 v=null ids=Event One,Event Three,Event Two,Event Four,Event Five scores=0.9,0.8,0.85,0.6,0.5 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=
+top2: 200 personalized λ=0.7 v=null ids=Event One,Event Three scores=0.9,0.8 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=
+session E4: 200 personalized λ=0.7 v=null ids=Event One,Event Three,Event Four,Event Two,Event Five scores=0.9,0.8,0.7,0.85,0.5 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=
+student exp: 200 personalized λ=1 v=null ids=Event One,Event Two,Event Three,Event Four,Event Five scores=0.9,0.85,0.8,0.6,0.5 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=
+admin exp: 200 personalized λ=0 v=06000000-0000-4000-8000-0000000000b2 ids=Event One,Event Three,Event Four,Event Five,Event Two scores=0.9,0.8,0.6,0.5,0.85 expl="Because you're interested in academic" cc=private, no-store keys=recommendations|source|diversity_metadata|experiment_variant_id|total_events writes=experiment_assignments.insert{"experiment_id":"06000000-0000-4000-8000-0000000000a1","variant_id":"06000000-0000-4000-8000-0000000000b2","user_id":"06000000-0000-4000-8000-000000000002"}
+admin exp none: 200 popular_fallback λ=null v=undefined ids=Event Three,Event Five,Event Four,Event Two,Event One scores=0,0,0,0,0 expl="Trending on campus" cc=private, no-store keys=recommendations|source|total_events writes=
+Tests:       15 passed, 15 total
+# Readings:
+#  - The hand-computed MMR orders (normalised scores E1 1, E2 .875, E3 .75, E4 .25, E5 0; Jaccard
+#    E1~E2 1, E5~E1/E2 1/3, others 0) equal the measured orders for λ 0.7, 0 and 1.
+#  - "student exp" is F-017: a running experiment is invisible to a non-admin, so the diversity
+#    parameter's λ 1 applies and the variant is null with no insert. It is pinned only in
+#    experiment-assignment-defect.test.ts.
+#  - top_k=2 draws a pool of limit(6) ordered by score: EP .99 and EX .98 take two places and are
+#    then filtered, so E5 never enters MMR. The pool limit is pinned per row.
+#  - pickVariant (FNV-1a, 50/50): admin bucket 92 -> "diverse" (b2, λ 0); student bucket 27 ->
+#    "control" (b1, λ 1). The F-017 fix shape for the student is therefore control, λ 1.
+
+### 1.2 recommendations family, notifications, interactions and feedback
+# These suites were written from the source's if-ladders and run on the unchanged source; all 118
+# assertions of Tasks 1-2 passed on the first run (§ 5), so no pinned value had to be corrected.
+# Where the source did not decide the value alone (malformed bodies), a harness measured first:
+
+### 1.3 Malformed bodies at the three raw-parse sites (src/__tests__/api/zz-measure.test.ts, deleted)
+# caller: signed-in, onboarded student; body sent with content-type application/json
+interactions notjson: 500 {"error":"Internal server error"} writes=0
+interactions array: 400 {"error":"event_id and interaction_type are required"} writes=0
+interactions number: 400 {"error":"Invalid interaction_type. Must be one of: view, click, save, unsave, share, calendar_add"} writes=0
+interactions event_id number: 404 {"error":"Event not found"} writes=0
+interactions null: 500 {"error":"Internal server error"} writes=0
+feedback notjson: 500 {"error":"Internal server error"} writes=0
+feedback array: 400 {"error":"Message is required"} writes=0
+feedback number: 400 {"error":"Message is required"} writes=0
+feedback subject number: 500 {"error":"Internal server error"} writes=0
+feedback null: 500 {"error":"Internal server error"} writes=0
+recfeedback notjson: 500 {"error":"Failed to submit feedback"} writes=0
+recfeedback array: 400 {"error":"Missing required fields: event_id, recommendation_rank, action"} writes=0
+recfeedback number: 400 {"error":"Invalid action. Must be one of: impression, click, save, dismiss"} writes=0
+recfeedback null: 500 {"error":"Failed to submit feedback"} writes=0
+recfeedback rank string: 400 {"error":"recommendation_rank must be >= 1"} writes=0
+Tests:       15 passed, 15 total
+# Readings:
+#  - The number column pins a required field the handler checks WITHOUT a database read
+#    (interaction_type, message, action). "interactions event_id number" answers 404 in the fake
+#    because the fake compares 5 with a uuid as strings; on PostgREST a uuid column compared with 5
+#    raises 22P02 and the route would answer 500 "Failed to verify event". That row is therefore
+#    NOT pinned (the fake is not faithful there).
+#  - JSON null (500 at all three sites) and feedback's numeric subject (500, subject.trim throws)
+#    are pinned beyond the 3x3 matrix as the same defect, F-094.
+
+## § 2  Mutation check
+# Method: scratchpad mutate.py (exact-string replace, must match once; body below) applies one
+# mutation to production source; the named PRESERVE suite runs; the file is restored from a copy
+# taken before the mutation and cmp proves it byte-identical; git diff --exit-code confirms.
+# Nothing was committed while a mutation was applied.
+#
+# mutate.py (verbatim):
+#   MUT = {
+#    "M1": ("src/app/api/recommendations/route.ts",
+#           'const baseLambda = diversityParam ? parseFloat(diversityParam) : 0.7;',
+#           'const baseLambda = diversityParam ? parseFloat(diversityParam) : 0.6;'),
+#    "M2": ("src/app/api/interactions/route.ts",
+#           <the 6-line `if (!validTypes.includes(body.interaction_type)) { return 400 … }` block>,
+#           ""),
+#   }
+#
+# Reading M1: 3 rows red (diversity absent, top_k=2, session boost: every row where the
+# default applies). "diversity=abc" stays green because a NaN diversity takes the SEPARATE 0.7
+# fallback at route.ts:249, not the default at :246. That is a finding about the source, not a
+# weak pin: the two constants are pinned by different rows.
+# Reading M2: 4 rows red (invalid type, case variant, invalid type + invalid source, and the
+# anonymous 400 row); "invalid source" stays green, as it must.
+
+$ /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/d6f0f2c2-0ba5-4efb-b3ce-b5d843e8e77d/scratchpad/mutation-run.sh
+base=f7bffbf0701822a7e3f170db567d33bf91b24cb1
+recorded: 2026-09-25T23:30:41Z
+
+### M1 — src/app/api/recommendations/route.ts
+$ python3 mutate.py M1
+M1: mutated src/app/api/recommendations/route.ts
+exit=0
+$ git diff --stat -- src/app/api/recommendations/route.ts
+ src/app/api/recommendations/route.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+$ npx jest --ci src/__tests__/api/recommendations/recommendations-characterization.test.ts
+    ✓ the table has at least eight rows
+    ✓ anonymous: popularity by start_date, no scores read (47 ms)
+    ✓ anonymous top_k=2: the first two by start_date
+    ✓ signed in, zero score rows: popular_fallback (F-041, today's behaviour) (1 ms)
+    ✓ signed in, only pending and past score rows: popular_fallback
+    ✕ scores, diversity absent: λ 0.7, MMR puts E3 ahead of E2 (1 ms)
+    ✓ scores, diversity=0: λ 0, pure novelty after the first pick (1 ms)
+    ✓ scores, diversity=1: λ 1, raw score order (1 ms)
+    ✓ scores, diversity=5: clamped to λ 1
+    ✓ scores, diversity=-1: clamped to λ 0 (1 ms)
+    ✓ scores, diversity=abc: not a number, λ 0.7
+    ✕ scores, top_k=2: pool of 6 (pending and past take two), truncated after MMR (1 ms)
+    ✕ scores and a session interaction with E4: E4 boosted 0.1, ranked third (1 ms)
+    ✓ admin, running experiment: the variant's λ 0 overrides diversity=1 (1 ms)
+    ✓ the popularity paths answer exactly recommendations, source, total_events with a zero-score trending item
+    ✓ the scored path answers recommendations, source, diversity_metadata, experiment_variant_id, total_events with boosted scores
+    ✓ a thrown read answers 500 with the generic body (1 ms)
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 14 passed, 17 total
+exit=1
+$ cmp /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/d6f0f2c2-0ba5-4efb-b3ce-b5d843e8e77d/scratchpad/M1.orig src/app/api/recommendations/route.ts
+cmp exit=0
+$ git diff --exit-code -- src/app/api/recommendations/route.ts
+git diff exit=0
+
+### M2 — src/app/api/interactions/route.ts
+$ python3 mutate.py M2
+M2: mutated src/app/api/interactions/route.ts
+exit=0
+$ git diff --stat -- src/app/api/interactions/route.ts
+ src/app/api/interactions/route.ts | 6 ------
+ 1 file changed, 6 deletions(-)
+$ npx jest --ci src/__tests__/api/interactions/interactions-feedback-characterization.test.ts
+    ✓ empty object (47 ms)
+    ✓ no event_id
+    ✓ empty event_id (1 ms)
+    ✓ no interaction_type
+    ✓ empty interaction_type (1 ms)
+    ✓ no event_id AND invalid type → required first
+    ✕ invalid interaction_type (2 ms)
+    ✕ interaction_type case variant
+    ✕ invalid type AND invalid source → type first
+    ✓ invalid source (1 ms)
+    ✕ the 400s are the same for an anonymous caller
+    ✓ signed in, not onboarded → 403 Onboarding required before the body is validated
+    ✓ a missing event → 404 Event not found, no write
+    ✓ a soft-deleted event → 404 Event not found, no write
+    ✓ anonymous → 201 and a row with user_id null (DEC-34) (1 ms)
+    ✓ signed in, every optional field, empty source allowed → 201 and the caller's id
+    ✓ empty object (1 ms)
+    ✓ empty message
+    ✓ whitespace message (1 ms)
+    ✓ no message AND invalid type → message first
+    ✓ invalid type
+    ✓ type case variant
+    ✓ the 400s are the same for an anonymous caller
+    ✓ signed in, not onboarded → 403 Onboarding required
+    ✓ anonymous → 200 { success: true }, user_id and user_email null, type defaulted
+    ✓ signed in → 200 and the row carries the caller's id and email; subject trimmed
+    ✓ an empty type is defaulted, a whitespace subject is stored null (1 ms)
+    ✓ an insert error → 500 Failed to save feedback
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 24 passed, 28 total
+exit=1
+$ cmp /private/tmp/claude-501/-Users-adyan-Documents-GitHub-Event-Radar/d6f0f2c2-0ba5-4efb-b3ce-b5d843e8e77d/scratchpad/M2.orig src/app/api/interactions/route.ts
+cmp exit=0
+$ git diff --exit-code -- src/app/api/interactions/route.ts
+git diff exit=0
+
+$ git status --porcelain -- src/app
+exit=0 (empty output = clean)
+
+## § 3  events-webhook — every response today, from source
+# File: supabase/functions/events-webhook/index.ts (442 lines) at f7bffbf. Deno is not installed
+# locally (06-RESEARCH § Environment Availability), so this is read from source, line by line.
+# It is the contract 06-03's Jest suite (webhook-handler.test.ts) reproduces. Rows marked
+# CHANGE are the two deliberate changes DEC-64 makes (INTENTIONAL BEHAVIOUR CHANGE); every
+# other row must be reproduced byte for byte.
+#
+# Order of checks: OPTIONS -> env -> signature header present -> HMAC -> JSON parse -> payload
+# structure -> count match -> per-event validation -> per-event mapping/insert -> summary.
+# Every JSON response carries Content-Type: application/json; the 200/207/final-400/outer-500
+# responses also carry Access-Control-Allow-Origin: *.
+#
+# | #  | Condition                                                         | Status | Body shape                                                                                          | index.ts lines |
+# |----|-------------------------------------------------------------------|--------|-----------------------------------------------------------------------------------------------------|----------------|
+# | 1  | method OPTIONS                                                    | 204    | no body; ACAO *, methods "POST, OPTIONS", allowed headers incl. the three signature headers          | 188-197        |
+# | 2  | WEBHOOK_SECRET, SUPABASE_URL (or SUPABASE_SERVICE_URL) or         | 500    | {"error":"Server configuration error"}                                                              | 201-213        |
+# |    | SUPABASE_SERVICE_ROLE_KEY unset                                   |        |                                                                                                     |                |
+# | 3  | none of x-signature, x-hub-signature-256 (sha256= stripped),      | 401    | {"error":"Missing signature header"}                                                                | 215-229        |
+# |    | x-webhook-signature present (or all empty)                        |        |                                                                                                     |                |
+# | 4  | signature of the right length (64 hex chars) that does not match  | 401    | {"error":"Invalid signature"}                                                                       | 45-53, 235-244 |
+# |    | HMAC-SHA256(secret, raw body) hex — includes an upper-case hex    |        |                                                                                                     |                |
+# |    | rendering of the correct digest                                   |        |                                                                                                     |                |
+# | 5  | CHANGE 1 — signature of a WRONG LENGTH (e.g. "abc", or the digest | 500    | {"error":"Internal server error"} — crypto.timingSafeEqual throws RangeError on unequal Buffer       | 51, 405-416    |
+# |    | with "sha256=" left on in x-signature)                            |        | lengths; the outer catch answers. DEC-64: verifySignature returns false -> 401 Invalid signature     |                |
+# | 6  | valid signature, body is not JSON                                 | 400    | {"error":"Invalid JSON payload"}                                                                    | 246-258        |
+# | 7  | valid signature, body is JSON null                                | 500    | {"error":"Internal server error"} — `payload.event_count` dereferences null (TypeError)              | 262, 405-416   |
+# | 8  | event_count not a number, or events not an array                  | 400    | {"error":"Invalid payload structure. Expected event_count (number) and events (array)"}             | 260-274        |
+# | 9  | event_count !== events.length                                     | 400    | {"error":"event_count (N) does not match events array length (M)"}                                  | 276-287        |
+# | 10 | any event fails validateEvent                                     | 400    | {"error":"Invalid events found","details":[{"index":i,"errors":[...]}]} — messages, in order:        | 58-95, 289-310 |
+# |    |                                                                   |        | "title is required and must be a non-empty string", "description is required and must be a         |                |
+# |    |                                                                   |        | non-empty string", "category must be a string if provided", "date is required and must be a         |                |
+# |    |                                                                   |        | string" | "date must be a valid date string", "location is required and must be a non-empty string", |                |
+# |    |                                                                   |        | "time must be a string if provided". Nothing is inserted (validation runs over all events first)    |                |
+# | 11 | an events[] element is null or not an object                      | 500    | {"error":"Internal server error"} — validateEvent dereferences it                                   | 61, 405-416    |
+# | 12 | tags contains a non-string                                        | 500    | {"error":"Internal server error"} — tag.toLowerCase throws in mapEventToDatabase                     | 139-141, 405   |
+# | 13 | every event maps and inserts (includes event_count 0, events [])  | 200    | {"success":true,"message":"Successfully processed N event(s)","events":[<inserted rows>]}            | 355-370        |
+# | 14 | some events insert, some fail mapping (time not HH:mm, e.g.       | 207    | {"success":true,"message":"Processed N event(s) with K error(s)","events":[...],"errors":            | 150-156,       |
+# |    | "25:00": "Invalid time format: 25:00. Expected HH:mm format") or  |        | [{"index":i,"error":"<mapping errors joined by '; '>" or "<insertError.message>"}]}                 | 325-353,       |
+# |    | fail insert (the DB error message is echoed)                      |        |                                                                                                     | 371-387        |
+# | 15 | no event inserts (all mapping or insert failures)                 | 400    | {"success":false,"message":"Failed to process all events","errors":[{"index":i,"error":"..."}]}     | 388-403        |
+# | 16 | CHANGE 2 — REPLAY: the same correctly signed body sent twice      | 200    | 200 both times and a SECOND set of pending rows: DatabaseEvent (168-181) never sets content_hash,    | 168-181, 339-  |
+# |    |                                                                   | twice  | and idx_events_content_hash is UNIQUE only WHERE content_hash IS NOT NULL                           | 343; baseline  |
+# |    |                                                                   |        | (supabase/migrations/20260915214553_baseline.sql:1480), so nothing refuses the duplicate.           | .sql:1480      |
+# |    |                                                                   |        | DEC-64: content_hash is populated (parity-tested _shared/contentHash.ts); a 23505 on the second     |                |
+# |    |                                                                   |        | send is reported per event as `duplicate`                                                           |                |
+# | 17 | anything else thrown after the env check                          | 500    | {"error":"Internal server error"} (the error is swallowed, nothing logged)                          | 405-416        |
+#
+# Mapped row written on success (lines 168-181): title/description/location trimmed; start_date
+# from date + time (default "00:00", set with setHours in the runtime's local zone); end_date =
+# start + duration (default 60 min); category = category || null; tags = unique lower-cased
+# [category, ...tags]; image_url || null; organizer trimmed || null; status "pending"; source
+# "instagram" when source_url is set, else "manual"; source_url || null; no club_id; no content_hash.
+#
+# The two rows to change are #5 (wrong-length signature, 500 -> 401 Invalid signature) and #16
+# (replay, duplicate insert -> refused by content_hash). Rows 7, 11 and 12 (500 on a structurally
+# malformed payload) are the webhook's share of F-094; DEC-64 routes the payload through
+# _shared/webhook-contract.ts "with today's messages", and whether those three become 400s is
+# 06-03's decision to record — they are listed here so the change, if made, is visible.
+
+## § 4  Cron caller census
+# Expected (plan): docs, the ESLint elevated allow-list, one CSRF unit-test fixture string; vercel.json has
+# no crons key; CRON_SECRET read only by the two cron routes. The .planning register mentions are
+# counted, not listed (they are the audit that established the no-caller evidence).
+# Measured extra line: .claude/CLAUDE.md:353 names send-reminders as an entry point (documentation;
+# 06-18's claude-md-corrections.patch owns it). No caller: no fetch, no schedule, no workflow.
+# Cross-reference: .planning/audit/async/vercel-crons.md § 1 (definitions: []) and
+# cron-webhook-inventory.md § 2.3-2.4 (CRON_SECRET unset in production; email_reminder_log = 0 rows).
+$ git grep -n 'api/cron' -- ':(exclude).planning'
+.claude/CLAUDE.md:353:- Location: `src/app/api/cron/send-reminders/route.ts`
+docs/superpowers/plans/2026-03-15-create-event-flow.md:297:| 18 | `src/app/api/cron/send-reminders/route.ts` | 23 | None |
+docs/superpowers/plans/2026-03-15-create-event-flow.md:816:For `src/app/api/cron/send-reminders/route.ts`, always filter — never send reminders for deleted events.
+docs/superpowers/specs/2026-03-16-event-feedback-requests-design.md:55:### `POST /api/cron/send-feedback-requests`
+eslint.elevated-allowlist.mjs:45:  "src/app/api/cron/send-feedback-requests/route.ts",
+eslint.elevated-allowlist.mjs:46:  "src/app/api/cron/send-reminders/route.ts",
+src/server/__tests__/csrf.test.ts:219:        isCrossSiteMutation(req("/api/cron/send-reminders", method, { authorization: "Bearer x" }))
+exit=0
+
+$ git grep -l 'api/cron' -- .planning | wc -l   (planning-register mentions, counted not listed)
+      99
+exit=0
+
+$ node -p "require('./vercel.json').crons"
+undefined
+exit=0
+
+$ command grep -rn 'CRON_SECRET' src
+src/app/api/cron/send-feedback-requests/route.ts:8:  if (!process.env.CRON_SECRET) {
+src/app/api/cron/send-feedback-requests/route.ts:12:  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+src/app/api/cron/send-reminders/route.ts:9:  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+exit=0
+
+## § 5  The eight new suites
+$ npx jest --ci src/__tests__/api/recommendations src/__tests__/api/notifications src/__tests__/api/interactions src/__tests__/api/slice6-malformed-input-defect.test.ts src/__tests__/api/admin/admin-reports-defect.test.ts --verbose
+PASS node src/__tests__/api/recommendations/recommendations-characterization.test.ts
+  GET /api/recommendations: input fixture to ranked output
+    ✓ the table has at least eight rows (1 ms)
+    ✓ anonymous: popularity by start_date, no scores read (13 ms)
+    ✓ anonymous top_k=2: the first two by start_date
+    ✓ signed in, zero score rows: popular_fallback (F-041, today's behaviour) (1 ms)
+    ✓ signed in, only pending and past score rows: popular_fallback
+    ✓ scores, diversity absent: λ 0.7, MMR puts E3 ahead of E2 (1 ms)
+    ✓ scores, diversity=0: λ 0, pure novelty after the first pick (1 ms)
+    ✓ scores, diversity=1: λ 1, raw score order
+    ✓ scores, diversity=5: clamped to λ 1 (1 ms)
+    ✓ scores, diversity=-1: clamped to λ 0
+    ✓ scores, diversity=abc: not a number, λ 0.7 (1 ms)
+    ✓ scores, top_k=2: pool of 6 (pending and past take two), truncated after MMR
+    ✓ scores and a session interaction with E4: E4 boosted 0.1, ranked third (1 ms)
+    ✓ admin, running experiment: the variant's λ 0 overrides diversity=1
+  GET /api/recommendations: response shapes
+    ✓ the popularity paths answer exactly recommendations, source, total_events with a zero-score trending item (1 ms)
+    ✓ the scored path answers recommendations, source, diversity_metadata, experiment_variant_id, total_events with boosted scores
+    ✓ a thrown read answers 500 with the generic body (1 ms)
+
+PASS node src/__tests__/api/interactions/interactions-feedback-characterization.test.ts
+  POST /api/interactions: shape-400s in today's order
+    ✓ empty object (3 ms)
+    ✓ no event_id
+    ✓ empty event_id (1 ms)
+    ✓ no interaction_type
+    ✓ empty interaction_type
+    ✓ no event_id AND invalid type → required first
+    ✓ invalid interaction_type
+    ✓ interaction_type case variant (1 ms)
+    ✓ invalid type AND invalid source → type first
+    ✓ invalid source
+    ✓ the 400s are the same for an anonymous caller
+  POST /api/interactions: guards, lookup and success
+    ✓ signed in, not onboarded → 403 Onboarding required before the body is validated (1 ms)
+    ✓ a missing event → 404 Event not found, no write
+    ✓ a soft-deleted event → 404 Event not found, no write
+    ✓ anonymous → 201 and a row with user_id null (DEC-34)
+    ✓ signed in, every optional field, empty source allowed → 201 and the caller's id (1 ms)
+  POST /api/feedback: shape-400s in today's order
+    ✓ empty object (1 ms)
+    ✓ empty message
+    ✓ whitespace message
+    ✓ no message AND invalid type → message first
+    ✓ invalid type
+    ✓ type case variant (1 ms)
+    ✓ the 400s are the same for an anonymous caller
+  POST /api/feedback: guards and success
+    ✓ signed in, not onboarded → 403 Onboarding required
+    ✓ anonymous → 200 { success: true }, user_id and user_email null, type defaulted
+    ✓ signed in → 200 and the row carries the caller's id and email; subject trimmed
+    ✓ an empty type is defaulted, a whitespace subject is stored null (1 ms)
+    ✓ an insert error → 500 Failed to save feedback
+
+PASS node src/__tests__/api/notifications/notifications-characterization.test.ts
+  notifications GET (list)
+    ✓ anonymous → 401 Unauthorized (1 ms)
+    ✓ auth error → 401 Unauthorized (1 ms)
+    ✓ first page: the caller's 20 newest, next_cursor = the 20th's created_at, unread_count of the caller only
+    ✓ cursor: rows strictly older than the cursor; the last page has next_cursor null (1 ms)
+    ✓ exactly 20 rows: one page, next_cursor null
+  notifications POST
+    ✓ anonymous → 401 Unauthorized before the action is read (1 ms)
+    ✓ not onboarded → 403 Onboarding required before the action is read
+    ✓ no action → 400 Invalid action, no write
+    ✓ an unknown action → 400 Invalid action, no write
+    ✓ an empty action → 400 Invalid action, no write (1 ms)
+    ✓ a case variant → 400 Invalid action, no write
+    ✓ mark-all-read → 200 { success: true }; only the caller's rows become read
+  notifications/[id] PATCH
+    ✓ anonymous → 401 Unauthorized, no write (1 ms)
+    ✓ own unread row → 200 { success: true } and the row is read (1 ms)
+    ✓ another user's row → the same 200 success, and nothing changes
+  notifications/count GET, signed in
+    ✓ answers { unread_count } for the caller's own unread rows (1 ms)
+    ✓ a caller with no unread rows gets { unread_count: 0 }
+
+PASS node src/__tests__/api/slice6-malformed-input-defect.test.ts
+  DEFECT F-094: malformed bodies at the three slice-6 raw-parse sites
+    ✓ the matrix is three sites by three inputs (1 ms)
+    ✓ interactions, not-json → today's status and body
+    ✓ interactions, array → today's status and body (1 ms)
+    ✓ interactions, number (interaction_type: 5) → today's status and body
+    ✓ feedback, not-json → today's status and body
+    ✓ feedback, array → today's status and body
+    ✓ feedback, number (message: 5) → today's status and body
+    ✓ recommendations/feedback, not-json → today's status and body (1 ms)
+    ✓ recommendations/feedback, array → today's status and body (1 ms)
+    ✓ recommendations/feedback, number (action: 5) → today's status and body
+  DEFECT F-094: beyond the matrix, same defect
+    ✓ interactions, a JSON null body → 500
+    ✓ feedback, a JSON null body → 500
+    ✓ recommendations/feedback, a JSON null body → 500
+    ✓ feedback, subject sent as a number → 500 (subject.trim throws) (1 ms)
+
+PASS node src/__tests__/api/recommendations/recommendations-family-characterization.test.ts
+  recommendations/batch POST
+    ✓ anonymous → 401 Unauthorized, no rpc on either client (3 ms)
+    ✓ student → 403 Forbidden, no rpc on either client
+    ✓ admin → 200 and compute_user_scores on the elevated client only
+    ✓ admin, rpc error → 500 with the error message in details (today's bytes)
+  recommendations/analytics GET
+    ✓ anonymous → 401 Unauthorized (2 ms)
+    ✓ student → 403 Forbidden
+    ✓ admin, period=90d → 400 Invalid period. Use 7d or 30d
+    ✓ admin, period absent → 7d metrics from the fixture rows
+  recommendations/feedback POST: guards
+    ✓ anonymous → 401 with this arm's own text (DEC-34), no write (1 ms)
+    ✓ signed in, not onboarded → 403 Onboarding required, no write
+  recommendations/feedback POST: shape-400s in today's order
+    ✓ thumbs: feedback 'meh'
+    ✓ thumbs: invalid feedback AND no event_id → the feedback check first
+    ✓ thumbs: valid feedback, no event_id (1 ms)
+    ✓ thumbs: valid feedback, empty event_id
+    ✓ analytics: empty body
+    ✓ analytics: no event_id
+    ✓ analytics: no recommendation_rank
+    ✓ analytics: null recommendation_rank
+    ✓ analytics: no action (1 ms)
+    ✓ analytics: missing event_id AND invalid action → missing first
+    ✓ analytics: invalid action
+    ✓ analytics: invalid action AND rank 0 → action first
+    ✓ analytics: rank 0
+    ✓ analytics: rank -3 (1 ms)
+    ✓ non-string feedback falls through to the analytics branch
+  recommendations/feedback POST: success and whose feedback is written (DI-44)
+    ✓ thumbs with another user's id in the body → 200 {ok, feedback}; the row is the caller's
+    ✓ analytics with another user's id in the body → 200 {ok}; the row is the caller's
+    ✓ analytics insert error → 500 Failed to store feedback
+  recommendations/feedback GET
+    ✓ anonymous → 401 Unauthorized
+    ✓ no event_ids → 200 { feedback: {} } without a read
+    ✓ the caller's own valid thumbs only; invalid types and other users' rows dropped
+
+PASS node src/__tests__/api/admin/admin-reports-defect.test.ts
+  DEFECT F-092: the reports list answers 500 on PGRST200
+    ✓ D1: admin → 500 Internal server error; the count query never runs (1 ms)
+  rows that do not move
+    ✓ anonymous → 401 Unauthorized, no event_reports read (1 ms)
+    ✓ non-admin → 403 Forbidden, no event_reports read
+    ✓ the schema-cache model answers a select without the broken embed normally
+
+PASS node src/__tests__/api/recommendations/experiment-assignment-defect.test.ts
+  fixture sanity: pickVariant's choice for each fixture user
+    ✓ the student falls in control and the admin in diverse
+  DEFECT F-017: a non-admin is never assigned a variant
+    ✓ D1: running experiment, no assignment yet — variant null, diversity λ, zero experiment_assignments inserts (1 ms)
+    ✓ D2: an existing own assignment row is not honoured — variant null, zero inserts (1 ms)
+  controls that do not move: an admin is assigned
+    ✓ C1: admin with scores is assigned pickVariant's variant with exactly one insert carrying the admin's id
+    ✓ C2: admin with an existing assignment is given that variant and nothing is inserted
+
+PASS node src/__tests__/api/notifications/notifications-count-defect.test.ts
+  DEFECT F-028: anonymous notifications/count answers 200
+    ✓ D1: anonymous → 200 { unread_count: 0 }, no notifications read (3 ms)
+    ✓ D2: getUser auth error → the same 200 { unread_count: 0 }, no read
+
+Test Suites: 8 passed, 8 total
+Tests:       118 passed, 118 total
+Snapshots:   0 total
+Time:        0.302 s, estimated 1 s
+Ran all test suites matching src/__tests__/api/recommendations|src/__tests__/api/notifications|src/__tests__/api/interactions|src/__tests__/api/slice6-malformed-input-defect.test.ts|src/__tests__/api/admin/admin-reports-defect.test.ts.
+exit=0
+
+## § 6  Tag gate
+$ node scripts/check-characterization-tags.mjs --all
+ok   PRESERVE src/__tests__/api/admin/admin-guard-characterization.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-guard-defect.test.ts (F-061, F-001, F-040)
+ok   DEFECT   src/__tests__/api/admin/admin-reports-defect.test.ts (F-092)
+ok   DEFECT   src/__tests__/api/admin/admin-users-patch-defect.test.ts (F-091)
+ok   PRESERVE src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+ok   DEFECT   src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts (F-088, F-089, F-062)
+ok   PRESERVE src/__tests__/api/clubs/club-gates-characterization.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/clubs/club-owner-writes-defect.test.ts (F-087)
+ok   DEFECT   src/__tests__/api/events/anonymous-personalized-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/events/ban-asymmetry-defect.test.ts (F-088, F-062, F-089)
+ok   PRESERVE src/__tests__/api/events/calendar-events-characterization.test.ts (F-059, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/club-fabrication-defect.test.ts (F-080, F-050)
+ok   PRESERVE src/__tests__/api/events/events-detail-characterization.test.ts (F-080, F-081, F-059)
+ok   PRESERVE src/__tests__/api/events/events-list-characterization.test.ts (F-082, F-083, F-080, F-081, F-059, F-085)
+ok   DEFECT   src/__tests__/api/events/friends-defect.test.ts (F-071, F-028)
+ok   PRESERVE+DEFECT src/__tests__/api/events/pagination-contract-defect.test.ts (F-083, F-066)
+ok   DEFECT   src/__tests__/api/events/pending-edits-defect.test.ts (F-086)
+ok   PRESERVE src/__tests__/api/events/rsvp-characterization.test.ts (F-079, F-080, F-085, F-011)
+ok   DEFECT   src/__tests__/api/events/rsvp-count-defect.test.ts (F-079)
+ok   PRESERVE src/__tests__/api/events/save-characterization.test.ts (F-080, F-085)
+ok   PRESERVE src/__tests__/api/events/saved-events-characterization.test.ts (F-085, F-080, F-081)
+ok   DEFECT   src/__tests__/api/events/saved-events-time-floor-defect.test.ts (F-085)
+ok   DEFECT   src/__tests__/api/events/search-escaping-defect.test.ts (F-082, F-059, F-078)
+ok   PRESERVE src/__tests__/api/interactions/interactions-feedback-characterization.test.ts (F-094)
+ok   PRESERVE src/__tests__/api/notifications/notifications-characterization.test.ts (F-028, F-059)
+ok   DEFECT   src/__tests__/api/notifications/notifications-count-defect.test.ts (F-028)
+ok   DEFECT   src/__tests__/api/recommendations/experiment-assignment-defect.test.ts (F-017)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-characterization.test.ts (F-017, F-041)
+ok   PRESERVE src/__tests__/api/recommendations/recommendations-family-characterization.test.ts
+ok   DEFECT   src/__tests__/api/slice6-malformed-input-defect.test.ts (F-094)
+ok   DEFECT   src/__tests__/lib/tag-coercion-defect.test.ts (F-081)
+ok   DEFECT   src/__tests__/moderation/audit-shape.test.ts (F-072, F-073, F-007)
+ok   DEFECT   src/__tests__/pages/public-profile-defect.test.tsx (F-005)
+ok   PRESERVE src/app/api/events/route.test.ts (F-083, F-078)
+ok   DEFECT   src/app/auth/callback/route-defect.test.ts (F-077, F-004)
+ok   PRESERVE src/app/auth/callback/route.test.ts (F-004, F-040)
+ok   DEFECT   src/lib/__tests__/env-assertions-defect.test.ts (F-003)
+ok   PRESERVE src/middlewareRateLimit.test.ts
+ok   PRESERVE src/proxy-characterization.test.ts
+ok   DEFECT   src/proxy-defect.test.ts (F-003, F-062, F-088, F-089)
+ok   PRESERVE src/proxy.test.ts
+ok   PRESERVE src/server/__tests__/getsession-gate.test.ts
+ok 42 files
+exit=0
+
+## § 7  Full Jest run
+# before-floor (floor.before.txt): 1651 passed, 1 skipped, 88 suites (87 run + 1 skipped)
+# after: 1651 + 118 new = 1769 passed, 1 skipped; 88 + 8 = 96 suites
+$ npx jest --ci
+Test Suites: 1 skipped, 95 passed, 95 of 96 total
+Tests:       1 skipped, 1769 passed, 1770 total
+Snapshots:   0 total
+Time:        2.021 s
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ git diff --stat f215fb7 HEAD -- src/app src/server src/lib supabase
+exit=0 (empty = no production source changed)

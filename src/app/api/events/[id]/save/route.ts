@@ -14,6 +14,10 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import { notFound, serverError } from "@/server/errors";
 import { ok } from "@/server/http";
 import type { NextRequest } from "next/server";
+import { withRoute } from "@/server/route";
+import { parseWith } from "@/server/body";
+import { DetailParams } from "@/contracts/discovery";
+import { log } from "@/server/log";
 
 interface RouteContext {
   params: Promise<{
@@ -21,7 +25,7 @@ interface RouteContext {
   }>;
 }
 
-export async function DELETE(_request: NextRequest, { params }: RouteContext) {
+export const DELETE = withRoute({ cache: "private", action: "unsave event" }, async (_request: NextRequest, { params }: RouteContext) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -39,18 +43,18 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
       .eq("event_id", eventId);
 
     if (deleteError) {
-      console.error("Error deleting saved event:", deleteError);
+      log.error("Error deleting saved event", { error: deleteError });
       return serverError("unsave event");
     }
 
     return ok({ saved: false });
   } catch (error) {
-    console.error("Unexpected error unsaving event:", error);
+    log.error("Unexpected error unsaving event", { error });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});
 
-export async function POST(_request: NextRequest, { params }: RouteContext) {
+export const POST = withRoute({ cache: "private", action: "save event" }, async (_request: NextRequest, { params }: RouteContext) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -71,7 +75,7 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
       .maybeSingle();
 
     if (eventError) {
-      console.error("Error looking up event:", eventError);
+      log.error("Error looking up event", { error: eventError });
       return serverError("verify event");
     }
 
@@ -88,7 +92,7 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
       .maybeSingle();
 
     if (existingError) {
-      console.error("Error checking saved event:", existingError);
+      log.error("Error checking saved event", { error: existingError });
       return serverError("check saved event");
     }
 
@@ -101,7 +105,7 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
         .eq("event_id", eventId);
 
       if (deleteError) {
-        console.error("Error unsaving event:", deleteError);
+        log.error("Error unsaving event", { error: deleteError });
         return serverError("unsave event");
       }
 
@@ -114,13 +118,28 @@ export async function POST(_request: NextRequest, { params }: RouteContext) {
       .insert({ user_id: user.id, event_id: eventId });
 
     if (insertError) {
-      console.error("Save event error:", insertError);
+      log.error("Save event error", { error: insertError });
       return serverError("save event");
     }
 
     return ok({ saved: true });
   } catch (error) {
-    console.error("Unexpected error saving event:", error);
+    log.error("Unexpected error saving event", { error });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+});
+
+/** Idempotent counterpart for discovery cards; the legacy POST toggle remains. */
+export const PUT = withRoute({ cache: "private", action: "save event" }, async (_request: NextRequest, { params }: RouteContext) => {
+  const ctx = await createRequestContext();
+  const active = requireActiveUser(ctx); if (!active.ok) return active.response;
+  const onboarded = requireOnboarded(ctx); if (!onboarded.ok) return onboarded.response;
+  const parsed = parseWith(DetailParams, await params); if (!parsed.ok) return parsed.response;
+  const { id } = parsed.data;
+  const { data: event, error } = await ctx.supabase.from("events").select("id").eq("id", id).eq("status", "approved").is("deleted_at", null).maybeSingle();
+  if (error) throw error;
+  if (!event) return notFound("Event not found");
+  const { error: saveError } = await ctx.supabase.from("saved_events").upsert({ user_id: active.user.id, event_id: id }, { onConflict: "user_id,event_id", ignoreDuplicates: true });
+  if (saveError) throw saveError;
+  return ok({ saved: true });
+});

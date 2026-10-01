@@ -3,8 +3,11 @@ import type { NextRequest } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { readQuery } from "@/server/body";
+import { AuditLogQuery } from "@/contracts/admin";
+import { logRouteError, withRoute } from "@/server/route";
 
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "private", action: "fetch audit log" }, async (request: NextRequest) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -12,9 +15,10 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
   const supabase = ctx.supabase;
 
-  const searchParams = request.nextUrl.searchParams;
-  const action = searchParams.get("action");
-  const page = parseInt(searchParams.get("page") || "1");
+  const { action, page } = readQuery(
+    request.nextUrl.searchParams,
+    AuditLogQuery
+  );
   const limit = 20;
   const offset = (page - 1) * limit;
 
@@ -31,6 +35,7 @@ export async function GET(request: NextRequest) {
   const { data, error, count } = await query;
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -40,4 +45,4 @@ export async function GET(request: NextRequest) {
     page,
     totalPages: Math.ceil((count ?? 0) / limit),
   });
-}
+});

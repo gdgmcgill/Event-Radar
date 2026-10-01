@@ -1,0 +1,6 @@
+e2e/helpers/isolatedProbes.ts(113,20): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(supabaseUrl: string, supabaseKey: string, options: SupabaseClientOptions<"public"> & { cookieOptions?: CookieOptionsWithName | undefined; cookies: CookieMethodsServerDeprecated; cookieEncoding?: "raw" | ... 1 more ... | undefined; }): SupabaseClient<...>', gave the following error.
+    Object literal may only specify known properties, and 'getAll' does not exist in type 'CookieMethodsServerDeprecated'.
+  Overload 2 of 2, '(supabaseUrl: string, supabaseKey: string, options: SupabaseClientOptions<"public"> & { cookieOptions?: CookieOptionsWithName | undefined; cookies: CookieMethodsServer; cookieEncoding?: "raw" | ... 1 more ... | undefined; }): SupabaseClient<...>', gave the following error.
+    Type '(cookies: { name: string; value: string; options: Partial<SerializeOptions>; }[]) => number' is not assignable to type 'SetAllCookies'.
+      Type 'number' is not assignable to type 'void | Promise<void>'.

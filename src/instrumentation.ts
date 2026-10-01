@@ -47,8 +47,38 @@
  *   to start (InvalidEnvError naming the URL variables, never the value);
  *   otherwise ONE error is logged in every environment and the server starts
  *   on the memory store.
+ *
+ * LOG LINES (plan 06-12, DEC-74)
+ *   Every line is one JSON object from `src/server/log.ts`: the refusal is
+ *   `level "error", scope "Config", msg "refusing to start"` with the error's
+ *   name and message (a variable NAME, never a value); the store lines are
+ *   `scope "RateLimit"` with the constant's text as `msg`. The logger is
+ *   imported dynamically on the Node.js branch only, beside the elevated door,
+ *   so the edge compilation of this file imports nothing Node-only.
+ *
+ * SENTRY (plan 06-16, DEC-76, REFAC-21)
+ *   On the Node.js branch, outside the build phase, `register()` initializes
+ *   Sentry FIRST (`initSentryServer()` from src/sentry.server.config.ts),
+ *   before the boot checks, which are unchanged (a refusal is still the one
+ *   logged line and the rethrow; this file does not capture it, so a boot
+ *   refusal is logged, not sent to Sentry). It never throws: no usable
+ *   SENTRY_DSN means
+ *   one info line "Sentry disabled" and a disabled SDK; a failing init means
+ *   one warn line and the server starts without error reporting.
+ *
+ *   `onRequestError` is Next's hook for errors it catches while rendering,
+ *   in route handlers, server actions and the proxy. It hands the error to
+ *   Sentry's `captureRequestError` inside a scope tagged `request_id` when
+ *   the request carries a UUID-shaped `x-request-id` (the proxy stamps one on
+ *   every request it matches), so a page-render error correlates with its
+ *   log lines the same way a route error does. Errors a `withRoute` handler
+ *   throws never reach it: the wrapper catches them and captures them itself
+ *   (src/server/route.ts). `@sentry/nextjs` resolves to its edge build in an
+ *   edge compilation, so the static import is safe on both runtimes.
  */
 
+import type { Instrumentation } from "next";
+import { captureRequestError, withScope } from "@sentry/nextjs";
 import {
   InvalidEnvError,
   MissingEnvError,
@@ -65,12 +95,12 @@ import {
 const UPSTASH_URL_NAMES = "UPSTASH_REDIS_REST_URL or KV_REST_API_URL";
 
 const RATE_LIMIT_UNUSABLE =
-  "[RateLimit] the configured Upstash store is unusable: set " +
+  "the configured Upstash store is unusable: set " +
   `${UPSTASH_URL_NAMES} to the https:// REST URL. Rate limiting is degraded ` +
   "to the per-instance in-memory store, which is not shared across instances";
 
 const RATE_LIMIT_DEGRADED =
-  "[RateLimit] no distributed store is configured in production: set " +
+  "no distributed store is configured in production: set " +
   "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_URL and " +
   "KV_REST_API_TOKEN). Rate limiting is degraded to the per-instance in-memory " +
   "store, which is not shared across instances. Set " +
@@ -79,6 +109,13 @@ const RATE_LIMIT_DEGRADED =
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === "phase-production-build") return;
+
+  // Sentry first (plan 06-16). Never throws; see SENTRY above.
+  const { initSentryServer } = await import("./sentry.server.config");
+  initSentryServer();
+
+  // Node.js branch only (see LOG LINES above).
+  const { log } = await import("@/server/log");
 
   try {
     supabaseUrl();
@@ -92,7 +129,9 @@ export async function register(): Promise<void> {
     const upstash = upstashConfig();
     if (!upstash) {
       if (requireDistributed) throw new MissingEnvError(UPSTASH_ENV_NAMES);
-      if (isVercelProduction()) console.error(RATE_LIMIT_DEGRADED);
+      if (isVercelProduction()) {
+        log.error(RATE_LIMIT_DEGRADED, { scope: "RateLimit" });
+      }
     } else {
       // REVIEW-05 CR-02: a present pair is not necessarily a usable one. A
       // `rediss://` connection string or a pasted `KV_URL` value is refused
@@ -108,13 +147,35 @@ export async function register(): Promise<void> {
             "an https:// Upstash REST URL"
           );
         }
-        console.error(`${RATE_LIMIT_UNUSABLE} (${problem})`);
+        log.error(RATE_LIMIT_UNUSABLE, { scope: "RateLimit", problem });
       }
     }
   } catch (err) {
     if (err instanceof MissingEnvError || err instanceof InvalidEnvError) {
-      console.error("[Config] refusing to start:", err.message);
+      log.error("refusing to start", { scope: "Config", error: err });
     }
     throw err;
   }
 }
+
+/** A canonical UUID, the only request id shape trusted (as in src/server/route.ts). */
+const REQUEST_ID_SHAPE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Next's error hook (see SENTRY above): Sentry's `captureRequestError`, in a
+ * scope tagged with the request's id when it has a UUID-shaped one.
+ */
+export const onRequestError: Instrumentation.onRequestError = (
+  error,
+  request,
+  context
+) => {
+  const header = request.headers["x-request-id"];
+  const requestId =
+    typeof header === "string" && REQUEST_ID_SHAPE.test(header) ? header : undefined;
+  withScope((scope) => {
+    if (requestId) scope.setTag("request_id", requestId);
+    captureRequestError(error, request, context);
+  });
+};

@@ -9,11 +9,14 @@ import type { NextRequest } from "next/server";
 import { EVENT_WITH_CLUB_SELECT, transformEventFromDB } from "@/lib/tagMapping";
 import { getESTNowISO } from "@/lib/timezone";
 import { ilikeContainsFilter, postgrestQuotedValue } from "@/lib/searchFilter";
+import { encodeEventCursor, type EventCursor } from "@/lib/eventCursor";
+import { parseQuery } from "@/server/body";
 import {
-  decodeEventCursor,
-  encodeEventCursor,
-  type EventCursor,
-} from "@/lib/eventCursor";
+  EVENTS_LIST_FIELD_KEYS,
+  EventsListQuery,
+} from "@/contracts/events";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /** Shape of event row from DB */
 type EventRow = {
@@ -256,71 +259,35 @@ function cursorFor(row: EventRow | undefined): string | null {
  *      500:
  *        description: Internal server error
  */
-export async function GET(request: NextRequest) {
+export const GET = withRoute({ cache: "public-30-60", action: "fetch events" }, async (request: NextRequest) => {
   try {
     const supabase = await createClient();
-    const searchParams = request.nextUrl.searchParams;
-
-    // Extract query parameters
-    const tags = searchParams.get('tags');
-    const search = searchParams.get('search');
-    const dateFrom = searchParams.get('dateFrom');
-    const dateTo = searchParams.get('dateTo');
-    const idsParam = searchParams.get('ids');
-    const timeOfDay = searchParams.get('timeOfDay');
-    const dayType = searchParams.get('dayType');
-    // `page` and `limit` are validated before any query. Unparsed they reached
-    // PostgREST (`range(NaN, NaN)`, `range(0, -1)`, a negative offset), which
-    // answered 400 and the error branch below turned into a 500. Cursor mode
-    // (`range(0, limit - 1)`) and `totalPages` (`Math.ceil(total / limit)`)
-    // are built on the same two values.
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-
-    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-      return NextResponse.json(
-        { error: 'limit must be an integer from 1 to 100', field: 'limit' },
-        { status: 400 }
-      );
-    }
-
-    if (!Number.isInteger(page) || page < 1) {
-      return NextResponse.json(
-        { error: 'page must be a positive integer', field: 'page' },
-        { status: 400 }
-      );
-    }
-
-    // Validate timeOfDay and dayType values
-    const validTimeOfDay = ['morning', 'afternoon', 'evening', 'night'];
-    const validDayType = ['weekday', 'weekend'];
-
-    if (timeOfDay && !validTimeOfDay.includes(timeOfDay)) {
-      return NextResponse.json(
-        { error: `Invalid timeOfDay value. Must be one of: ${validTimeOfDay.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    if (dayType && !validDayType.includes(dayType)) {
-      return NextResponse.json(
-        { error: `Invalid dayType value. Must be one of: ${validDayType.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // Keyset cursor (F-083, DEC-25). Rejected before any query is issued.
-    // An empty `cursor=` is treated as absent, as useEvents never sends one.
-    // `sort`, `direction`, `clubId` and `before` are deliberately not read:
-    // the only caller sends start_date/asc and no clubId (DEC-25).
-    const cursorParam = searchParams.get('cursor');
-    let cursor: EventCursor | null = null;
-    if (cursorParam) {
-      cursor = decodeEventCursor(cursorParam);
-      if (!cursor) {
-        return NextResponse.json({ error: 'Invalid cursor' }, { status: 400 });
-      }
-    }
+    // The query contract (plan 06-08, REFAC-15), before any query, in
+    // today's order: limit and page (their 400s carry field), timeOfDay,
+    // dayType, then the keyset cursor (F-083, DEC-25; an empty `cursor=` is
+    // absent). `page` and `limit` keep parseInt's defaults: unparsed they
+    // reached PostgREST (`range(NaN, NaN)`, `range(0, -1)`, a negative
+    // offset), which answered 400 and the error branch below turned into a
+    // 500. Cursor mode (`range(0, limit - 1)`) and `totalPages`
+    // (`Math.ceil(total / limit)`) are built on the same two values. `sort`,
+    // `direction`, `clubId` and `before` are deliberately not read: the only
+    // caller sends start_date/asc and no clubId (DEC-25).
+    const query = parseQuery(request.nextUrl.searchParams, EventsListQuery, {
+      fieldFor: EVENTS_LIST_FIELD_KEYS,
+    });
+    if (!query.ok) return query.response;
+    const {
+      tags,
+      search,
+      dateFrom,
+      dateTo,
+      ids: idsParam,
+      timeOfDay,
+      dayType,
+      page,
+      limit,
+      cursor,
+    } = query.data;
 
     // Build Supabase query for events, in (start_date, id) order: id breaks
     // ties between equal start dates, so a keyset never skips or repeats.
@@ -350,7 +317,7 @@ export async function GET(request: NextRequest) {
       );
 
       if (searchError) {
-        console.error('Fuzzy search RPC error:', searchError);
+        log.error("Fuzzy search RPC error", { error: searchError });
         // Fallback to basic ILIKE search if RPC fails. The term is escaped for
         // LIKE and double-quoted for PostgREST (F-082, see searchFilter.ts).
         searchFallback = [
@@ -381,7 +348,7 @@ export async function GET(request: NextRequest) {
     // Time-based filtering (requires RPC since Supabase JS can't do EXTRACT)
     let timeFilteredIds: string[] | null = null;
     if (timeOfDay || dayType) {
-      // `searchParams.get()` yields `string | null`; the RPC's two arguments are
+      // The query contract yields `string | null`; the RPC's two arguments are
       // both optional `text DEFAULT NULL`. Omitting an argument and passing SQL
       // NULL select the same branch of the function body
       // (`time_of_day IS NULL OR …`), so `?? undefined` preserves the query
@@ -444,8 +411,11 @@ export async function GET(request: NextRequest) {
 
     if (eventsError) {
       // Handle range errors gracefully (e.g., page beyond available data)
-      const errorCode = (eventsError as { code?: string }).code;
-      const errorMessage = eventsError.message;
+      // Read only to recognise the benign cases below; never sent (F-059).
+      const { code: errorCode, message: errorMessage } = eventsError as {
+        code?: string;
+        message?: unknown;
+      };
 
       // Check for known benign error codes or malformed responses
       const isBenignError =
@@ -466,15 +436,12 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      console.error("Supabase error fetching events:", JSON.stringify(eventsError));
-      const safeMessage = typeof errorMessage === 'string' && !errorMessage.startsWith('{')
-        ? errorMessage
-        : 'Failed to fetch events';
-      return NextResponse.json({ error: safeMessage }, { status: 500 });
+      log.error("Supabase error fetching events", { error: eventsError });
+      return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
     }
 
     if (totalResult?.error) {
-      console.error("Supabase error counting events:", JSON.stringify(totalResult.error));
+      log.error("Supabase error counting events", { error: totalResult.error });
       return NextResponse.json({ error: 'Failed to fetch events' }, { status: 500 });
     }
 
@@ -511,27 +478,23 @@ export async function GET(request: NextRequest) {
       transformEventFromDB(event as Parameters<typeof transformEventFromDB>[0])
     );
 
-    return NextResponse.json(
-      {
-        events,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        nextCursor,
-        prevCursor,
-      },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-        },
-      }
-    );
+    // The public-30-60 class (withRoute above) sends the header this
+    // response set itself before 06-14, byte for byte (DI-26: kept, now
+    // declared).
+    return NextResponse.json({
+      events,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      nextCursor,
+      prevCursor,
+    });
   } catch (error) {
-    console.error("Error fetching events:", error);
+    log.error("Error fetching events", { error });
     return NextResponse.json(
       { error: "Failed to fetch events" },
       { status: 500 }
     );
   }
-}
+});

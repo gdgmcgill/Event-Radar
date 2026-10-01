@@ -1,17 +1,18 @@
 import { createClient } from "@/lib/supabase/server";
 import { getElevatedClient } from "@/server/db/elevated";
 import { NextResponse } from "next/server";
+import { logRouteError, withRoute } from "@/server/route";
 
 /**
  * GET /api/users/me/suggestions — Suggest people based on shared clubs,
- * overlapping interest tags, same faculty/year, or shared event RSVPs.
+ * overlapping interest tags, or same faculty/year. Attendance is private.
  *
  * The caller's own rows and the world-readable club follower list are read
- * on the cookie client (DEC-49). Other users' profiles, club memberships and
- * event RSVPs go through the elevated door. REGISTRY.md row: "Friend
- * suggestions read other users' profiles, memberships and RSVPs".
+ * on the cookie client (DEC-49). Other users' profiles and club memberships
+ * go through the elevated door. REGISTRY.md row: "Friend
+ * suggestions read other users' profiles and memberships".
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch suggestions" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -64,15 +65,6 @@ export async function GET() {
       ]),
     ];
 
-    // Get current user's RSVPs
-    const { data: myRsvps } = await supabase
-      .from("rsvps")
-      .select("event_id")
-      .eq("user_id", user.id)
-      .in("status", ["going", "interested"]);
-
-    const myEventIds = (myRsvps ?? []).map((r: any) => r.event_id);
-
     type Suggestion = {
       id: string;
       name: string;
@@ -80,7 +72,7 @@ export async function GET() {
       faculty: string | null;
       year: string | null;
       reason: string;
-      reason_type: "club" | "event" | "tags" | "faculty";
+      reason_type: "club" | "tags" | "faculty";
       score: number;
     };
 
@@ -134,30 +126,7 @@ export async function GET() {
       }
     }
 
-    // 2. People attending the same events
-    if (myEventIds.length > 0) {
-      const { data: eventMates } = await service
-        .from("rsvps")
-        .select("user_id, event_id, events(title)")
-        .in("event_id", myEventIds)
-        .in("status", ["going", "interested"])
-        .limit(100);
-
-      for (const em of eventMates ?? []) {
-        if (followingIds.has(em.user_id)) continue;
-        if (suggestionsMap.has(em.user_id)) continue;
-        suggestionsMap.set(em.user_id, {
-          id: em.user_id,
-          name: "",
-          avatar_url: null,
-          faculty: null,
-          year: null,
-          reason: `Both attending ${em.events?.title ?? "an event"}`,
-          reason_type: "event",
-          score: 3,
-        });
-      }
-    }
+    // Attendance is never used to expose other students' event participation (F-011).
 
     // 3. People with overlapping interest tags
     const myTags: string[] = profile?.interest_tags ?? [];
@@ -246,10 +215,11 @@ export async function GET() {
     suggestions.sort((a, b) => b.score - a.score);
 
     return NextResponse.json({ suggestions: suggestions.slice(0, 20) });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch suggestions" },
       { status: 500 }
     );
   }
-}
+});

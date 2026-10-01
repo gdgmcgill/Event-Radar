@@ -8,11 +8,12 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import type { NextRequest } from "next/server";
+import { parseForm } from "@/server/body";
+import { AVATAR_UPLOAD, ProfileImageForm } from "@/contracts/users";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-
-export async function POST(request: NextRequest) {
+export const POST = withRoute({ cache: "private", action: "upload avatar" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -22,29 +23,10 @@ export async function POST(request: NextRequest) {
     const user = active.user;
     const supabase = ctx.supabase;
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-
-    if (!file) {
-      return NextResponse.json(
-        { error: "No file provided" },
-        { status: 400 }
-      );
-    }
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Allowed: JPEG, PNG, WebP, GIF" },
-        { status: 400 }
-      );
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "File too large. Maximum size is 5MB" },
-        { status: 400 }
-      );
-    }
+    // "No file provided", then type, then size (5MB), with the route's texts.
+    const parsed = await parseForm(request, ProfileImageForm, AVATAR_UPLOAD);
+    if (!parsed.ok) return parsed.response;
+    const { file } = parsed.data;
 
     // Determine file extension from MIME type
     const ext = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
@@ -61,7 +43,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error("Storage upload error:", uploadError);
+      log.error("Storage upload error", { error: uploadError });
       return NextResponse.json(
         { error: "Failed to upload avatar" },
         { status: 500 }
@@ -88,7 +70,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (dbError || !dbData) {
-      console.error("Database update error:", dbError ?? "No rows updated");
+      log.error("Database update error", { error: dbError ?? "No rows updated" });
       return NextResponse.json(
         { error: "Failed to save avatar URL" },
         { status: 500 }
@@ -100,10 +82,10 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error uploading avatar:", error);
+    log.error("Error uploading avatar", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

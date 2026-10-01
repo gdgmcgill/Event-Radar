@@ -6,7 +6,13 @@ import { EventTag } from "@/types";
  * Classifies raw Instagram posts from McGill club accounts as EVENT vs NON-EVENT
  * using a hybrid heuristic + regex approach with confidence scoring.
  *
- * Pipeline position: Apify output -> classifier -> webhook (pending_events)
+ * Pipeline position: none today. The Apify -> classifier -> webhook pipeline
+ * this once described (src/lib/classifier-pipeline.ts) was deleted in 5879268,
+ * no sender of events-webhook exists in the tree, and there is no
+ * pending_events table: webhook events land in public.events with status
+ * "pending". ExtractedEvent below is kept assignable to the webhook contract
+ * (supabase/functions/_shared/webhook-contract.ts); the type-level assertion in
+ * src/__tests__/webhook/webhook-contract.test.ts fails if the two drift.
  */
 
 // =============================================

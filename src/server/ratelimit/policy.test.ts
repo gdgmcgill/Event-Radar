@@ -26,6 +26,8 @@ import { NextRequest } from "next/server";
 import { applyApiRateLimit } from "@/middlewareRateLimit";
 import {
   ADMIN_BUDGETS,
+  INTAKE_BUDGET,
+  INTAKE_POST_PREFIXES,
   PUBLIC_BUDGETS,
   WINDOW_MS,
   clientIp,
@@ -118,6 +120,23 @@ describe("rateLimitPolicy", () => {
       });
     }
   );
+
+  it.each(["/api/submissions", "/api/company-requests", "/api/listing-reports"])(
+    "gives POST %s the public intake budget of 5 (M3 P1-09)",
+    (path) => {
+      expect(INTAKE_BUDGET).toBe(5);
+      expect(INTAKE_POST_PREFIXES).toContain(path);
+      expect(rateLimitPolicy(fromIp(path, "POST", "1.1.1.1"))).toMatchObject({
+        limit: 5,
+        windowMs: 60_000,
+        scope: "public",
+      });
+    }
+  );
+
+  it("leaves a non-POST intake request on the ordinary public budget", () => {
+    expect(rateLimitPolicy(fromIp("/api/submissions", "GET", "1.1.1.1"))).toMatchObject({ limit: 300 });
+  });
 
   it("gives /api/admin/* GETs 600 and admin mutations 120 per 60 s window", () => {
     expect(ADMIN_BUDGETS).toEqual({ GET: 600, mutation: 120 });
@@ -279,6 +298,19 @@ describe("applyRateLimit with the memory store", () => {
     expect(await applyRateLimit(fromIp(path, "POST", nextIp()), store)).toBeNull();
   });
 
+  it("the 6th intake POST from one IP within a minute is answered 429 (M3 P1-09)", async () => {
+    const ip = nextIp();
+    const store = new MemoryRateLimitStore();
+    for (let i = 1; i <= 5; i++) {
+      expect(await applyRateLimit(fromIp("/api/submissions", "POST", ip), store)).toBeNull();
+    }
+    const blocked = await applyRateLimit(fromIp("/api/submissions", "POST", ip), store);
+    expect(blocked?.status).toBe(429);
+    expect(blocked?.headers.get("X-RateLimit-Limit")).toBe("5");
+    // Another address keeps its own budget.
+    expect(await applyRateLimit(fromIp("/api/submissions", "POST", nextIp()), store)).toBeNull();
+  });
+
   it("the synchronous wrapper still exempts /api/admin/* while the async path limits it", async () => {
     const syncIp = nextIp();
     for (let i = 0; i < 130; i++) {
@@ -305,6 +337,8 @@ describe("the async path and the synchronous wrapper decide identically on publi
     { path: "/api/events/x/rsvp", method: "HEAD", budget: 30 },
     { path: "/api/interactions", method: "POST", budget: 300 },
     { path: "/api/recommendations/feedback", method: "POST", budget: 300 },
+    { path: "/api/submissions", method: "POST", budget: 5 },
+    { path: "/api/listing-reports", method: "POST", budget: 5 },
     { path: "/profile", method: "POST", budget: 30 },
   ];
 

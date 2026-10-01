@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
-import { VALID_INTEREST_TAGS } from "@/lib/constants";
+import { parseBody } from "@/server/body";
+import { UserUpdateBody } from "@/contracts/users";
 import type { NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
+import { getElevatedClient } from "@/server/db/elevated";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update profile" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   try {
     // Onboarding exemption (DEC-34, research C2): the onboarding wizard calls
     // this self-update before onboarding is complete, so requireOnboarded is
@@ -28,157 +32,38 @@ export async function PATCH(
       );
     }
 
-    const body = await request.json();
-    const { name, avatar_url, banner_url, interest_tags, pronouns, year, faculty, visibility, onboarding_completed } = body;
-
-    const updatePayload: Database["public"]["Tables"]["users"]["Update"] = {
+    // The self-update ladder, after the self-only 403 (src/contracts/users.ts):
+    // name, avatar_url, banner_url, interest_tags, pronouns, year, faculty,
+    // visibility, onboarding_completed, then "No fields to update". Its output
+    // is the payload: each key only when sent, the name and image URLs
+    // trimmed (a blank or null image URL clears it), the rest as sent.
+    const parsed = await parseBody(request, UserUpdateBody);
+    if (!parsed.ok) return parsed.response;
+    const affiliationChanged = parsed.data.university_id !== undefined || parsed.data.other_university !== undefined;
+    // New student completion has required basics. Legacy completed profiles
+    // keep their state even when their historical fields are incomplete.
+    if (parsed.data.onboarding_completed === true && !ctx.profile?.onboarding_completed) {
+      if (!parsed.data.name || (!parsed.data.university_id && !parsed.data.other_university)) {
+        return NextResponse.json({ error: "Name and university choice are required to complete onboarding" }, { status: 400 });
+      }
+    }
+    if (parsed.data.university_id) {
+      const { data: university, error } = await ctx.supabase.from("universities").select("id").eq("id", parsed.data.university_id).eq("active", true).maybeSingle();
+      if (error) throw error;
+      if (!university) return NextResponse.json({ error: "Choose an active university" }, { status: 400 });
+    }
+    const updatePayload = {
       updated_at: new Date().toISOString(),
-    };
+      ...parsed.data,
+      ...(affiliationChanged ? { affiliation_source: "self_declared", university_id: parsed.data.university_id ?? null, other_university: parsed.data.other_university ?? null } : {}),
+    } as Database["public"]["Tables"]["users"]["Update"];
 
-    // Validate name
-    if (name !== undefined) {
-      if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 50) {
-        return NextResponse.json(
-          { error: "Name must be between 2 and 50 characters long" },
-          { status: 400 }
-        );
-      }
-      updatePayload.name = name.trim();
-    }
-
-    // Validate avatar_url
-    if (avatar_url !== undefined) {
-      if (avatar_url !== null && typeof avatar_url !== "string") {
-        return NextResponse.json(
-          { error: "Avatar URL must be a string or null" },
-          { status: 400 }
-        );
-      }
-      // Basic URL validation if it's not null and not empty
-      if (avatar_url && avatar_url.trim() !== '') {
-        try {
-          new URL(avatar_url);
-          updatePayload.avatar_url = avatar_url.trim();
-        } catch (_) {
-          return NextResponse.json(
-            { error: "Invalid Avatar URL format" },
-            { status: 400 }
-          );
-        }
-      } else {
-        updatePayload.avatar_url = null;
-      }
-    }
-
-    // Validate banner_url
-    if (banner_url !== undefined) {
-      if (banner_url !== null && typeof banner_url !== "string") {
-        return NextResponse.json(
-          { error: "Banner URL must be a string or null" },
-          { status: 400 }
-        );
-      }
-      if (banner_url && banner_url.trim() !== '') {
-        try {
-          new URL(banner_url);
-          (updatePayload as Record<string, unknown>).banner_url = banner_url.trim();
-        } catch (_) {
-          return NextResponse.json(
-            { error: "Invalid Banner URL format" },
-            { status: 400 }
-          );
-        }
-      } else {
-        (updatePayload as Record<string, unknown>).banner_url = null;
-      }
-    }
-
-    // Validate interest_tags
-    if (interest_tags !== undefined) {
-      if (!Array.isArray(interest_tags)) {
-        return NextResponse.json(
-          { error: "interest_tags must be an array" },
-          { status: 400 }
-        );
-      }
-
-      const isValid = interest_tags.every((tag: string) => VALID_INTEREST_TAGS.includes(tag));
-
-      if (!isValid) {
-        return NextResponse.json(
-          { error: "Invalid tag values provided in interest_tags" },
-          { status: 400 }
-        );
-      }
-      updatePayload.interest_tags = interest_tags;
-    }
-
-    // Validate pronouns
-    if (pronouns !== undefined) {
-      if (pronouns !== null && typeof pronouns !== "string") {
-        return NextResponse.json(
-          { error: "Pronouns must be a string or null" },
-          { status: 400 }
-        );
-      }
-      (updatePayload as Record<string, unknown>).pronouns = pronouns;
-    }
-
-    // Validate year
-    if (year !== undefined) {
-      if (year !== null && typeof year !== "string") {
-        return NextResponse.json(
-          { error: "Year must be a string or null" },
-          { status: 400 }
-        );
-      }
-      (updatePayload as Record<string, unknown>).year = year;
-    }
-
-    // Validate faculty
-    if (faculty !== undefined) {
-      if (faculty !== null && typeof faculty !== "string") {
-        return NextResponse.json(
-          { error: "Faculty must be a string or null" },
-          { status: 400 }
-        );
-      }
-      (updatePayload as Record<string, unknown>).faculty = faculty;
-    }
-
-    // Validate visibility
-    if (visibility !== undefined) {
-      if (visibility !== "public" && visibility !== "private") {
-        return NextResponse.json(
-          { error: "Visibility must be 'public' or 'private'" },
-          { status: 400 }
-        );
-      }
-      (updatePayload as Record<string, unknown>).visibility = visibility;
-    }
-
-    // Validate onboarding_completed
-    if (onboarding_completed !== undefined) {
-      if (typeof onboarding_completed !== "boolean") {
-        return NextResponse.json(
-          { error: "onboarding_completed must be a boolean" },
-          { status: 400 }
-        );
-      }
-      (updatePayload as Record<string, unknown>).onboarding_completed = onboarding_completed;
-    }
-
-    if (Object.keys(updatePayload).length === 1) { // only updated_at is set
-      return NextResponse.json(
-        { error: "No fields to update" },
-        { status: 400 }
-      );
-    }
-
-    // The caller's own row on the cookie client: "Users can update own
-    // profile" permits it, and every column this payload can carry is in the
-    // F-006 column grant (DEC-49).
-    const { data, error } = await ctx.supabase
+    // DI-72: clients cannot set onboarding_completed directly through Data API.
+    // This validated self-only path owns that transition; ordinary profile
+    // changes continue through the caller's RLS policy.
+    const database = parsed.data.onboarding_completed === undefined && !affiliationChanged
+      ? ctx.supabase : getElevatedClient();
+    const { data, error } = await database
       .from("users")
       .update(updatePayload)
       .eq("id", id)
@@ -186,7 +71,7 @@ export async function PATCH(
       .single();
 
     if (error) {
-      console.error("Database error while updating profile:", error);
+      log.error("Database error while updating profile", { error });
       return NextResponse.json(
         { error: "Failed to update profile" },
         { status: 500 }
@@ -201,10 +86,10 @@ export async function PATCH(
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error updating profile:", error);
+    log.error("Error updating profile", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

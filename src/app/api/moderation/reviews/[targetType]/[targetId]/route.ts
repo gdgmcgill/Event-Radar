@@ -4,21 +4,25 @@ import { getElevatedClient } from "@/server/db/elevated";
 import { hasRole } from "@/lib/roles";
 import { createRequestContext } from "@/server/context";
 import { requireUser } from "@/server/authz/requireUser";
+import { requireActiveUser } from "@/server/authz/requireActiveUser";
+import { parseWith } from "@/server/body";
+import { ReviewTargetParams } from "@/contracts/admin";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function GET(
+export const GET = withRoute({ cache: "private", action: "fetch moderation reviews" }, async (
   _request: NextRequest,
   { params }: { params: Promise<{ targetType: string; targetId: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const auth = requireUser(ctx);
   if (!auth.ok) return auth.response;
   const user = auth.user;
 
-  const { targetType, targetId } = await params;
-
-  if (!["event", "club"].includes(targetType)) {
-    return NextResponse.json({ error: "Invalid target type" }, { status: 400 });
-  }
+  // "Invalid target type" unless event or club; the id is used as sent.
+  const target = parseWith(ReviewTargetParams, await params);
+  if (!target.ok) return target.response;
+  const { targetType, targetId } = target.data;
 
   // The target read and the review listing run on the caller's cookie client:
   // "Anyone can read clubs", "Organizers can view own events", "Admins can
@@ -30,6 +34,14 @@ export async function GET(
   // The admin decision reads the request context's profile slice, the same
   // one read every admin guard uses; the creator path below is unchanged.
   const isAdmin = ctx.profile !== null && hasRole(ctx.profile, "admin");
+
+  // The admin path runs the active-user guard before the role takes effect
+  // (DI-55, DEC-79): a banned admin gets the seam's 403 "Account suspended"
+  // instead of every review. The creator path below is unchanged.
+  if (isAdmin) {
+    const active = requireActiveUser(ctx);
+    if (!active.ok) return active.response;
+  }
 
   if (!isAdmin) {
     const table = targetType === "event" ? "events" : "clubs";
@@ -52,7 +64,11 @@ export async function GET(
     .order("created_at", { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    log.error("Failed to fetch moderation reviews", { targetType, targetId, error });
+    return NextResponse.json(
+      { error: "Failed to fetch moderation reviews" },
+      { status: 500 }
+    );
   }
 
   const authorIds = [...new Set((reviews ?? []).map((r) => r.author_id))];
@@ -79,4 +95,4 @@ export async function GET(
   }));
 
   return NextResponse.json({ reviews: enrichedReviews });
-}
+});

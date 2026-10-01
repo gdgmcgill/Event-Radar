@@ -1,0 +1,305 @@
+# Contract regeneration, slice 7 — plan 06-15 Task 1 (REFAC-19, DEC-73, DEC-69, DI-58)
+
+Recorded 2026-09-27 on the local tree. Base: 25412cd (06-14 complete). endpoints.json is changed only
+through `.planning/audit/tools/classify-inventory.mjs`, with classification-rules.md updated in the
+same commit (DEC-55, phase-locked constraint 10). Every command is quoted with its exit code; outputs
+are verbatim unless marked. `<field diff>` is a scratch script (leaf-path comparison of two
+endpoints.json files by id); it is not committed.
+
+## 1. Drift before the edit (the unedited classifier against the current tree)
+
+The real run was taken to measure the field-level change, then endpoints.json and pages.json were
+restored from copies before the classifier was edited.
+
+$ node .planning/audit/tools/classify-inventory.mjs --dry-run   (unedited classifier)
+endpoints: 94 rows, 24 changed (phase 3, dry-run)
+endpoints: 3 row(s) retained unchanged, handler file deleted: api.auth-debug, api.cron.send-feedback-requests, api.cron.send-reminders
+pages: 43 rows, 0 changed
+exit=0
+
+$ node .planning/audit/tools/classify-inventory.mjs && node <field diff> before.json endpoints.json   (unedited classifier; then restored)
+endpoints: 94 rows, 24 changed (phase 3)
+endpoints: 3 row(s) retained unchanged, handler file deleted: api.auth-debug, api.cron.send-feedback-requests, api.cron.send-reminders
+pages: 43 rows, 0 changed
+exit=0
+api.admin.clubs.id
+  input_validation: "manual" -> "none"
+api.admin.events.id.status
+  input_validation: "manual" -> "none"
+api.admin.events
+  input_validation: "manual" -> "none"
+api.admin.experiments
+  input_validation: "manual" -> "none"
+api.admin.featured.id
+  input_validation: "manual" -> "none"
+api.admin.featured
+  input_validation: "manual" -> "none"
+api.admin.organizer-requests.id
+  input_validation: "manual" -> "none"
+api.admin.reports.id
+  input_validation: "manual" -> "none"
+api.admin.users.id
+  input_validation: "manual" -> "none"
+api.clubs.id.appeal
+  input_validation: "manual" -> "none"
+api.clubs.id.invites
+  input_validation: "manual" -> "none"
+api.clubs
+  input_validation: "manual" -> "none"
+api.events.id.appeal
+  input_validation: "manual" -> "none"
+api.events.id.report
+  input_validation: "manual" -> "none"
+api.events.id
+  input_validation: "manual" -> "none"
+api.events.id.rsvp
+  input_validation: "manual" -> "none"
+api.events.create
+  input_validation: "manual" -> "none"
+api.feedback
+  input_validation: "manual" -> "none"
+api.interactions
+  input_validation: "manual" -> "none"
+api.organizer-requests
+  input_validation: "manual" -> "none"
+api.profile.inferred-tags
+  input_validation: "manual" -> "none"
+api.profile.interests
+  input_validation: "manual" -> "none"
+api.recommendations.feedback
+  input_validation: "manual" -> "none"
+api.users.id
+  input_validation: "manual" -> "none"
+changed rows: 24; changed fields: 24
+by field: {"input_validation":24}
+
+Reading: the unedited classifier changes no cache field at all. It still derives
+`cache_policy_today` from the audit-time `signals.sets_cache_control` and the removed vercel.json
+rule, so all 88 live rows without an own header keep reading the blanket value. The one drift it
+does produce is wrong: 24 rows would go `manual` -> `none`, because 06-04..06-10 replaced their
+inline `status: 400` lines with the zod contract boundary (`parseBody`, `parseQuery`, `parseWith`,
+`readQuery`, `parseForm`), which rule V1 did not know. Writing that would say the best-validated
+handlers validate nothing, so rule V1 gains the boundary clause below (Rule 1 deviation, recorded in
+the SUMMARY).
+
+## 2. The classifier edits (git diff --stat, then the summary)
+
+$ git diff --stat -- .planning/audit/tools/classify-inventory.mjs
+ .planning/audit/tools/classify-inventory.mjs | 158 +++++++++++++++++++++++----
+ 1 file changed, 136 insertions(+), 22 deletions(-)
+
+- `loadCachePolicies()` reads the `POLICIES` table out of `src/server/http.ts` (class -> header
+  text; `PRIVATE_NO_STORE` resolved from its const), so the mapping is not restated.
+- `wrapperClasses(src)` reads `export const VERB = withRoute({ cache: "<class>" …` (the census's own
+  form). `successHeader(verb, cls)` applies the wrapper's method rule: a public class on GET/HEAD
+  gives its public value, anything else `private, no-store`.
+- Per live row: `signals.sets_cache_control` = true, `signals.cache_control_values` = the distinct
+  success headers in export order; `cache_policy_today` = those values joined with ` ; `.
+  vercel.json no longer contributes (`BLANKET_API_HEADER` and `NO_PLATFORM_HEADER` removed).
+- A live file whose exports are not all wrapped is FATAL (exit 1), so today cannot fall back.
+- `CACHE_TARGET_OVERRIDES` (each with its decision): `api.events.id` and `api.health` ->
+  `private, no-store` (C7, C8); `api.events.id.rsvp` and `api.clubs.id.events` -> `private, no-store`
+  (DEC-69; already private under P1, pinned); `api.events` -> `public, s-maxage=30,
+  stale-while-revalidate=60`, `api.events.featured` and `api.clubs.featured` -> `public, s-maxage=60,
+  stale-while-revalidate=120` (C9). The target never reads the wrapper.
+- DI-58 (a): the moderation reviews row's mechanism text; and `/auth/callback`'s text, which still
+  named the ADMIN_EMAILS grant 05-05 removed (F-004).
+- DI-58 (b): `signals.env_vars_referenced` and `signals.env_gated_auth` re-derived per live row with
+  gen-endpoint-inventory.mjs's own regexes. No other signal is refreshed (the generator's regexes
+  predate the seam; a blanket refresh measured 20 `uses_service_client` true -> false flips on the
+  elevated-door rows, which would rewrite `rls_reliance`).
+- V1: `CONTRACT_BOUNDARY` -> `zod`.
+- Retained rows (DEC-55) untouched: api.auth-debug, api.cron.send-reminders,
+  api.cron.send-feedback-requests.
+
+## 3. After the edit: dry run, the real run, idempotence
+
+$ node .planning/audit/tools/classify-inventory.mjs --dry-run   (edited classifier)
+endpoints: 94 rows, 91 changed (phase 3, dry-run)
+endpoints: 3 row(s) retained unchanged, handler file deleted: api.auth-debug, api.cron.send-feedback-requests, api.cron.send-reminders
+pages: 43 rows, 0 changed
+exit=0
+
+$ node .planning/audit/tools/classify-inventory.mjs
+endpoints: 94 rows, 91 changed (phase 3)
+endpoints: 3 row(s) retained unchanged, handler file deleted: api.auth-debug, api.cron.send-feedback-requests, api.cron.send-reminders
+pages: 43 rows, 0 changed
+exit=0
+
+$ node .planning/audit/tools/classify-inventory.mjs --dry-run   (idempotence: second run)
+endpoints: 94 rows, 0 changed (phase 3, dry-run)
+endpoints: 3 row(s) retained unchanged, handler file deleted: api.auth-debug, api.cron.send-feedback-requests, api.cron.send-reminders
+pages: 43 rows, 0 changed
+exit=0
+
+## 4. Field-level change (before = the committed endpoints.json at 25412cd)
+
+$ node <field diff> before.json .planning/audit/inventory/endpoints.json | tail -2
+changed rows: 91; changed fields: 329
+by field: {"signals.sets_cache_control":87,"signals.cache_control_values":88,"cache_policy_today":87,"input_validation":56,"signals.env_vars_referenced":3,"signals.env_gated_auth":1,"cache_policy_target":5,"role_required":2}
+
+Grouped by transition (every row id listed):
+-- cache_policy_today
+  "s-maxage=60, stale-while-revalidate=300" -> "private, no-store"  [77]
+    api.admin.analytics.events, api.admin.analytics.users, api.admin.audit-log, api.admin.calculate-popularity, api.admin.clubs.id, api.admin.clubs, api.admin.events.id.edits, api.admin.events.id, api.admin.events.id.status, api.admin.events, api.admin.experiments.id.results, api.admin.experiments.id, api.admin.experiments, api.admin.featured.id, api.admin.featured, api.admin.organizer-requests.id, api.admin.organizer-requests, api.admin.organizers, api.admin.reports.id, api.admin.reports, api.admin.stats, api.admin.users.id.ban, api.admin.users.id, api.admin.users, api.calendar.events, api.clubs.id.analytics, api.clubs.id.appeal, api.clubs.id.events, api.clubs.id.follow, api.clubs.id.invites, api.clubs.id.members.role, api.clubs.id.members, api.clubs.id.transfer, api.clubs.banner, api.clubs.friends, api.clubs.logo, api.events.id.analytics, api.events.id.appeal, api.events.id.friends, api.events.id.invite, api.events.id.report, api.events.id.reviews, api.events.id, api.events.id.rsvp, api.events.id.save, api.events.create, api.events.following, api.events.friends-activity, api.events.friends-organizing, api.events.my-events, api.events.upload-image, api.feedback, api.health, api.interactions, api.moderation.reviews.targetType.targetId, api.my-clubs, api.notifications.id, api.notifications.count, api.notifications, api.onboarding.complete, api.organizer-requests, api.profile.avatar, api.profile.banner, api.profile.inferred-tags, api.profile.interests, api.recommendations.analytics, api.recommendations.batch, api.recommendations.feedback, api.user.engagement, api.user.following, api.users.id.follow, api.users.id, api.users.me.friends, api.users.me.requests, api.users.me.suggestions, api.users.saved-events, api.users.search
+  "s-maxage=60, stale-while-revalidate=300" -> "public, s-maxage=60, stale-while-revalidate=300 ; private, no-store"  [2]
+    api.clubs.id, api.clubs
+  "s-maxage=60, stale-while-revalidate=300" -> "public, s-maxage=60, stale-while-revalidate=300"  [6]
+    api.clubs.new, api.clubs.trending, api.events.export, api.events.happening-now, api.events.new, api.events.popular
+  "(none — vercel.json /api/(.*) rule does not match this path; next.config.ts sets no Cache-Control)" -> "private, no-store"  [2]
+    auth.callback, auth.signout
+-- cache_policy_target
+  "public, s-maxage=60, stale-while-revalidate=300" -> "public, s-maxage=60, stale-while-revalidate=120"  [2]
+    api.clubs.featured, api.events.featured
+  "public, s-maxage=60, stale-while-revalidate=300" -> "private, no-store"  [2]
+    api.events.id, api.health
+  "public, s-maxage=60, stale-while-revalidate=300" -> "public, s-maxage=30, stale-while-revalidate=60"  [1]
+    api.events
+-- input_validation
+  "none" -> "zod"  [23]
+    api.admin.audit-log, api.admin.calculate-popularity, api.admin.clubs, api.admin.events.id, api.admin.organizer-requests, api.admin.organizers, api.admin.reports, api.calendar.events, api.clubs.banner, api.clubs.logo, api.clubs.trending, api.events.export, api.events.popular, api.events, api.events.upload-image, api.moderation.reviews.targetType.targetId, api.notifications, api.profile.avatar, api.profile.banner, api.recommendations.analytics, api.recommendations, api.users.saved-events, api.users.search
+  "manual" -> "zod"  [33]
+    api.admin.clubs.id, api.admin.events.id.edits, api.admin.events.id.status, api.admin.events, api.admin.experiments.id, api.admin.experiments, api.admin.featured.id, api.admin.featured, api.admin.organizer-requests.id, api.admin.reports.id, api.admin.users.id.ban, api.admin.users.id, api.clubs.id.appeal, api.clubs.id.invites, api.clubs.id.members.role, api.clubs.id.members, api.clubs.id, api.clubs.id.transfer, api.clubs, api.events.id.appeal, api.events.id.invite, api.events.id.report, api.events.id.reviews, api.events.id, api.events.id.rsvp, api.events.create, api.feedback, api.interactions, api.organizer-requests, api.profile.inferred-tags, api.profile.interests, api.recommendations.feedback, api.users.id
+-- signals (cache)
+  signals.sets_cache_control: false -> true  [87]
+  signals.cache_control_values: [] -> ["private, no-store"]  [79]
+  signals.cache_control_values: [] -> ["public, s-maxage=60, stale-while-revalidate=300","private, no-store"]  [2]
+    api.clubs.id, api.clubs
+  signals.cache_control_values: [] -> ["public, s-maxage=60, stale-while-revalidate=300"]  [6]
+    api.clubs.new, api.clubs.trending, api.events.export, api.events.happening-now, api.events.new, api.events.popular
+  signals.cache_control_values: ["private, no-store","private, no-store","private, no-store"] -> ["private, no-store"]  [1]
+    api.recommendations
+
+The non-cache, non-validation fields (verbatim from the field diff):
+  signals.cache_control_values: [] -> ["private, no-store"]
+  signals.env_vars_referenced: ["NEXT_PUBLIC_SUPABASE_URL","SUPABASE_SERVICE_ROLE_KEY","ADMIN_API_KEY"] -> []
+  signals.env_gated_auth: true -> false
+  signals.cache_control_values: [] -> ["private, no-store"]
+  role_required: "inline roles check on the service client (users.roles includes \"admin\"), not verifyAdmin()" -> "admin or the item's creator (inline hasRole(ctx.profile, \"admin\") after requireUser(ctx) on the request context, not requireRole(); a non-admin caller must be the target's created_by)"
+  signals.cache_control_values: [] -> ["private, no-store"]
+  signals.env_vars_referenced: ["ADMIN_EMAILS","NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_ANON_KEY","SUPABASE_SERVICE_ROLE_KEY"] -> []
+  role_required: "none for the route itself; ADMIN_EMAILS drives a service-role role GRANT inside it (FO-05)" -> "none for the route itself; no role is granted at sign-in since 05-05 (F-004, FO-05 fixed); the profile upsert runs through getElevatedClient() and roles change only through the admin users route"
+  signals.cache_control_values: [] -> ["private, no-store"]
+  signals.env_vars_referenced: ["NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_ANON_KEY"] -> []
+
+Reading:
+- 91 rows changed, all live; the 3 retained rows are byte-identical.
+- cache_policy_today: 87 live rows leave the blanket value (77 to private, 6 to public-60-300, 2 to
+  the mixed public GET + private mutation value, 2 /auth rows from "(none …)" to private). The 4
+  unchanged live rows already carried their own header (api.events, both featured, recommendations).
+- cache_policy_target: exactly the 5 corrections (C7, C8, C9 x3); the DEC-69 rows were already
+  private and are now pinned.
+- On the regenerated data: live rows 91; today private 80, one public value 9, mixed 2; all 26 live
+  personalized rows private in both columns; the public today set equals the public target set (11
+  rows, research § Inventory E).
+
+$ node -e '<rows whose cache_policy_today has a bare "s-maxage=60, stale-while-revalidate=300" element>'
+api.auth-debug handler_deleted
+api.cron.send-feedback-requests handler_deleted
+api.cron.send-reminders handler_deleted
+live: 0
+exit=0
+Reading: no live row carries the blanket value. The three that do are the DEC-55 retained rows for
+deleted handlers, kept byte-for-byte with a handler_deleted note (classification-rules.md § 8). The
+plan's acceptance line "no row" is met for every live row; the three are recorded as a measured
+difference, not rewritten, because DEC-55 retains them unchanged.
+
+## 5. classification-rules.md sections changed (same commit)
+
+$ git diff --stat -- .planning/audit/inventory/classification-rules.md
+ .planning/audit/inventory/classification-rules.md | 97 +++++++++++++++++++++--
+ 1 file changed, 92 insertions(+), 5 deletions(-)
+- § A2: the DI-58 (a) correction note (moderation reviews; /auth/callback).
+- § C1: rewritten for the wrapper (class table, the ` ; ` join, counts, the FATAL rule); the
+  audit-time rule kept as history.
+- § C2: "Recorded corrections (06-15, CACHE_TARGET_OVERRIDES)" table and the 11-row public set.
+- § V1: the contract-boundary clause, the measured 24-row drift it prevents, and the counts
+  (live: 56 zod, 35 none, 0 manual; no live none row reads a body).
+- § 8: three handler_deleted rows (auth-debug, both cron rows) in a table; "Signals the script
+  refreshes (06-15, DI-58 (b))".
+
+## 6. endpoints.csv (the derived view)
+
+$ node .planning/audit/tools/gen-endpoints-csv.mjs
+wrote 94 rows to .planning/audit/inventory/endpoints.csv; 13 carry no authorization signal at all
+exit=0
+ .planning/audit/inventory/endpoints.csv | 182 ++++++++++++++++----------------
+ 1 file changed, 91 insertions(+), 91 deletions(-)
+
+## 7. Validators
+
+$ node .planning/audit/tools/validate.mjs --check endpoints
+PASS endpoints :: is-an-array :: array
+PASS endpoints :: row-count-matches-baseline :: baseline/versions.txt route_ts_count is 94, inventory has 94
+PASS endpoints :: schema-valid :: all rows valid
+PASS endpoints :: ids-unique :: all ids distinct
+PASS endpoints :: no-residual-placeholders :: fully classified
+--- 5 passed, 0 failed, 0 skipped
+exit=0
+
+$ node .planning/audit/tools/validate.mjs --quick   (after; the same command on the 25412cd endpoints.json gave the identical list except the line marked)
+FAIL schema-snapshots :: dump-contains-create-table :: schema/staging.schema.sql
+FAIL schema-snapshots :: dump-contains-create-table :: schema/local.schema.sql
+SKIP endpoints-signals :: placeholders-permitted :: this gate runs before hand classification; use --check endpoints afterwards
+PASS authz-registers :: every-env-gated-check-is-registered :: 1 env-gated routes registered
+PASS authz-registers :: fail-open-register-non-empty :: register must list the reachable route for each env-gated check
+--- 118 passed, 2 failed, 1 skipped
+exit=1 (the two schema-snapshot FAILs and the SKIP are by design, identical to the before-run: 118 passed, 2 failed, 1 skipped)
+before: PASS authz-registers :: every-env-gated-check-is-registered :: 2 env-gated routes registered
+
+## 8. The census and the cache defect suite
+
+src/__tests__/api/cache-headers-census.test.ts: OVERRIDES removed (the data carries C7, C8, C9 and
+DEC-69). INVENTORY_CLASS keeps only the mapping from each target value to its class name (private,
+no-store, and the three public values). New P0 rows: every live target maps to a class and every
+public class's header is its target value; the C7, C8 and DEC-69 routes are private in the data.
+
+src/__tests__/api/cache-headers-defect.test.ts (Rule 3): its worklist is "every GET row whose target
+is private, no-store", so the corrected /api/events/[id] and /api/health rows joined it without
+invokers and C0 failed (6 failures: C0 x2, C1 x2, C2 x2). Both routes were wrapped private by 06-14,
+so they gain invokers and enter ADOPTED (C4/C5: private, no-store, a UUID x-request-id, no Vary);
+the drivable count moves 44 -> 46. No pin moved, so no defect-ledger row. The auth-debug
+NOT_DRIVABLE reason now cites DEC-55 instead of "stale (DI-58)".
+
+$ npx jest --ci src/__tests__/api/cache-headers-census.test.ts src/__tests__/api/cache-headers-defect.test.ts   (before the defect-suite edit)
+FAIL node src/__tests__/api/cache-headers-defect.test.ts
+  ● C0: the worklist is the inventory › every private-target GET row has an invoker or a NOT_DRIVABLE reason
+  ● C0: the worklist is the inventory › every ADOPTED route is a drivable worklist row
+  ● C1: signed in, no private, no-store today › /api/events/[id]
+  ● C1: signed in, no private, no-store today › /api/health
+  ● C2: anonymous, no private, no-store today › /api/events/[id]
+  ● C2: anonymous, no private, no-store today › /api/health
+PASS node src/__tests__/api/cache-headers-census.test.ts
+Tests:       6 failed, 370 passed, 376 total
+exit=1
+
+$ npx jest --ci src/__tests__/api/cache-headers-census.test.ts src/__tests__/api/cache-headers-defect.test.ts   (after)
+PASS node src/__tests__/api/cache-headers-defect.test.ts
+PASS node src/__tests__/api/cache-headers-census.test.ts
+Tests:       378 passed, 378 total
+exit=0
+
+## 9. Task 1 verify (the plan's automated command) and the floor
+
+$ node .planning/audit/tools/validate.mjs --check endpoints && npx jest --ci src/__tests__/api/cache-headers-census.test.ts && node -e <C7/C8 one-liner>
+PASS endpoints :: is-an-array :: array
+PASS endpoints :: row-count-matches-baseline :: baseline/versions.txt route_ts_count is 94, inventory has 94
+PASS endpoints :: schema-valid :: all rows valid
+PASS endpoints :: ids-unique :: all ids distinct
+PASS endpoints :: no-residual-placeholders :: fully classified
+--- 5 passed, 0 failed, 0 skipped
+PASS node src/__tests__/api/cache-headers-census.test.ts
+Test Suites: 1 passed, 1 total
+Tests:       279 passed, 279 total
+exit=0
+(jest's own line is piped through grep above; its unpiped exit is in the full run below)
+
+$ npx jest --ci
+Test Suites: 1 skipped, 125 passed, 125 of 126 total
+Tests:       1 skipped, 3340 passed, 3341 total
+exit=0
+$ npx tsc --noEmit
+exit=0 (no output)
+$ node scripts/check-characterization-tags.mjs --all
+ok 57 files
+exit=0

@@ -35,10 +35,20 @@
  *   node .planning/audit/tools/classify-inventory.mjs --phase 3   # + persona matrix + pages
  *   node .planning/audit/tools/classify-inventory.mjs             # same as --phase 3
  *   ... --dry-run                                                 # report, write nothing
+ *
+ * SINCE 06-15 (REFAC-19, DEC-73, DI-58)
+ *   cache_policy_today and the two cache signals are read from each export's
+ *   `withRoute({ cache: "<class>" })` declaration, mapped to header text through
+ *   the POLICIES table in src/server/http.ts; vercel.json no longer contributes
+ *   (06-14 removed its /api headers rule). cache_policy_target stays derived from
+ *   the verdicts plus CACHE_TARGET_OVERRIDES and NEVER reads the wrapper, so the
+ *   census (src/__tests__/api/cache-headers-census.test.ts) compares two
+ *   independent sources. A live route file with no wrapper is a FATAL error.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { M1_M2_ENDPOINTS, updateM1M2Inventory } from './m1-m2-inventory.mjs';
 
 const ROOT = process.cwd();
 const INV = path.join(ROOT, '.planning/audit/inventory');
@@ -58,13 +68,84 @@ const readJson = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
 const writeJson = (p, v) => fs.writeFileSync(p, JSON.stringify(v, null, 2) + '\n');
 
 /**
- * The blanket platform header. vercel.json applies this to EVERY path matching
- * /api/(.*) with no exception for authenticated or personalized routes. It is
- * quoted verbatim; do not paraphrase it — REFAC-19 inverts exactly this string.
+ * The cache classes as implemented (06-12, DEC-73). Read out of the POLICIES
+ * table in src/server/http.ts rather than restated, so a class whose header text
+ * changes there changes here on the next run. Until 06-14 every /api/ response
+ * without its own header inherited vercel.json's blanket
+ * `s-maxage=60, stale-while-revalidate=300`; that rule is gone, and every route
+ * file declares its class through withRoute (the census asserts it).
  */
-const BLANKET_API_HEADER = 's-maxage=60, stale-while-revalidate=300';
-/** next.config.ts headers() sets only security headers for /(.*) — no Cache-Control. */
-const NO_PLATFORM_HEADER = '(none — vercel.json /api/(.*) rule does not match this path; next.config.ts sets no Cache-Control)';
+const HTTP_TS = path.join(ROOT, 'src/server/http.ts');
+
+function loadCachePolicies() {
+  const src = fs.readFileSync(HTTP_TS, 'utf8');
+  const consts = Object.fromEntries(
+    [...src.matchAll(/^const\s+([A-Z_]+)\s*=\s*"([^"]+)";/gm)].map((m) => [m[1], m[2]])
+  );
+  const block = /const POLICIES[^=]*=\s*\{([\s\S]*?)\};/.exec(src);
+  if (!block) throw new Error('FATAL: POLICIES table not found in src/server/http.ts');
+  const out = {};
+  for (const m of block[1].matchAll(/^\s*"?([a-z0-9-]+)"?\s*:\s*(?:"([^"]+)"|([A-Z_]+))\s*,?\s*$/gm)) {
+    const value = m[2] ?? consts[m[3]];
+    if (!value) throw new Error(`FATAL: cache class ${m[1]} has no resolvable header text`);
+    out[m[1]] = value;
+  }
+  if (!out.private) throw new Error('FATAL: the private class is missing from POLICIES');
+  return out;
+}
+
+const CACHE_POLICIES = loadCachePolicies();
+const PRIVATE_NO_STORE = CACHE_POLICIES.private;
+
+/**
+ * Each HTTP export's declared class, in source order:
+ * `export const GET = withRoute({ cache: "public-60-300", ... }, ...)`.
+ * The same form the census reads.
+ */
+function wrapperClasses(src) {
+  return [...src.matchAll(/export\s+const\s+(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\s*=\s*withRoute\(\s*\{\s*cache:\s*"([^"]+)"/g)]
+    .map((m) => ({ verb: m[1], cls: m[2] }));
+}
+
+/**
+ * The header a verb's success answers with. A public class applies to GET and
+ * HEAD only (applyCachePolicy); any other verb answers private whatever it
+ * declares, and every 401 or 500 is private too (status rule, not recorded here).
+ */
+function successHeader(verb, cls) {
+  const value = CACHE_POLICIES[cls];
+  if (!value) throw new Error(`FATAL: unknown cache class "${cls}"`);
+  return verb === 'GET' || verb === 'HEAD' ? value : PRIVATE_NO_STORE;
+}
+
+/**
+ * cache_policy_target corrections the verdict rule (C2) cannot express, each
+ * with its decision. Recorded in classification-rules.md § C2. The target is the
+ * GET's policy; every other verb and every non-200/404 status is private anyway.
+ */
+const CACHE_TARGET_OVERRIDES = {
+  'api.events.id': ['private, no-store',
+    'C7 (DEC-73): viewer-dependent. Admins and the creator read pending and rejected rows through the cookie client, pending_edits goes to the creator and admins only, and Vercel caches 404s.'],
+  'api.health': ['private, no-store',
+    'C8 (DEC-73): a CDN-cached liveness answer masks an origin outage.'],
+  'api.events.id.rsvp': ['private, no-store',
+    'DEC-69: the GET stays 200 for anonymous callers and answers the caller\'s own RSVP state; already private under P1, pinned here.'],
+  'api.clubs.id.events': ['private, no-store',
+    'DEC-69: members see the club\'s pending events; already private under P1, pinned here.'],
+  'api.events': ['public, s-maxage=30, stale-while-revalidate=60',
+    'C9 (DEC-73): the value the route served before 06-14 (its own header), byte-identical under the public-30-60 class.'],
+  'api.events.featured': ['public, s-maxage=60, stale-while-revalidate=120',
+    'C9 (DEC-73): the route\'s own value before 06-14, byte-identical under public-60-120.'],
+  'api.clubs.featured': ['public, s-maxage=60, stale-while-revalidate=120',
+    'C9 (DEC-73): the route\'s own value before 06-14, byte-identical under public-60-120.'],
+};
+
+/**
+ * The seam's validation boundary (06-04..06-10): a handler that reads its body,
+ * query, form or params through these helpers validates with a zod contract
+ * from src/contracts/ and answers 400 on a mismatch (src/server/body.ts).
+ */
+const CONTRACT_BOUNDARY = /\b(?:parseBody|parseQuery|readQuery|parseForm|parseWith)\s*\(/;
 
 /**
  * Jest suites that live under src/__tests__/ rather than beside the handler.
@@ -200,8 +281,11 @@ const VERDICTS = {
   'api.events.id.invite': A('authenticated', null, 'partial', false, 'self'),
   'api.events.id.report': A('authenticated', null, 'partial', false, 'self'),
   'api.events.id.save': A('authenticated', null, 'partial', true, 'self'),
+  // DI-58 (a), corrected in 06-15: 05-13 moved this route onto the request
+  // context; the admin decision is an inline role check on ctx.profile, not
+  // requireRole(), and a non-admin caller falls through to the creator check.
   'api.moderation.reviews.targetType.targetId': A('authenticated',
-    'inline roles check on the service client (users.roles includes "admin"), not verifyAdmin()', 'bypassed', false, 'admin'),
+    'admin or the item\'s creator (inline hasRole(ctx.profile, "admin") after requireUser(ctx) on the request context, not requireRole(); a non-admin caller must be the target\'s created_by)', 'bypassed', false, 'admin'),
 
   /* ---- authenticated since Phase 5 slice 3 (F-028, DEC-39) ---------------
    * These four were anonymous-tolerant and personalized (the § 6 D-6 cohort).
@@ -270,8 +354,10 @@ const VERDICTS = {
     'No 401; anonymous callers fall through to the popularity feed. The ONLY route in the tree that sets private,no-store itself — and raw/prod/exact-counts.json shows user_event_scores at 0 rows, so every caller is on the fallback path today.'),
 
   /* ---- auth flow --------------------------------------------------------- */
+  // Corrected in 06-15 (the DI-58 class of stale admin text): 05-05 removed the
+  // ADMIN_EMAILS grant (F-004, FO-05 fixed); no role is granted at sign-in.
   'auth.callback': A('anonymous',
-    'none for the route itself; ADMIN_EMAILS drives a service-role role GRANT inside it (FO-05)', 'bypassed', true, 'self',
+    'none for the route itself; no role is granted at sign-in since 05-05 (F-004, FO-05 fixed); the profile upsert runs through getElevatedClient() and roles change only through the admin users route', 'bypassed', true, 'self',
     'OAuth code exchange. The response is a redirect carrying the caller\'s own session cookies, so it is caller-specific by construction and must never be shared.'),
   'auth.signout': A('anonymous', null, 'none', false, 'self',
     'Clears cookies and 302s. Ban-exempt in src/middleware.ts BAN_EXEMPT_PATHS.'),
@@ -430,9 +516,11 @@ function main() {
 
   const missing = [];
   const retained = [];
+  const unwrapped = [];
   let changed = 0;
 
   for (const row of rows) {
+    if (row.route in M1_M2_ENDPOINTS) continue; // Reviewed current release overlay below.
     const v = VERDICTS[row.id];
     if (!v) { missing.push(row.id); continue; }
     // A row whose handler file has since been deleted keeps its audit-time
@@ -443,6 +531,26 @@ function main() {
     if (!fs.existsSync(path.join(ROOT, row.file))) { retained.push(row.id); continue; }
     const before = JSON.stringify(row);
     const src = fs.readFileSync(path.join(ROOT, row.file), 'utf8');
+
+    /* ---- signals this script refreshes (06-15) --------------------------- */
+    // Only the signals whose staleness would misstate a derived field or a
+    // gate. The rest stay audit-time: gen-endpoint-inventory.mjs owns them, and
+    // its regexes predate the seam (a blanket refresh would, for example, flip
+    // uses_service_client on the elevated-door rows and rewrite rls_reliance).
+    const classes = wrapperClasses(src);
+    const exported = [...src.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS)\b/g)].map((m) => m[1]);
+    if (classes.length === 0 || classes.length !== exported.length) {
+      unwrapped.push(row.id);
+      continue;
+    }
+    const literal = [...src.matchAll(/["']Cache-Control["']\s*[,:]\s*["']([^"']+)["']/gi)].map((m) => m[1]);
+    const successValues = [...new Set([...classes.map(({ verb, cls }) => successHeader(verb, cls)), ...literal])];
+    row.signals.sets_cache_control = true;
+    row.signals.cache_control_values = successValues;
+    // DI-58 (b): the env signals, with gen-endpoint-inventory.mjs's own regexes.
+    // calculate-popularity lost its ADMIN_API_KEY gate in 05-14.
+    row.signals.env_vars_referenced = [...new Set([...src.matchAll(/process\.env\.([A-Z0-9_]+)/g)].map((m) => m[1]))];
+    row.signals.env_gated_auth = /if\s*\(\s*[A-Za-z_]\w*\s*&&\s*[^)]*!==/.test(src);
 
     /* ---- phase 1: the four authorization fields ------------------------- */
     row.auth_requirement = v.auth;
@@ -463,27 +571,31 @@ function main() {
     if (PHASE >= 2) {
       row.personalized = v.pers;
 
-      // cache_policy_today: the handler's own header when it sets one, else the
-      // blanket platform header. Quoted verbatim from vercel.json.
-      row.cache_policy_today = row.signals.sets_cache_control
-        ? [...new Set(row.signals.cache_control_values)].join(' ; ')
-        : (row.route.startsWith('/api/') ? BLANKET_API_HEADER : NO_PLATFORM_HEADER);
+      // cache_policy_today (rule C1, since 06-15): the header each export's
+      // success carries under its withRoute class, in export order, distinct
+      // values joined with ' ; '. vercel.json no longer contributes.
+      row.cache_policy_today = row.signals.cache_control_values.join(' ; ');
 
-      // cache_policy_target: REFAC-19's input.
+      // cache_policy_target: REFAC-19's input (rule C2), plus the recorded
+      // corrections. Never read from the wrapper.
       const mutatingOnly = !row.methods.includes('GET');
-      row.cache_policy_target = v.pers
-        ? 'private, no-store'
-        : mutatingOnly
-          ? 'no-store'
-          : row.auth_requirement === 'anonymous'
-            ? 'public, s-maxage=60, stale-while-revalidate=300'
-            : 'private, no-store';
+      row.cache_policy_target = row.id in CACHE_TARGET_OVERRIDES
+        ? CACHE_TARGET_OVERRIDES[row.id][0]
+        : v.pers
+          ? 'private, no-store'
+          : mutatingOnly
+            ? 'no-store'
+            : row.auth_requirement === 'anonymous'
+              ? 'public, s-maxage=60, stale-while-revalidate=300'
+              : 'private, no-store';
 
       // input_validation: no schema validator is imported anywhere in src/
       // (signals.has_zod is false on all 94 rows), so the only two reachable
       // values are manual and none. A handler that parses a body and has no
       // 400 path validates nothing — that is the REFAC-15 candidate set.
-      row.input_validation = row.signals.has_zod
+      // Since 06-15: a handler reading input through the seam's contract
+      // boundary (CONTRACT_BOUNDARY) validates with zod.
+      row.input_validation = row.signals.has_zod || CONTRACT_BOUNDARY.test(src)
         ? 'zod'
         : row.signals.parses_body
           // A 400 is either written inline or produced by the seam's badRequest()
@@ -508,6 +620,10 @@ function main() {
 
   if (missing.length) {
     console.error(`FATAL: ${missing.length} endpoint ids have no verdict: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+  if (unwrapped.length) {
+    console.error(`FATAL: ${unwrapped.length} live route file(s) declare an export outside withRoute: ${unwrapped.join(', ')}`);
     process.exit(1);
   }
 
@@ -543,3 +659,4 @@ function main() {
 }
 
 main();
+if (!DRY) updateM1M2Inventory();

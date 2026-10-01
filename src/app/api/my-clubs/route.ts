@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { logRouteError, withRoute } from "@/server/route";
 
 /**
  * GET /api/my-clubs
  * Returns the current user's clubs with role and member count.
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch your clubs" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -23,6 +24,7 @@ export async function GET() {
       .eq("user_id", user.id);
 
     if (error) {
+      logRouteError(error);
       return NextResponse.json(
         { error: "Failed to fetch your clubs" },
         { status: 500 }
@@ -82,10 +84,11 @@ export async function GET() {
     }));
 
     return NextResponse.json({ clubs });
-  } catch {
+  } catch (error) {
+    logRouteError(error);
     return NextResponse.json(
       { error: "Failed to fetch your clubs" },
       { status: 500 }
     );
   }
-}
+});

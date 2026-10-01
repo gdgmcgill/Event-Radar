@@ -50,7 +50,7 @@ describe("isCrossSiteMutation", () => {
     }
   );
 
-  it.each(["/profile", "/auth/signout", "/api", "/apix/events"])(
+  it.each(["/profile", "/api", "/apix/events"])(
     "never checks a path outside /api/ (%s)",
     (path) => {
       expect(
@@ -286,5 +286,20 @@ describe("the proxy runs the check after the rate limiter and before session wor
       proxy(req(SAVE, "POST", { origin: "https://evil.example", "x-forwarded-for": addr }));
     for (let i = 0; i < 30; i++) expect((await cross()).status).toBe(403);
     expect((await cross()).status).toBe(429);
+  });
+});
+
+
+describe("M0 DI-69", () => {
+  it("refuses cross-site sign-out without destroying the session", () => {
+    expect(isCrossSiteMutation(req("/auth/signout", "POST", { origin: "https://evil.example" }))).toBe(true);
+    expect(isCrossSiteMutation(req("/auth/signout", "POST", { origin: "https://uni-verse.test" }))).toBe(false);
+  });
+  it("compares schemes and normalizes default ports", () => {
+    expect(isCrossSiteMutation(req(SAVE, "POST", { origin: "http://uni-verse.test" }))).toBe(true);
+    expect(isCrossSiteMutation(req(SAVE, "POST", { host: "uni-verse.test:443", origin: "https://uni-verse.test" }))).toBe(false);
+  });
+  it("refuses a non-web origin with the same host", () => {
+    expect(isCrossSiteMutation(req(SAVE, "POST", { origin: "ftp://uni-verse.test" }))).toBe(true);
   });
 });

@@ -12,6 +12,7 @@ import {
   Calendar,
   Mail,
 } from "lucide-react";
+import type { BanBodyInput, UnbanRequestInit } from "@/contracts/admin";
 
 interface OrganizerClub {
   id: string;
@@ -121,7 +122,7 @@ export default function ModerationOrganizersPage() {
     const res = await fetch(`/api/admin/users/${selectedUser.id}/ban`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(data satisfies BanBodyInput),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -138,7 +139,7 @@ export default function ModerationOrganizersPage() {
 
     const res = await fetch(`/api/admin/users/${org.id}/ban`, {
       method: "DELETE",
-    });
+    } satisfies UnbanRequestInit);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       alert(err.error || "Failed to unban user");

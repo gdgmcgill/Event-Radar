@@ -1,0 +1,30 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { OnboardingWizard } from './OnboardingWizard';
+const push = jest.fn();
+const update = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push, refresh: jest.fn() }) }));
+jest.mock('@/store/useAuthStore', () => ({ useAuthStore: (select: (state: unknown) => unknown) => select({ updateUser: update }) }));
+jest.mock('@/components/profile/InterestTagSelector', () => ({ __esModule: true, default: () => <div>Optional interests</div> }));
+const request = jest.fn();
+beforeEach(() => { jest.clearAllMocks(); global.fetch = request; request.mockImplementation(async (url: string) => ({ ok: true, json: async () => url === '/api/universities' ? { universities: [{ id: '10000000-0000-4000-8000-000000000002', name: 'Concordia University' }] } : { success: true } })); });
+it.each(['unspecified', '10000000-0000-4000-8000-000000000002'])('completes with name and %s, without requiring interests or optional details', async choice => {
+  render(<OnboardingWizard userId="person" initialName="Reader" avatarUrl={null} />);
+  await screen.findByRole('option', { name: 'Concordia University' });
+  expect(screen.getByRole('link', { name: 'Keep browsing for now' })).toHaveAttribute('href', '/');
+  expect(screen.getByRole('button', { name: 'Finish setup' })).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('University'), { target: { value: choice } });
+  fireEvent.click(screen.getByRole('button', { name: 'Finish setup' }));
+  await waitFor(() => expect(push).toHaveBeenCalledWith('/'));
+  const patch = request.mock.calls.find(([url]) => url === '/api/users/person')!;
+  expect(JSON.parse(patch[1].body)).toEqual({ name: 'Reader', university_id: choice === 'unspecified' ? null : choice, other_university: choice === 'unspecified' ? 'Prefer not to specify' : null, program: null, year: null, interest_tags: [], onboarding_completed: true });
+  expect(request).toHaveBeenCalledWith('/api/onboarding/complete', { method: 'POST' });
+  expect(update).toHaveBeenCalledWith(expect.objectContaining({ affiliation_source: 'self_declared' }));
+});
+it('retains Other and prefer-not options if the university catalog is unavailable', async () => {
+  request.mockResolvedValue({ ok: false });
+  render(<OnboardingWizard userId="person" initialName="Reader" avatarUrl={null} />);
+  await screen.findByRole('alert');
+  fireEvent.change(screen.getByLabelText('University'), { target: { value: 'other' } });
+  expect(screen.getByRole('button', { name: 'Finish setup' })).toBeEnabled();
+  expect(screen.getByLabelText('University name (optional)')).toBeInTheDocument();
+});

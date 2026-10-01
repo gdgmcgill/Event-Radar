@@ -1,0 +1,1 @@
+{"status":400,"error":{"code":"21000","details":null,"hint":null,"message":"DELETE requires a WHERE clause"}}

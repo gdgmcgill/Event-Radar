@@ -8,10 +8,13 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
 import type { NextRequest } from "next/server";
-import { VALID_INTEREST_TAGS } from "@/lib/constants";
+import { parseBody } from "@/server/body";
+import { InterestsBody } from "@/contracts/users";
 import type { Database } from "@/lib/supabase/types";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PUT(request: NextRequest) {
+export const PUT = withRoute({ cache: "private", action: "update interests" }, async (request: NextRequest) => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
@@ -21,24 +24,11 @@ export async function PUT(request: NextRequest) {
     const user = active.user;
     const supabase = ctx.supabase;
 
-    const { interest_tags } = await request.json();
-
-    if (!Array.isArray(interest_tags)) {
-      return NextResponse.json(
-        { error: "interest_tags must be an array" },
-        { status: 400 }
-      );
-    }
-
-    // Validate that all tags are valid interest tags (EventTag + quick filters)
-    const isValid = interest_tags.every((tag: string) => VALID_INTEREST_TAGS.includes(tag));
-
-    if (!isValid) {
-      return NextResponse.json(
-        { error: "Invalid tag values provided" },
-        { status: 400 }
-      );
-    }
+    // "interest_tags must be an array", then every tag a valid interest tag
+    // (EventTag + quick filters): "Invalid tag values provided".
+    const parsed = await parseBody(request, InterestsBody);
+    if (!parsed.ok) return parsed.response;
+    const { interest_tags } = parsed.data;
 
     // Update user's interest_tags in the database
     const updatePayload: Database["public"]["Tables"]["users"]["Update"] = {
@@ -54,7 +44,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Database error:", error);
+      log.error("Database error", { error });
       return NextResponse.json(
         { error: "Failed to update interests" },
         { status: 500 }
@@ -69,10 +59,10 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error updating interests:", error);
+    log.error("Error updating interests", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

@@ -1,0 +1,397 @@
+evidence/logger-foundation.txt - plan 06-12 (REFAC-20, REFAC-19, DEC-73, DEC-74, DI-45, DI-70): the logger, withRoute,
+the cache classes, the request id through proxy and context, the server-console and cache censuses
+
+Base: a41650d (06-11 complete). Every command below was run on this tree; exit codes are verbatim.
+Host: macOS, Node v24.16.0, Next 16.3.5. Long commands were time-boxed with the scratchpad with-timeout.sh.
+
+======================================================================================================
+TASK 1 - src/server/log.ts, src/server/route.ts, the cache classes in src/server/http.ts (test first)
+======================================================================================================
+
+[1.1 RED] log.test.ts, route.test.ts written and http.test.ts extended before log.ts/route.ts/the classes existed
+$ npx jest --ci src/server/__tests__/log.test.ts src/server/__tests__/route.test.ts src/server/__tests__/http.test.ts
+FAIL node src/server/__tests__/route.test.ts
+    Cannot find module '../log' from 'src/server/__tests__/route.test.ts'
+FAIL node src/server/__tests__/log.test.ts
+    Cannot find module '../log' from 'src/server/__tests__/log.test.ts'
+FAIL node src/server/__tests__/http.test.ts
+    TypeError: http_1.CACHE_CLASSES is not iterable   (Test suite failed to run)
+Test Suites: 3 failed, 3 total
+Tests:       0 total
+exit=1
+
+[1.2 GREEN] after log.ts, route.ts and the http.ts classes
+(one row changed while going green: the route.test row 'a uuid with a newline appended' could not be built -
+ the Fetch Headers class itself throws 'Headers.append: ... is an invalid header value' for a newline, so no
+ request can carry one; it became 'two ids comma-joined', the shape a repeated header actually arrives in)
+$ npx jest --ci src/server/__tests__/log.test.ts src/server/__tests__/route.test.ts src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/route.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/server/__tests__/log.test.ts
+Test Suites: 3 passed, 3 total
+Tests:       73 passed, 73 total
+exit=0
+
+$ npx tsc --noEmit
+exit=0
+
+$ npm run lint
+
+exit=0 (17 warnings, all pre-existing; none in the new files)
+
+Acceptance rows:
+  log.test.ts  'redacts the cookie key', 'redacts a cookie key whatever its case' -> [redacted];
+               'replaces an email inside the message with [email]' -> 'lookup failed for [email] today';
+               'keeps a newline in msg inside the one line (no log injection)' (T-06-12-03)
+  route.test.ts 'answers the seam's JSON 500 ...': body {"error":"Failed to process request"},
+               Cache-Control 'private, no-store', x-request-id == the incoming UUID, one error line
+  http.test.ts 'public-60-300 on POST 200 sets private, no-store', 'public-60-300 on GET 401 sets private, no-store'
+  src/server/http.ts: ok, created, success bodies unchanged (git diff shows additions only):
+ src/server/http.ts | 65 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 65 insertions(+)
+  removed lines in http.ts: 0
+
+======================================================================================================
+TASK 2 - the request id from the proxy through the context; proxy and boot logs as JSON (DI-45, DI-70)
+======================================================================================================
+
+[2.1 A1] Research assumption A1: request.headers.set on the proxy's NextRequest is permitted and is
+forwarded by NextResponse.next({ request }). Scratch Jest test (src/zz-scratch-a1.test.ts, deleted after the
+run, never staged):
+$ npx jest --ci src/zz-scratch-a1.test.ts
+A1 set threw: null
+A1 forwarded: 11111111-1111-4111-8111-111111111111
+A1 override list: x-request-id
+A1 after cookies.set (setAll path): 11111111-1111-4111-8111-111111111111 | cookie: sb-x=v
+PASS node src/zz-scratch-a1.test.ts
+exit=0
+RESULT: A1 HOLDS. headers.set did not throw; the value is forwarded as x-middleware-request-x-request-id, and
+it is still forwarded after request.cookies.set (the setAll path). The runtime agrees: Next's adapter
+(node_modules/next/dist/server/web/adapter.js:150-175) builds the proxy's NextRequest from a fresh Headers
+object (fromNodeOutgoingHttpHeaders), which is mutable - the proxy's existing setAll already relies on
+request.cookies.set mutating it. FORM USED: the direct form (request.headers.set at the top of proxy());
+the clone-and-pass fallback was not needed.
+
+[2.2 RED] src/proxy-request-id.test.ts (new), context.test.ts rows added, instrumentation.test.ts edited in
+place (untagged; inventory row 4) - all before the source changed
+$ npx jest --ci src/proxy-request-id.test.ts src/server/__tests__/context.test.ts src/instrumentation.test.ts
+FAIL node src/proxy-request-id.test.ts
+FAIL node src/instrumentation.test.ts
+FAIL node src/server/__tests__/context.test.ts
+Test Suites: 3 failed, 3 total
+Tests:       23 failed, 29 passed, 52 total
+exit=1
+  x createRequestContext: an auth lookup failure logs one warn line (DI-45) › logs 'auth user lookup failed' with code and status only, and stays anonymous
+  x createRequestContext: the request id comes from the request store (DEC-74, C19) › takes the store's id inside runWithRequest, so the proxy's and the handler's lines share it
+  x proxy request id (DEC-74, C19) › 403 cross-site mutation carries the id
+  x proxy request id (DEC-74, C19) › 429 from the limiter carries the id and is otherwise unchanged
+  x proxy request id (DEC-74, C19) › 500 on a page carries the id
+  x proxy request id (DEC-74, C19) › 500 on the ring's own error carries the id, and the error line is JSON with the same id
+  x proxy request id (DEC-74, C19) › a limiter fault logs one JSON line carrying the request's id, then passes through
+  x proxy request id (DEC-74, C19) › banned /api/* 403 and banned page redirect carry the id
+  x proxy request id (DEC-74, C19) › mints a distinct id per request
+  x proxy request id (DEC-74, C19) › never trusts a client-supplied id, even a UUID-shaped one
+  x proxy request id (DEC-74, C19) › non-refreshed pass-through: forwards a fresh UUID in place of the client's value and echoes it
+  x proxy request id (DEC-74, C19) › onboarding redirect carries the id
+  x proxy request id (DEC-74, C19) › profile-not-found 403 and sync-failed redirect carry the id
+  x proxy request id (DEC-74, C19) › refreshed pass-through (setAll rebuilt the response): still forwards and echoes the id, and keeps the cookie
+  x proxy request id (DEC-74, C19) › runs the ring inside the request store: getUser sees the forwarded id
+  x proxy request id (DEC-74, C19) › sign-in redirect on a protected page carries the id
+  x register() and an unusable Upstash URL › a rediss:// URL without the enforce flag: resolves and logs exactly one error, without the URL
+  x register() and the rate-limit store › an unreadable RATE_LIMIT_REQUIRE_DISTRIBUTED refuses to start, even with a store configured
+  x register() and the rate-limit store › unconfigured in production with RATE_LIMIT_REQUIRE_DISTRIBUTED=true: rejects with MissingEnvError naming both pairs
+  x register() and the rate-limit store › unconfigured in production: resolves, and logs exactly one error naming all four variables and the degradation
+  x register() on the Node.js server runtime › rejects with MissingEnvError naming NEXT_PUBLIC_SUPABASE_ANON_KEY when it is unset
+  x register() on the Node.js server runtime › rejects with MissingEnvError naming NEXT_PUBLIC_SUPABASE_URL when it is unset
+  x register() on the Node.js server runtime › rejects with MissingEnvError naming SUPABASE_SERVICE_ROLE_KEY when it is unset
+
+[2.3 LEDGER, step 2] the DEFECT suite src/proxy-defect.test.ts run UNEDITED against the changed proxy -> red,
+exactly the two exact-argument rows the inventory names (:213, :241). All other proxy suites green unedited:
+$ npx jest --ci src/proxy src/middlewareRateLimit.test.ts src/server/__tests__/ src/instrumentation.test.ts
+PASS node src/server/__tests__/context.test.ts
+PASS node src/server/__tests__/requireClubRole.test.ts
+PASS node src/server/__tests__/route.test.ts
+PASS node src/server/__tests__/getsession-gate.test.ts
+PASS node src/middlewareRateLimit.test.ts
+PASS node src/server/__tests__/requireOnboarded.test.ts
+PASS node src/server/__tests__/errors.test.ts
+PASS node src/server/__tests__/body.test.ts
+PASS node src/proxy-request-id.test.ts
+PASS node src/server/__tests__/requireActiveUser.test.ts
+PASS node src/server/__tests__/requireRole.test.ts
+PASS node src/server/__tests__/requireUser.test.ts
+PASS node src/server/__tests__/elevated.test.ts
+PASS node src/server/__tests__/http.test.ts
+PASS node src/proxy-ratelimit-failopen.test.ts
+PASS node src/instrumentation.test.ts
+FAIL node src/proxy-defect.test.ts
+PASS node src/server/__tests__/log.test.ts
+PASS node src/proxy-characterization.test.ts
+PASS node src/server/__tests__/csrf.test.ts
+PASS node src/proxy.test.ts
+Test Suites: 1 failed, 20 passed, 21 total
+Tests:       2 failed, 316 passed, 318 total
+exit=1
+  x proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile → 500 plain text, no client built, logged
+  x proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-088: auth.getUser rejecting reaches the catch — /profile → 500, not passed through, and logged
+
+[2.4 LEDGER, step 3] the two rows moved (edited in place: DEFECT file) to parse the JSON line -> green
+$ npx jest --ci src/proxy-defect.test.ts
+PASS node src/proxy-defect.test.ts
+Tests:       9 passed, 9 total
+exit=0
+
+[2.5 LEDGER, step 4] pre-change src/proxy.ts (HEAD d790b21) restored temporarily -> the moved rows go red;
+the changed proxy restored and proven byte-identical
+$ cp proxy.prefix.ts src/proxy.ts && npx jest --ci src/proxy-defect.test.ts
+FAIL node src/proxy-defect.test.ts
+Tests:       2 failed, 7 passed, 9 total
+exit=1
+  x proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-003: with NEXT_PUBLIC_SUPABASE_URL unset, anonymous /profile → 500 plain text, no client built, logged
+  x proxy ring (DEFECT — F-003, F-062, F-088, F-089; FIXED in 05-05) › F-088: auth.getUser rejecting reaches the catch — /profile → 500, not passed through, and logged
+$ cp proxy.fixed.ts src/proxy.ts && cmp src/proxy.ts proxy.fixed.ts
+cmp exit=0
+[step 5] the PRESERVE suites src/proxy.test.ts, src/proxy-characterization.test.ts, src/middlewareRateLimit.test.ts
+and src/server/__tests__/getsession-gate.test.ts passed UNEDITED throughout (2.3 above; git diff shows none of them).
+
+Measured against the inventory (evidence/console-coupled-tests.md, 06-12 rows): src/proxy-ratelimit-failopen.test.ts
+(row 6, 'edited in place') needed NO edit. Its assertions are content checks over JSON.stringify(mock.calls):
+the new line still contains "TypeError" (the proxy logs the error's class as the error field) and never the
+secret. Inventory note 3 is resolved in favour of keeping the class name in the field. proxy-characterization.test.ts
+(PRESERVE) has no exact console assertion, so nothing moved out of a PRESERVE file in this task.
+
+[2.6 GREEN] full Jest, tsc, lint
+$ npx jest --ci
+Test Suites: 1 skipped, 120 passed, 120 of 121 total
+Tests:       1 skipped, 2984 passed, 2985 total
+Time:        2.794 s, estimated 3 s
+exit=0
+$ npx tsc --noEmit
+exit=0
+$ npm run lint
+
+exit=0
+
+[2.7 acceptance] proxy invariants (T-06-12-04)
+PROTECTED_ROUTES, re-derived with the CLAUDE.md command, before (HEAD) and after:
+  before: "/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"
+  after:  "/my-events", "/create-event", "/notifications", "/profile", "/settings", "/my-clubs", "/invites", "/friends"
+The region from 'const supabase = createServerClient(' to 'await supabase.auth.getUser();' extracted from both
+(30 lines each) and compared: cmp exit=0 (nothing added between createServerClient and getUser).
+The 'export const config = {' block to end of file compared: cmp exit=0 (matcher unchanged).
+applyRateLimit(request, getRateLimitStore()) line identical; src/middlewareRateLimit.ts (applyApiRateLimit) untouched.
+Lines removed from src/proxy.ts (git diff -U0): the DI-70 comment lines, the proxy() signature line (the body
+moved unchanged into ring(), run inside runWithRequest), and the two console.error calls:
+  - *   - A rejected `auth.getUser()` or a failed users read (any error other than
+  - *     PGRST116, or no data) throws too (F-088).
+  - *   Every throw reaches the catch, which logs `[Middleware] Error:` and
+  - *   answers 500: `{"error":"Failed to process request"}` as JSON under
+  - *   `/api/`, plain-text `Internal Server Error` otherwise. It never passes the
+  - *   request through.
+  -export async function proxy(request: NextRequest) {
+  -    console.error("[Middleware] Rate limit check failed; allowing request", {
+  -    console.error("[Middleware] Error:", e);
+src/server/context.ts: 1 x currentRequestId(), 1 x 'auth user lookup failed'
+
+[2.8 VERIFY] the plan's <verify> command, verbatim
+$ npx jest --ci src/proxy src/server/__tests__/context.test.ts src/instrumentation.test.ts && npx tsc --noEmit && npm run lint
+Test Suites: 7 passed, 7 total
+Tests:       110 passed, 110 total
+✖ 17 problems (0 errors, 17 warnings)
+exit=0
+
+======================================================================================================
+TASK 3 - the non-route server modules on the logger; the server-console and cache censuses; CI step
+======================================================================================================
+
+Task 1's commit: d790b21. Task 2's commit: 4ad1fae (filled into the two proxy-defect ledger rows by Task 3's
+commit). Task 3's commit: f044f02 (filled into the audit-shape ledger row by the plan's docs commit).
+
+[3.1] Four modules converted: src/server/ratelimit/index.ts (3 calls), src/server/ratelimit/upstashStore.ts (2),
+src/server/afterResponse.ts (1), src/lib/audit.ts (1). Scopes from the old bracket prefixes (RateLimit,
+afterResponse, Audit); fields kept (logAdminAction: action, targetType, targetId, requestId, code, message -
+no actor email or name exists in the line; the logger redacts email-shaped text in the message).
+No client module imports any of them, or src/server/log.ts (grep of every "use client" file: none).
+
+[3.2] the coupled suites run UNEDITED against the converted modules -> red (ledger step 2 for audit-shape, DEFECT)
+$ npx jest --ci src/server/ratelimit src/__tests__/moderation/audit-shape.test.ts src/__tests__/api/review05/fanout-after.test.ts
+FAIL node src/__tests__/api/review05/fanout-after.test.ts
+FAIL node src/__tests__/moderation/audit-shape.test.ts
+FAIL node src/server/ratelimit/selection.test.ts
+FAIL node src/server/ratelimit/upstashStore.test.ts
+PASS node src/server/ratelimit/memoryStore.test.ts
+PASS node src/server/ratelimit/policy.test.ts
+Tests:       10 failed, 1 skipped, 55 passed, 66 total
+exit=1
+  x F-072 / F-073 — admin_audit_log.admin_email does not exist (FIXED in 05-14) › fixed: a rejected insert is logged loudly with the request id, and the call still resolves
+  x UpstashRateLimitStore.consume › a store error allows the request and logs the error message, never throwing
+  x UpstashRateLimitStore.consume › a timeout allows the request and logs the timeout line with the key
+  x getRateLimitStore() selection › unconfigured with VERCEL_ENV "production": returns the memory store, warns once, never throws
+  x getRateLimitStore() selection › unconfigured: returns the memory store and warns exactly once across calls
+  x getRateLimitStore() with an unusable Upstash pair › a plain http:// URL: does not throw, selects the memory store, logs once without the URL
+  x getRateLimitStore() with an unusable Upstash pair › a rediss:// TCP connection string: does not throw, selects the memory store, logs once without the URL
+  x getRateLimitStore() with an unusable Upstash pair › a value that does not parse: does not throw, selects the memory store, logs once without the URL
+  x getRateLimitStore() with an unusable Upstash pair › the Marketplace's KV_URL value pasted into KV_REST_API_URL: does not throw, selects the memory store, logs once without the URL
+  x runAfterResponse › a rejecting task is logged, never thrown
+
+Measured against the inventory: upstashStore.test.ts 'unconfigured with VERCEL_ENV "production" ... warns once'
+(:349, expect(warnSpy).toHaveBeenCalledTimes(1)) is classified A (count only) but goes red: the logger writes
+warn to console.error (inventory note 1), so the console.warn spy sees nothing. Edited in place with the other
+rows (plain file): it now counts warn-level JSON lines on the console.error spy. The configured-store row's
+expect(warnSpy).not.toHaveBeenCalled() (:330) would have passed vacuously for the same reason; it gained
+expect(warnLines()).toHaveLength(0) so it still means 'warns nothing'.
+
+[3.3] plain files edited in place (selection.test.ts :96, upstashStore.test.ts :232/:247/:336/:349,
+fanout-after.test.ts :107) and the DEFECT row moved (audit-shape.test.ts :327) -> green
+$ npx jest --ci src/server/ratelimit src/__tests__/moderation/audit-shape.test.ts src/__tests__/api/review05/fanout-after.test.ts
+PASS node src/__tests__/api/review05/fanout-after.test.ts
+PASS node src/__tests__/moderation/audit-shape.test.ts
+PASS node src/server/ratelimit/memoryStore.test.ts
+PASS node src/server/ratelimit/policy.test.ts
+PASS node src/server/ratelimit/selection.test.ts
+PASS node src/server/ratelimit/upstashStore.test.ts
+Tests:       1 skipped, 65 passed, 66 total
+exit=0
+
+[3.4 LEDGER, step 4] pre-change src/lib/audit.ts (HEAD 4ad1fae) restored temporarily -> the moved row goes red;
+the converted file restored and proven byte-identical
+$ cp audit.prefix src/lib/audit.ts && npx jest --ci src/__tests__/moderation/audit-shape.test.ts
+FAIL node src/__tests__/moderation/audit-shape.test.ts
+Tests:       1 failed, 7 passed, 8 total
+exit=1
+  x F-072 / F-073 — admin_audit_log.admin_email does not exist (FIXED in 05-14) › fixed: a rejected insert is logged loudly with the request id, and the call still resolves
+$ cp audit.fixed.ts src/lib/audit.ts && cmp src/lib/audit.ts audit.fixed.ts
+cmp exit=0
+
+[3.5 RED] check-server-console.test.ts and cache-headers-census.test.ts written before the script existed
+$ npx jest --ci src/__tests__/scripts/check-server-console.test.ts src/__tests__/api/cache-headers-census.test.ts
+PASS node src/__tests__/api/cache-headers-census.test.ts
+FAIL node src/__tests__/scripts/check-server-console.test.ts
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       15 failed, 95 passed, 110 total
+exit=1
+  (15 of 15 check-server-console rows red: the script did not exist)
+The cache census PASSES from the start by design: it describes today's tree (all 91 route files PENDING_WRAP).
+Its red proof is by mutation, each reverted and proven byte-identical with cmp afterwards:
+  M1 clubs/trending still in PENDING_WRAP but its file gains 'withRoute('         -> Tests:       1 failed, 94 skipped, 95 total  (exit 1)
+  M2 clubs/trending removed from PENDING_WRAP, file not wrapped                  -> Tests:       2 failed, 94 skipped, 1 passed, 97 total  (exit 1)
+  M3 a new src/app/api/zz-probe/route.ts with no inventory row                   -> Tests:       1 failed, 94 skipped, 3 passed, 98 total  (exit 1, P0)
+  M4a positive control: trending removed from PENDING_WRAP and wrapped as
+      export const GET = withRoute({ cache: "public-60-300" }, async (request: NextRequest) => …) -> Tests:       94 skipped, 3 passed, 97 total  (exit 0)
+  M4b the same with cache: "private" (wrong class for a public route)            -> Tests:       1 failed, 94 skipped, 2 passed, 97 total  (exit 1)
+  M4c the correct wrap plus a literal "Cache-Control" in the file               -> Tests:       1 failed, 94 skipped, 2 passed, 97 total  (exit 1)
+
+[3.6] the allow-list, generated once from the live tree (seeded with the tagMapping reason, which --write keeps)
+$ node scripts/check-server-console.mjs --write
+wrote 70 entries (188 sites) to scripts/server-console-allowlist.json
+exit=0
+  S1 in route files:        142 sites in 46 files
+  S1 outside route files:   src/app/clubs/page.tsx 3  (Server Component)
+  S1 outside route files:   src/lib/tagMapping.ts 1  (reason: module shared with client components; stays on console)
+  S2 (route files only):    42 sites in 22 files
+  entries under src/server/, src/proxy.ts, src/instrumentation.ts, src/lib/audit.ts: 0
+
+Reconciled with the before-floor (evidence/floor.before.txt):
+  S1 vs C1 (160 lines in 56 files): per-file diff of the two lists shows only removals -
+    the two cron routes (1 each, deleted in 06-03) and the 12 converted here (instrumentation 3, audit 1,
+    proxy 2, afterResponse 1, ratelimit/index 3, upstashStore 2). 160 - 2 - 12 = 146 = live S1. Every route
+    file's count is unchanged, src/app/clubs/page.tsx (3) is the only Server Component with console calls.
+  S2 vs C7 (40 hits in 22 files): S2 is 42 sites in the same 22 files. The +2 are updateError.message 500
+    bodies at src/app/api/clubs/[id]/appeal/route.ts:83 and src/app/api/events/[id]/appeal/route.ts:88
+    ({ error: updateError.message }, 500). They existed at the floor's base (introduced by 523dd76 / f999fd5)
+    but are absent from C7's list, which names only the reviewError line in each file. The F-059 worklist is
+    therefore 35 response-body sites plus the callback redirect, not 33 plus the redirect.
+
+[3.7 VERIFY] the plan's <verify> command, verbatim
+$ node scripts/check-server-console.mjs && npx jest --ci src/__tests__/scripts/check-server-console.test.ts src/__tests__/api/cache-headers-census.test.ts && npx jest --ci && npx tsc --noEmit
+committed=188 live=188 delta=0
+PASS: the live census is within the committed allow-list
+Test Suites: 2 passed, 2 total
+Tests:       110 passed, 110 total
+Test Suites: 1 skipped, 122 passed, 122 of 123 total
+Tests:       1 skipped, 3094 passed, 3095 total
+exit=0
+
+$ npm run lint
+✖ 17 problems (0 errors, 17 warnings)
+exit=0 (all 17 pre-existing; none in a file this plan touched)
+$ node scripts/check-contracts.mjs && node scripts/check-contracts.mjs --client
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+client files=38 violations=0
+exit=0
+$ node scripts/check-characterization-tags.mjs --all
+ok 54 files
+exit=0
+$ node scripts/check-elevated-ratchet.mjs
+committed=0 live=0 delta=0
+PASS: the allow-list is empty and the live census is empty
+exit=0
+CI: .github/workflows/ci.yml has the step '- name: Server console census' (run: node scripts/check-server-console.mjs)
+after 'Contracts census'.
+
+[3.8 PLAYWRIGHT] from a fresh reset and seed; port 3000 free before (lsof exit=1) and after (lsof exit=1);
+the harness builds and starts its own server (reuseExistingServer: false)
+$ supabase db reset --local
+{"target":"local","version":"","message":"Reset local database."}
+exit=0
+$ npx tsx scripts/seed/load.ts
+seed: target http://127.0.0.1:54321 (local stack)
+seed: 10 personas, 5 clubs, 6 memberships, 5 events, 2 rsvps, 0 saved events
+seed: pinned now 2026-06-01T16:00:00.000Z (America/Toronto)
+exit=0
+$ npx playwright test e2e/specs/csrf-origin.spec.ts e2e/specs/ban-and-onboarding-ring.spec.ts e2e/specs/protected-route-redirect.spec.ts e2e/specs/admin-audit-row.spec.ts
+[WebServer] ✓ Running next.config.js took 6ms
+[WebServer] ✓ Compiled successfully in 2.7s
+[WebServer] ✓ Generating static pages using 9 workers (98/98) in 535ms
+[WebServer] ✓ Ready in 61ms
+[WebServer] ✓ Running next.config.js took 6ms
+Running 29 tests using 1 worker
+✓   1 [setup] › e2e/auth.setup.ts:59:18 › authenticate as onboarded_student (422ms)
+✓   2 [setup] › e2e/auth.setup.ts:59:18 › authenticate as mid_onboarding_student (294ms)
+✓   3 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_member (277ms)
+✓   4 [setup] › e2e/auth.setup.ts:59:18 › authenticate as club_owner (286ms)
+✓   5 [setup] › e2e/auth.setup.ts:59:18 › authenticate as multi_club_organizer (255ms)
+✓   6 [setup] › e2e/auth.setup.ts:59:18 › authenticate as cross_club_attacker (282ms)
+✓   7 [setup] › e2e/auth.setup.ts:59:18 › authenticate as admin (305ms)
+✓   8 [setup] › e2e/auth.setup.ts:59:18 › authenticate as banned_permanent (239ms)
+✓   9 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspended_active (251ms)
+✓  10 [setup] › e2e/auth.setup.ts:59:18 › authenticate as suspension_expired (262ms)
+✓  11 [chromium] › e2e/specs/admin-audit-row.spec.ts:114:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-073: approving the fixture writes exactly one audit row (210ms)
+✓  12 [chromium] › e2e/specs/admin-audit-row.spec.ts:134:7 › a moderation action writes exactly one audit row (F-073) › FIXED F-072: Recent Activity shows the action and the actor by name (525ms)
+✓  13 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:60:7 › a permanently banned user (F-062, F-088) › gets a JSON 403 Account suspended on an API write (81ms)
+✓  14 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:64:7 › a permanently banned user (F-062, F-088) › gets the same JSON 403 on an API read (62ms)
+✓  15 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:68:7 › a permanently banned user (F-062, F-088) › is still sent to the ban page on a page request (146ms)
+✓  16 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:77:7 › a user whose suspension is still running (F-088) › gets a JSON 403 Account suspended on an API write (78ms)
+✓  17 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:85:7 › a user whose suspension has expired › reads their own saved events, because banned_at alone is not a ban (147ms)
+✓  18 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:94:7 › the mid-onboarding student (F-089, DEC-34) › is sent to onboarding from the home page (177ms)
+✓  19 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:99:7 › the mid-onboarding student (F-089, DEC-34) › is still sent to onboarding with the needs_onboarding cookie deleted (database truth) (188ms)
+✓  20 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:108:7 › the mid-onboarding student (F-089, DEC-34) › gets a JSON 403 Onboarding required on a direct API write (96ms)
+✓  21 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:112:7 › the mid-onboarding student (F-089, DEC-34) › can still make the wizard's self-update (exempt from the onboarding guard) (86ms)
+✓  22 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:119:7 › the mid-onboarding student (F-089, DEC-34) › can still complete onboarding (exempt from the onboarding guard) (85ms)
+✓  23 [chromium] › e2e/specs/ban-and-onboarding-ring.spec.ts:129:7 › the deleted debug route (F-027) › answers 404 in the production build (60ms)
+✓  24 [chromium] › e2e/specs/csrf-origin.spec.ts:88:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Origin https://evil.example is refused with 403 and writes no row (240ms)
+✓  25 [chromium] › e2e/specs/csrf-origin.spec.ts:94:7 › an onboarded student's session, from another site › FIXED F-090: a POST carrying Sec-Fetch-Site cross-site is refused with 403 and writes no row (243ms)
+✓  26 [chromium] › e2e/specs/csrf-origin.spec.ts:104:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with the application's own Origin is accepted (314ms)
+✓  27 [chromium] › e2e/specs/csrf-origin.spec.ts:112:7 › an onboarded student's session, same site or no browser › PRESERVE: a POST with neither Origin nor Sec-Fetch-Site is accepted (276ms)
+✓  28 [chromium] › e2e/specs/protected-route-redirect.spec.ts:38:18 › an anonymous visitor › is redirected from every protected path to the sign-in prompt, carrying the destination (401ms)
+✓  29 [chromium] › e2e/specs/protected-route-redirect.spec.ts:64:18 › a signed-in student › reaches every protected path without a redirect (2.2s)
+29 passed (23.3s)
+exit=0
+
+[3.9 END-TO-END request id, beyond the plan] a throwaway spec, e2e/specs/zz-request-id-probe.spec.ts, run through
+the same harness (its own build and start, local-stack env, never a reused server) and deleted afterwards, never
+staged. Every request sent x-request-id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa where a header was sent.
+$ npx playwright test e2e/specs/zz-request-id-probe.spec.ts
+PROBE GET / -> 200 x-request-id dd4c0fb4-384f-4bce-9dab-eb78c1f61dce
+PROBE GET /api/events -> 200 x-request-id 2306eeee-a26e-4110-baad-ac344790ce81
+PROBE GET /profile -> 307 /?signin=required&next=%2Fprofile x-request-id 5be58bfb-f597-403f-a8b6-b12957f80818
+PROBE POST cross-site -> 403 x-request-id ac5fc39a-8596-4f1e-9a9d-8f72f8c90de6
+11 passed (11.5s)
+exit=0
+Each response carries a fresh proxy-minted UUID, never the client's; the pass-through page and API answers carry
+it too (the proxy stamps its NextResponse.next(); Next copies proxy response headers onto the final response with
+setHeader, next/dist/server/lib/router-utils/resolve-routes.js:444-464, so a wrapped handler's own x-request-id,
+the same value, replaces it rather than duplicating it). This is A1 on the real runtime: the id reaches the
+response on the non-refreshed path through the same NextResponse.next({ request }) object that forwards it.
+Port 3000 free after (lsof exit=1); the spec file removed.

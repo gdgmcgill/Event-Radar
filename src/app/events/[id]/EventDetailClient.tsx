@@ -19,20 +19,26 @@ import { SignInButton } from "@/components/auth/SignInButton";
 import { EventDetailView } from "@/components/events/EventDetailView";
 import { CreateEventForm } from "@/components/events/CreateEventForm";
 import { RsvpButton } from "@/components/events/RsvpButton";
-import { ReviewPrompt } from "@/components/events/ReviewPrompt";
 import { EventReviewsSection } from "@/components/events/EventReviewsSection";
-import { StarRating } from "@/components/events/StarRating";
 import { FriendsGoing } from "@/components/events/FriendsGoing";
 import { InviteFriendsModal } from "@/components/events/InviteFriendsModal";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useEventReviews } from "@/hooks/useAnalytics";
-import type { Event, ReviewAggregate, RejectionCategory } from "@/types";
+import type { Event, RejectionCategory } from "@/types";
 import { REJECTION_CATEGORIES } from "@/types";
 import { AppealForm } from "@/components/AppealForm";
 import { ReviewThread } from "@/components/moderation/ReviewThread";
 import { Loader2, UserPlus, AlertTriangle } from "lucide-react";
+import type { EventSaveRequestInit } from "@/contracts/events";
+import type { ThumbsFeedbackBodyInput } from "@/contracts/recommendations";
+import type { DiscoveryItem } from "@/contracts/discovery";
 
-export default function EventDetailClient() {
+export default function EventDetailClient({
+  discovery = null,
+}: {
+  /** The public discovery projection of this event, when the discovery
+   * switch is on. Absent (switch off), rendering is unchanged. */
+  discovery?: DiscoveryItem | null;
+} = {}) {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
@@ -59,15 +65,6 @@ export default function EventDetailClient() {
     message: string;
     created_at: string;
   } | null>(null);
-  const { data: reviewData, mutate: mutateReviews } = useEventReviews(
-    id ?? ""
-  );
-
-  // Build ReviewAggregate for EventDetailView
-  const reviewAggregate: ReviewAggregate | undefined =
-    reviewData?.aggregate && reviewData.aggregate.total_reviews > 0
-      ? reviewData.aggregate
-      : undefined;
 
   useEffect(() => {
     if (!id) return;
@@ -194,7 +191,9 @@ export default function EventDetailClient() {
     if (!id || savingInProgress) return;
     setSavingInProgress(true);
     try {
-      const res = await fetch(`/api/events/${id}/save`, { method: "POST" });
+      const res = await fetch(`/api/events/${id}/save`, {
+        method: "POST",
+      } satisfies EventSaveRequestInit);
       if (!res.ok) throw new Error("Failed to toggle save");
       const data = await res.json();
       setSaved(data.saved);
@@ -221,7 +220,10 @@ export default function EventDetailClient() {
       const res = await fetch("/api/recommendations/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event_id: id, feedback: "positive" }),
+        body: JSON.stringify({
+          event_id: id,
+          feedback: "positive",
+        } satisfies ThumbsFeedbackBodyInput),
       });
       if (!res.ok) throw new Error("Failed to like event");
     } catch {
@@ -296,16 +298,17 @@ export default function EventDetailClient() {
         onLike={handleLike}
         onShare={handleShare}
         onEventClick={handleEventClick}
-        reviews={reviewAggregate}
         backHref={backHref}
         backLabel={backLabel}
         isCreator={isCreator}
         onEdit={() => setEditModalOpen(true)}
+        discovery={discovery}
+        rsvpSlot={<RsvpButton eventId={event.id} userId={user?.id ?? null} />}
       >
-        {/* RSVP, Friends Going, Invite — rendered inside left column */}
+        {/* Friends Going, Invite — rendered inside left column. The native
+            RSVP control itself is `rsvpSlot`, which EventDetailView hides
+            for a closed discovery listing. */}
         <div className="space-y-4">
-          <RsvpButton eventId={event.id} userId={user?.id ?? null} />
-
           {user && id && <FriendsGoing eventId={id} />}
 
           {user && (
@@ -319,26 +322,9 @@ export default function EventDetailClient() {
             </Button>
           )}
 
-          {/* Reviews */}
-          {user && reviewData?.can_review && !reviewData.user_review && (
-            <ReviewPrompt
-              eventId={event.id}
-              onReviewSubmitted={() => mutateReviews()}
-            />
-          )}
-          {user && reviewData?.user_review && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Your rating:</span>
-              <StarRating
-                value={reviewData.user_review.rating}
-                readonly
-                size="sm"
-              />
-            </div>
-          )}
-          {reviewData && reviewData.aggregate.total_reviews > 0 && (
-            <EventReviewsSection eventId={event.id} isOrganizer={false} />
-          )}
+          {/* Historical ratings are visible only to their author or admin. */}
+          {user && <EventReviewsSection eventId={event.id} />}
+
         </div>
       </EventDetailView>
 
@@ -355,7 +341,7 @@ export default function EventDetailClient() {
           <DialogHeader>
             <DialogTitle>Sign in to save events</DialogTitle>
             <DialogDescription>
-              Create an account or sign in with your McGill email to save events
+              Create an account or sign in with your email to save events
               and get personalised recommendations.
             </DialogDescription>
           </DialogHeader>

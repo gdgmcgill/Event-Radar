@@ -67,8 +67,16 @@ async function decide(body: Record<string, unknown>) {
   );
 }
 
-function logged(fragment: string): boolean {
-  return errorSpy.mock.calls.some((c) => String(c[0]).includes(fragment));
+/** True when one console.error call is the logger's JSON line for `msg`. */
+function logged(scope: string, msg: string): boolean {
+  return errorSpy.mock.calls.some((c) => {
+    try {
+      const line = JSON.parse(String(c[0]));
+      return line.level === "error" && line.scope === scope && line.msg === msg;
+    } catch {
+      return false;
+    }
+  });
 }
 
 it("an approval with no prior notification inserts exactly one event_approved row, never upserts", async () => {
@@ -138,14 +146,14 @@ it("a failed notification write is logged; the decision still answers 200", asyn
   });
   const res = await decide({ status: "approved" });
   expect(res.status).toBe(200);
-  expect(logged("[Admin] Failed to send notification")).toBe(true);
+  expect(logged("Admin", "Failed to send notification")).toBe(true);
 });
 
 it("a failed read of the existing notification is logged and nothing is written", async () => {
   asAdmin("pending", { "notifications.select": { error: { message: "read down" } } });
   const res = await decide({ status: "approved" });
   expect(res.status).toBe(200);
-  expect(logged("[Admin] Failed to read existing notification")).toBe(true);
+  expect(logged("Admin", "Failed to read existing notification")).toBe(true);
   expect(callsTo(mockElevated, "notifications", "insert")).toHaveLength(0);
   expect(callsTo(mockElevated, "notifications", "update")).toHaveLength(0);
 });

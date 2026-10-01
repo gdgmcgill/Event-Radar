@@ -33,15 +33,21 @@
  * dynamic segment like [id] is read as a CHARACTER CLASS matching one of 'i'
  * or 'd' — so an unescaped entry matches NOTHING and the file silently stays
  * under the rule. Measured on this tree: unescaped -> 12 errors leak through;
- * escaped -> 0. 0 of the 2 entries below are dynamic routes, so this is
- * the majority case, not an edge case.
+ * escaped -> 0. The list below is empty, so nothing needs escaping today;
+ * the rule stands for the file's history and for the ratchet's census.
+ *
+ * THE LIST IS EMPTY (plan 06-03). The last two entries, the dead
+ * /api/cron/* handlers, were deleted (F-002, F-037, DEC-63). ESLint 9 throws
+ * on a flat-config object whose `files` is an empty array (C14), so the
+ * override block that spread this list into `files` was removed from
+ * eslint.config.mjs in the same commit: the boundary now applies to every
+ * file under src/** with no exception. The file is kept because
+ * scripts/check-elevated-ratchet.mjs still reads it: committed=0, and any
+ * live callsite is a failure.
  *
  * The header carries no timestamp on purpose: a generated file that
  * regenerates byte-for-byte is one a reviewer can verify. The date the
  * original census was taken is recorded in
  * .planning/phases/03-refactor-foundations-schema-truth-and-the-seam-kit/evidence/elevated-callsite-census.txt
  */
-export const LEGACY_ELEVATED_CALLSITES = [
-  "src/app/api/cron/send-feedback-requests/route.ts",
-  "src/app/api/cron/send-reminders/route.ts",
-];
+export const LEGACY_ELEVATED_CALLSITES = [];

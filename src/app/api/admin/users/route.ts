@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
+import { logRouteError, withRoute } from "@/server/route";
 
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch users" }, async () => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -17,8 +18,9 @@ export async function GET() {
     .order("created_at", { ascending: false });
 
   if (error) {
+    logRouteError(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
   return NextResponse.json({ users: data });
-}
+});

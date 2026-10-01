@@ -3,11 +3,119 @@
 import { useMemo } from "react";
 import useSWR from "swr";
 import { useAuthStore } from "@/store/useAuthStore";
+import type {
+  ClubEventsResponse,
+  ClubFollowStatusResponse,
+  ClubInvitesResponse,
+  ClubMembersResponse,
+  ClubResponse,
+} from "@/contracts/clubs";
+import type {
+  FollowedClubsResponse,
+  MyClubsResponse,
+} from "@/contracts/users";
+import { checkResponseInDev } from "@/lib/contractCheck";
 
 const fetcher = (url: string) =>
   fetch(url).then((r) => {
     if (!r.ok) throw new Error("Fetch failed");
     return r.json();
+  });
+
+// One fetcher per route, each checking its response against the route's
+// contract in development only (plan 06-11, REFAC-16). The schema is loaded
+// inside the NODE_ENV branch, so a production build drops the branch and
+// ships no contract code; the data SWR receives is the JSON as sent.
+
+const fetchClub = (url: string) =>
+  fetcher(url).then((json) => {
+    if (process.env.NODE_ENV !== "production") {
+      void checkResponseInDev(
+        "GET /api/clubs/[id]",
+        (): Promise<typeof ClubResponse> =>
+          import("@/contracts/clubs").then((m) => m.ClubResponse),
+        json
+      );
+    }
+    return json;
+  });
+
+const fetchClubEvents = (url: string) =>
+  fetcher(url).then((json) => {
+    if (process.env.NODE_ENV !== "production") {
+      void checkResponseInDev(
+        "GET /api/clubs/[id]/events",
+        (): Promise<typeof ClubEventsResponse> =>
+          import("@/contracts/clubs").then((m) => m.ClubEventsResponse),
+        json
+      );
+    }
+    return json;
+  });
+
+const fetchClubMembers = (url: string) =>
+  fetcher(url).then((json) => {
+    if (process.env.NODE_ENV !== "production") {
+      void checkResponseInDev(
+        "GET /api/clubs/[id]/members",
+        (): Promise<typeof ClubMembersResponse> =>
+          import("@/contracts/clubs").then((m) => m.ClubMembersResponse),
+        json
+      );
+    }
+    return json;
+  });
+
+const fetchMyClubs = (url: string) =>
+  fetcher(url).then((json) => {
+    if (process.env.NODE_ENV !== "production") {
+      void checkResponseInDev(
+        "GET /api/my-clubs",
+        (): Promise<typeof MyClubsResponse> =>
+          import("@/contracts/users").then((m) => m.MyClubsResponse),
+        json
+      );
+    }
+    return json;
+  });
+
+const fetchFollowStatus = (url: string) =>
+  fetcher(url).then((json) => {
+    if (process.env.NODE_ENV !== "production") {
+      void checkResponseInDev(
+        "GET /api/clubs/[id]/follow",
+        (): Promise<typeof ClubFollowStatusResponse> =>
+          import("@/contracts/clubs").then((m) => m.ClubFollowStatusResponse),
+        json
+      );
+    }
+    return json;
+  });
+
+const fetchFollowedClubs = (url: string) =>
+  fetcher(url).then((json) => {
+    if (process.env.NODE_ENV !== "production") {
+      void checkResponseInDev(
+        "GET /api/user/following",
+        (): Promise<typeof FollowedClubsResponse> =>
+          import("@/contracts/users").then((m) => m.FollowedClubsResponse),
+        json
+      );
+    }
+    return json;
+  });
+
+const fetchClubInvites = (url: string) =>
+  fetcher(url).then((json) => {
+    if (process.env.NODE_ENV !== "production") {
+      void checkResponseInDev(
+        "GET /api/clubs/[id]/invites",
+        (): Promise<typeof ClubInvitesResponse> =>
+          import("@/contracts/clubs").then((m) => m.ClubInvitesResponse),
+        json
+      );
+    }
+    return json;
   });
 
 /**
@@ -16,7 +124,7 @@ const fetcher = (url: string) =>
 export function useClub(clubId: string | null | undefined) {
   return useSWR(
     clubId ? `/api/clubs/${clubId}` : null,
-    fetcher
+    fetchClub
   );
 }
 
@@ -26,7 +134,7 @@ export function useClub(clubId: string | null | undefined) {
 export function useClubEvents(clubId: string | null | undefined) {
   return useSWR(
     clubId ? `/api/clubs/${clubId}/events` : null,
-    fetcher
+    fetchClubEvents
   );
 }
 
@@ -37,7 +145,7 @@ export function useClubEvents(clubId: string | null | undefined) {
 export function useClubEventsManagement(clubId: string | null | undefined) {
   const { data, error, isLoading, mutate } = useSWR(
     clubId ? `/api/clubs/${clubId}/events` : null,
-    fetcher
+    fetchClubEvents
   );
 
   return {
@@ -55,7 +163,7 @@ export function useClubEventsManagement(clubId: string | null | undefined) {
 export function useClubMembers(clubId: string | null | undefined) {
   return useSWR(
     clubId ? `/api/clubs/${clubId}/members` : null,
-    fetcher
+    fetchClubMembers
   );
 }
 
@@ -63,7 +171,7 @@ export function useClubMembers(clubId: string | null | undefined) {
  * Fetch current user's clubs.
  */
 export function useMyClubs() {
-  return useSWR("/api/my-clubs", fetcher);
+  return useSWR("/api/my-clubs", fetchMyClubs);
 }
 
 /**
@@ -72,7 +180,7 @@ export function useMyClubs() {
 export function useFollowStatus(clubId: string | null | undefined) {
   return useSWR(
     clubId ? `/api/clubs/${clubId}/follow` : null,
-    fetcher
+    fetchFollowStatus
   );
 }
 
@@ -85,7 +193,7 @@ export function useFollowedClubIds() {
   const user = useAuthStore((s) => s.user);
   const { data, error, isLoading, mutate } = useSWR(
     user ? "/api/user/following" : null,
-    fetcher
+    fetchFollowedClubs
   );
 
   const followedIds = useMemo(() => {
@@ -108,6 +216,6 @@ export function useFollowedClubIds() {
 export function useClubInvites(clubId: string | undefined) {
   return useSWR(
     clubId ? `/api/clubs/${clubId}/invites` : null,
-    fetcher
+    fetchClubInvites
   );
 }

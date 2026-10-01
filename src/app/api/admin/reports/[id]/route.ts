@@ -4,12 +4,15 @@ import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireRole } from "@/server/authz/requireRole";
 import { logAdminAction } from "@/lib/audit";
-import { readJsonObject } from "@/server/body";
+import { parseBody } from "@/server/body";
+import { ReportDecisionBody } from "@/contracts/admin";
+import { logRouteError, withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
-export async function PATCH(
+export const PATCH = withRoute({ cache: "private", action: "update report" }, async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const ctx = await createRequestContext();
   const activeUser = requireActiveUser(ctx);
   if (!activeUser.ok) return activeUser.response;
@@ -18,14 +21,9 @@ export async function PATCH(
   const user = auth.user;
 
   const { id } = await params;
-  const parsedBody = await readJsonObject(request);
-  if (!parsedBody.ok) return parsedBody.response;
-  const body = parsedBody.body;
-  const { status } = body;
-
-  if (!["reviewed", "dismissed"].includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-  }
+  const parsed = await parseBody(request, ReportDecisionBody);
+  if (!parsed.ok) return parsed.response;
+  const { status } = parsed.data;
 
   // "Admins can read all reports" and "Admins can update reports" permit the
   // read and the update on the cookie client, so no elevated client is needed
@@ -63,6 +61,7 @@ export async function PATCH(
     .select("id");
 
   if (updateError) {
+    logRouteError(updateError);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 
@@ -83,8 +82,8 @@ export async function PATCH(
       metadata: { event_id: report.event_id },
     });
   } catch (auditErr) {
-    console.error("[Admin] Failed to log audit action:", auditErr);
+    log.error("Failed to log audit action", { scope: "Admin", error: auditErr });
   }
 
   return NextResponse.json({ success: true });
-}
+});

@@ -1,0 +1,59 @@
+{
+  "node --version": "v24.16.0",
+  "npm --version": "11.13.0",
+  "supabase --version": "2.115.0",
+  "git rev-parse HEAD": "2e4c4ff32233e2a59d8258575d9c232bea9e3aa8",
+  "git branch --show-current": "codex/m0-foundation-certification",
+  "recorded_at": "2026-09-27T22:36:47.531765+00:00",
+  "note": "M0 working tree based on recorded commit; final local database replay, pgTAP, Edge and type generation use installed pinned Supabase2.115.0. An intermediate reset/test run used npx2.118.0; it is superseded by the pinned final runs. Final code/test tree committed after the successful runs; follow-up commit changes certification metadata only.",
+  "tested_implementation_commit": "aabca3b6bcf523a849449ddf93c6771dc4bb194e",
+  "verification_recorded_at": "2026-09-27T23:10:42.471569+00:00",
+  "final_results": {
+    "jest": {
+      "passed": 3667,
+      "skipped": 1,
+      "suites_passed": 142,
+      "exit_code": 0
+    },
+    "playwright": {
+      "passed": 1800,
+      "skipped": 118,
+      "total": 1918,
+      "exit_code": 0
+    },
+    "pgtap": {
+      "assertions_per_run": 626,
+      "files": 22,
+      "seeded_exit_code": 0,
+      "unseeded_exit_code": 0,
+      "note": "Unseeded run includes explicit fixture-dependent skips; repeated runs are not distinct assertions."
+    },
+    "local_edge": {
+      "passed": 19,
+      "exit_code": 0
+    },
+    "deno_handler": {
+      "passed": 3,
+      "exit_code": 0
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 17,
+      "exit_code": 0
+    },
+    "typecheck_exit_code": 0,
+    "type_drift_exit_code": 0,
+    "guards_exit_code": 0,
+    "build_exit_code": 0,
+    "production_audit": {
+      "critical": 0,
+      "high": 0,
+      "moderate": 2,
+      "low": 1,
+      "exit_code": 0
+    },
+    "remote_ci": "unobserved",
+    "deployment": "not performed",
+    "foundation_certified": false
+  }
+}

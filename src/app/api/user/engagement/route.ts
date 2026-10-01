@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createRequestContext } from "@/server/context";
 import { requireActiveUser } from "@/server/authz/requireActiveUser";
 import { requireOnboarded } from "@/server/authz/requireOnboarded";
+import { withRoute } from "@/server/route";
+import { log } from "@/server/log";
 
 /**
  * @swagger
@@ -50,7 +52,7 @@ import { requireOnboarded } from "@/server/authz/requireOnboarded";
  *       500:
  *         description: Internal server error
  */
-export async function GET() {
+export const GET = withRoute({ cache: "private", action: "fetch engagement data" }, async () => {
   try {
     const supabase = await createClient();
 
@@ -63,7 +65,7 @@ export async function GET() {
     // Supabase returns an auth error when no session exists; that should be a 401.
     if (authError || !user) {
       if (authError) {
-        console.warn("Unauthenticated request to /api/user/engagement:", authError);
+        log.warn("Unauthenticated request to /api/user/engagement", { error: authError });
       }
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -71,15 +73,14 @@ export async function GET() {
       );
     }
 
-    // Fetch user's engagement summary
-    const { data: engagement, error: engagementError } = await supabase
-      .from("user_engagement_summary" as never)
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // DI-87: compute from canonical interactions; the retired summary table
+    // never existed on the reset schema. The RPC scopes itself to auth.uid().
+    const { data: engagement, error: engagementError } = await supabase.rpc(
+      "get_user_engagement"
+    );
 
     if (engagementError) {
-      console.error("Error fetching engagement:", engagementError);
+      log.error("Error fetching engagement", { error: engagementError });
       return NextResponse.json(
         { error: "Failed to fetch engagement data" },
         { status: 500 }
@@ -105,54 +106,37 @@ export async function GET() {
 
     return NextResponse.json(engagement);
   } catch (error) {
-    console.error("Unexpected error fetching engagement:", error);
+    log.error("Unexpected error fetching engagement", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * POST /api/user/engagement
  * Manually trigger recalculation of user's engagement summary
  */
-export async function POST() {
+export const POST = withRoute({ cache: "private", action: "recalculate engagement" }, async () => {
   try {
     const ctx = await createRequestContext();
     const active = requireActiveUser(ctx);
     if (!active.ok) return active.response;
     const onboarded = requireOnboarded(ctx);
     if (!onboarded.ok) return onboarded.response;
-    const user = active.user;
     const supabase = ctx.supabase;
 
-    // Call the database function to recalculate engagement
-    // Using type assertion since the function isn't in generated types yet
-    const { error: rpcError } = await supabase.rpc(
-      "update_user_engagement" as never,
-      { p_user_id: user.id } as never
+    // DI-87: live aggregation is always current, so refresh needs no write to
+    // a missing materialization table or caller-selected subject argument.
+    const { data: engagement, error: rpcError } = await supabase.rpc(
+      "get_user_engagement"
     );
 
     if (rpcError) {
-      console.error("Error recalculating engagement:", rpcError);
+      log.error("Error recalculating engagement", { error: rpcError });
       return NextResponse.json(
         { error: "Failed to recalculate engagement" },
-        { status: 500 }
-      );
-    }
-
-    // Fetch the updated engagement
-    const { data: engagement, error: engagementError } = await supabase
-      .from("user_engagement_summary" as never)
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    if (engagementError) {
-      console.error("Error fetching updated engagement:", engagementError);
-      return NextResponse.json(
-        { error: "Failed to fetch updated engagement" },
         { status: 500 }
       );
     }
@@ -162,10 +146,10 @@ export async function POST() {
       engagement,
     });
   } catch (error) {
-    console.error("Unexpected error recalculating engagement:", error);
+    log.error("Unexpected error recalculating engagement", { error });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
+});

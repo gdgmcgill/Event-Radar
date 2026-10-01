@@ -1,0 +1,9 @@
+PASS jsdom src/__tests__/pages/experiments-create.test.tsx
+PASS jsdom src/__tests__/pages/experiment-detail.test.tsx
+PASS node src/__tests__/pages/docs-gate-defect.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       20 passed, 20 total
+Snapshots:   0 total
+Time:        0.96 s, estimated 1 s
+Ran all test suites matching src/__tests__/pages/experiments-create.test.tsx|src/__tests__/pages/experiment-detail.test.tsx|src/__tests__/pages/docs-gate-defect.test.ts in 2 projects.

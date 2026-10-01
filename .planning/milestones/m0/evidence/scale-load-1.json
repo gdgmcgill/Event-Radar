@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "name": "scale",
+  "seed": 1431193942,
+  "namespace": "c0700001",
+  "counts": {
+    "users": 2000,
+    "clubs": 200,
+    "club_members": 200,
+    "events": 4000,
+    "rsvps": 20000,
+    "saved_events": 20000,
+    "user_interactions": 20000,
+    "notifications": 20000,
+    "club_invitations": 0
+  },
+  "probes": 0,
+  "sha256": "47033e32b468f938a41e3d711d3f09fcaed06f29460b88b9fb0a6a52841e6a10",
+  "persistedSha256": "fdf4e364572ebf49f55d31607481cc9fe620f42b292b734ba172c97cc8e76d07",
+  "excludedRuntimeColumns": [
+    "updated_at",
+    "auth timestamps",
+    "derived popularity calculated_at/scores"
+  ]
+}

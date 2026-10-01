@@ -169,9 +169,9 @@ export default function InterestTagSelector({
           {count}
         </span>{" "}
         selected{" "}
-        <span className="text-muted-foreground">
+        {min > 0 && <span className="text-muted-foreground">
           (at least {min})
-        </span>
+        </span>}
       </p>
     </div>
   );

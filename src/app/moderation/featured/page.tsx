@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Star, Trash2, Pencil, Plus, Search, Calendar } from "lucide-react";
 import { FeatureEventModal } from "@/components/moderation/FeatureEventModal";
 import { getESTNowISO } from "@/lib/timezone";
+import type { FeaturedDeleteRequestInit } from "@/contracts/admin";
 
 interface FeaturedRow {
   id: string;
@@ -72,7 +73,7 @@ export default function FeaturedManagementPage() {
     try {
       const res = await fetch(`/api/admin/featured/${id}`, {
         method: "DELETE",
-      });
+      } satisfies FeaturedDeleteRequestInit);
       if (res.ok) {
         fetchData();
       }

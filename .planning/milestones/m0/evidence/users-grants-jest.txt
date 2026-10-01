@@ -1,0 +1,9 @@
+PASS node src/__tests__/api/auth-ring/write-handlers-characterization.test.ts
+PASS node src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts
+PASS node src/lib/__tests__/ban.test.ts
+
+Test Suites: 3 passed, 3 total
+Tests:       181 passed, 181 total
+Snapshots:   0 total
+Time:        0.783 s, estimated 1 s
+Ran all test suites matching src/__tests__/api/auth-ring/write-handlers-characterization.test.ts|src/__tests__/api/auth-ring/write-handlers-ring-defect.test.ts|src/lib/__tests__/ban.test.ts.

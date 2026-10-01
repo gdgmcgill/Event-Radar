@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { FallbackImage } from "@/components/ui/FallbackImage";
 import {
   Card,
   CardContent,
@@ -19,6 +20,7 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTracking } from "@/hooks/useTracking";
 import { exportEventIcal } from "@/lib/exportUtils";
+import type { EventSaveRequestInit } from "@/contracts/events";
 
 interface EventCardProps {
   event: Event;
@@ -115,7 +117,7 @@ export function EventCard({
       const response = await fetch(`/api/events/${event.id}/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-      });
+      } satisfies EventSaveRequestInit);
       if (!response.ok) throw new Error("Failed to save event");
 
       const data = await response.json();
@@ -192,7 +194,7 @@ export function EventCard({
         {/* Image Section */}
         <div className="relative h-56 w-full overflow-hidden bg-muted">
           {event.image_url ? (
-            <Image
+            <FallbackImage
               src={event.image_url}
               alt={event.title}
               fill

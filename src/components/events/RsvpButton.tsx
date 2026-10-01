@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { UserCheck, Star, Loader2, X } from "lucide-react";
 import type { RsvpStatus } from "@/types";
+import type {
+  RsvpBodyInput,
+  RsvpDeleteBodyInput,
+  RsvpStatusValue,
+} from "@/contracts/events";
 
 interface RsvpButtonProps {
   eventId: string;
@@ -70,7 +75,7 @@ export function RsvpButton({ eventId, userId }: RsvpButtonProps) {
         const res = await fetch(`/api/events/${eventId}/rsvp`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: userId }),
+          body: JSON.stringify({ user_id: userId } satisfies RsvpDeleteBodyInput),
         });
         if (!res.ok) {
           setUserRsvp(prevUserRsvp);
@@ -84,7 +89,10 @@ export function RsvpButton({ eventId, userId }: RsvpButtonProps) {
       const res = await fetch(`/api/events/${eventId}/rsvp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, status }),
+        body: JSON.stringify({
+          user_id: userId,
+          status,
+        } satisfies RsvpBodyInput & { status: RsvpStatusValue }),
       });
       if (!res.ok) throw new Error("Failed to RSVP");
 

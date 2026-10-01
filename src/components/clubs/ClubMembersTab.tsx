@@ -28,7 +28,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useClubMembers, useClubInvites } from "@/hooks/useClubs";
-import { isMcGillEmail } from "@/lib/utils";
+import type {
+  ClubInviteBodyInput,
+  ClubMemberBodyInput,
+  ClubMemberRoleBodyInput,
+} from "@/contracts/clubs";
 
 interface MemberEntry {
   id: string;
@@ -122,7 +126,9 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
       const res = await fetch(`/api/clubs/${clubId}/members`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId: removingMember.id }),
+        body: JSON.stringify({
+          memberId: removingMember.id,
+        } satisfies ClubMemberBodyInput),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -142,13 +148,13 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
     setInviteLink(null);
     const email = inviteEmail.trim().toLowerCase();
     if (!email) { setInviteError("Please enter an email address."); return; }
-    if (!isMcGillEmail(email)) { setInviteError("Only McGill email addresses are accepted."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setInviteError("Enter a valid email address."); return; }
     setInviteLoading(true);
     try {
       const res = await fetch(`/api/clubs/${clubId}/invites`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email } satisfies ClubInviteBodyInput),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed to send invite");
@@ -170,13 +176,19 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
     } catch { /* fallback */ }
   };
 
-  async function handleRoleChange(memberId: string, newRole: string) {
+  async function handleRoleChange(
+    memberId: string,
+    newRole: ClubMemberRoleBodyInput["role"]
+  ) {
     setRoleLoading(memberId);
     try {
       const res = await fetch(`/api/clubs/${clubId}/members/role`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId, role: newRole }),
+        body: JSON.stringify({
+          memberId,
+          role: newRole,
+        } satisfies ClubMemberRoleBodyInput),
       });
       if (!res.ok) {
         const { error } = await res.json();
@@ -209,7 +221,7 @@ export function ClubMembersTab({ clubId, clubName, isOwner }: ClubMembersTabProp
         const res = await fetch(`/api/clubs/${clubId}/invites`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ email } satisfies ClubInviteBodyInput),
         });
         if (res.ok) {
           results.push({ email, success: true });

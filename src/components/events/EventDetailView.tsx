@@ -3,14 +3,18 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
+import { FallbackImage } from "@/components/ui/FallbackImage";
 import Link from "next/link";
 import { EventBadge } from "@/components/events/EventBadge";
 import { formatDate, formatTimeFromISO, cn } from "@/lib/utils";
 import { EVENT_CATEGORIES } from "@/lib/constants";
 import { exportEventIcal } from "@/lib/exportUtils";
-import type { Event, EventTag, ReviewAggregate } from "@/types";
+import type { Event, EventTag } from "@/types";
+import type { DiscoveryItem } from "@/contracts/discovery";
 import { ScrollRow } from "@/components/events/ScrollRow";
 import { DiscoveryCard } from "@/components/events/DiscoveryCard";
+import { ListingFacts } from "@/components/discovery/ListingFacts";
+import { ReportListingButton } from "@/components/intake/ReportListingButton";
 import {
   ArrowLeft,
   Calendar,
@@ -18,7 +22,6 @@ import {
   Bookmark,
   Heart,
   Share2,
-  Star,
   ExternalLink,
   Flame,
   ArrowRight,
@@ -30,6 +33,21 @@ import {
 import { ReportEventDialog } from "@/components/events/ReportEventDialog";
 import { useAuthStore } from "@/store/useAuthStore";
 
+// The sidebar's date and time when the discovery projection is present:
+// the same zone as ListingFacts, so the two never disagree on one page.
+const SIDEBAR_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "America/Toronto",
+});
+const SIDEBAR_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "America/Toronto",
+  timeZoneName: "short",
+});
+
 interface EventDetailViewProps {
   event: Event;
   similarEvents?: Event[];
@@ -39,12 +57,19 @@ interface EventDetailViewProps {
   onLike?: () => void;
   onShare?: (platform: string) => void;
   onEventClick?: (eventId: string) => void;
-  reviews?: ReviewAggregate;
   children?: React.ReactNode;
+  /** The in-app RSVP control (and nothing else — Friends Going, Invite,
+   * Reviews stay in `children`). Rendered only when the event is not a
+   * closed discovery listing, so the caller never has to duplicate that
+   * gate itself. */
+  rsvpSlot?: React.ReactNode;
   backHref?: string;
   backLabel?: string;
   isCreator?: boolean;
   onEdit?: () => void;
+  /** The public discovery projection of this event, when the discovery
+   * switch is on. Absent (switch off), rendering is unchanged. */
+  discovery?: DiscoveryItem | null;
 }
 
 export function EventDetailView({
@@ -56,12 +81,13 @@ export function EventDetailView({
   onLike,
   onShare,
   onEventClick,
-  reviews,
   children,
+  rsvpSlot,
   backHref = "/",
   backLabel = "Back to Events",
   isCreator = false,
   onEdit,
+  discovery = null,
 }: EventDetailViewProps) {
   const [saved, setSaved] = useState(isSaved);
   const [liked, setLiked] = useState(isLiked);
@@ -117,7 +143,14 @@ export function EventDetailView({
   }, [onLike]);
 
 
-  const isPast = new Date(event.start_date) < new Date();
+  // DEC-80 (docs/time-semantics.md): with the switch on, the discovery
+  // projection's `starts_at` is the true instant, so the sidebar and the
+  // past notice use it and agree with ListingFacts. With it absent, the
+  // legacy formatting below is unchanged.
+  const discoveryStart = discovery?.starts_at ? new Date(discovery.starts_at) : null;
+  const isPast = discoveryStart
+    ? discoveryStart < new Date()
+    : new Date(event.start_date) < new Date();
   const primaryTag = event.tags[0] as EventTag | undefined;
   const categoryInfo = primaryTag ? EVENT_CATEGORIES[primaryTag] : null;
 
@@ -126,7 +159,9 @@ export function EventDetailView({
       {/* ─── Full-Bleed Hero ─── */}
       <div className="relative w-full h-[55vh] min-h-[450px]">
         <div className="absolute inset-0">
-          <Image
+          {/* An expired external URL (e.g. a stale Instagram CDN link) falls
+              back to the placeholder instead of a broken hero (M3). */}
+          <FallbackImage
             src={event.image_url || "/placeholder-event.png"}
             alt={event.title}
             fill
@@ -263,6 +298,16 @@ export function EventDetailView({
               </div>
             )}
 
+            {/* Discovery listing facts (switch on only) */}
+            {discovery && (
+              <div className="rounded-xl border border-border p-6">
+                <ListingFacts item={discovery} />
+                <div className="mt-4 border-t border-border pt-4">
+                  <ReportListingButton kind="event" id={discovery.id} />
+                </div>
+              </div>
+            )}
+
             {/* About this event */}
             <div className="space-y-6 text-muted-foreground text-lg leading-relaxed">
               <h2 className="text-2xl font-bold text-foreground mb-2">
@@ -286,47 +331,7 @@ export function EventDetailView({
               )}
             </div>
 
-            {/* Reviews */}
-            {reviews && reviews.total_reviews > 0 && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-bold text-foreground">Reviews</h3>
-                  <div className="flex items-center gap-1 text-primary">
-                    <Star className="h-5 w-5 fill-current" />
-                    <span className="font-bold">
-                      {reviews.average_rating.toFixed(1)}
-                    </span>
-                    <span className="text-muted-foreground text-sm">
-                      ({reviews.total_reviews} review
-                      {reviews.total_reviews !== 1 ? "s" : ""})
-                    </span>
-                  </div>
-                </div>
-                {reviews.comments.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {reviews.comments.slice(0, 4).map((review, idx) => (
-                      <div
-                        key={idx}
-                        className="p-4 rounded-xl bg-black/[0.02] border border-black/10 dark:bg-white/[0.05] dark:border-white/10"
-                      >
-                        <p className="italic text-sm text-muted-foreground">
-                          &ldquo;{review.comment}&rdquo;
-                        </p>
-                        <div className="flex items-center gap-1 mt-2">
-                          {Array.from({ length: review.rating }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className="h-3 w-3 text-primary fill-current"
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
+            {!discovery?.closed && rsvpSlot}
             {children}
           </div>
 
@@ -341,10 +346,14 @@ export function EventDetailView({
                   </div>
                   <div className="flex flex-col">
                     <span className="text-foreground font-bold text-lg">
-                      {formatDate(event.start_date)}
+                      {discoveryStart
+                        ? SIDEBAR_DATE_FORMATTER.format(discoveryStart)
+                        : formatDate(event.start_date)}
                     </span>
                     <span className="text-muted-foreground text-sm mt-0.5">
-                      {formatTimeFromISO(event.start_date)}
+                      {discoveryStart
+                        ? SIDEBAR_TIME_FORMATTER.format(discoveryStart)
+                        : formatTimeFromISO(event.start_date)}
                     </span>
                     <button
                       onClick={() => exportEventIcal(event.id, event.title)}
@@ -456,44 +465,55 @@ export function EventDetailView({
                   </button>
                 </div>
 
-                {/* Registration */}
-                <div className="flex items-end justify-between mb-5">
-                  <div className="flex flex-col">
-                    <span className="text-muted-foreground text-sm font-medium mb-1">
-                      Registration
-                    </span>
-                    <span className="text-3xl font-black text-foreground truncate max-w-[180px]" title={event.is_free ? "Free" : event.price || "Paid"}>
-                      {event.is_free ? "Free" : event.price || "Paid"}
-                    </span>
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-black/[0.05] text-muted-foreground text-xs font-bold uppercase tracking-wider dark:bg-white/10">
-                    McGill ID Req.
-                  </span>
-                </div>
-
-                {/* Register Now CTA */}
-                {event.rsvp_link ? (
-                  <a
-                    href={event.rsvp_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-4 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(237,29,49,0.25)] hover:shadow-[0_0_35px_rgba(237,29,49,0.4)] flex items-center justify-center gap-2"
-                  >
-                    Register Now
-                    <ExternalLink className="h-5 w-5" />
-                  </a>
-                ) : (
-                  <button
-                    disabled
-                    className="w-full bg-muted text-muted-foreground font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed"
-                  >
-                    No Registration Link
-                  </button>
-                )}
-                {event.rsvp_link && (
-                  <p className="text-center text-muted-foreground text-xs mt-4">
-                    Opens external registration page.
+                {discovery?.closed ? (
+                  /* Discovery-driven closed state: no registration action. */
+                  <p className="rounded-xl bg-muted p-4 text-center text-sm font-semibold text-muted-foreground">
+                    This event has ended
                   </p>
+                ) : (
+                  <>
+                    {/* Registration */}
+                    <div className="flex items-end justify-between mb-5">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground text-sm font-medium mb-1">
+                          Registration
+                        </span>
+                        <span className="text-3xl font-black text-foreground truncate max-w-[180px]" title={event.is_free ? "Free" : event.price || "Paid"}>
+                          {event.is_free ? "Free" : event.price || "Paid"}
+                        </span>
+                      </div>
+                      <span className="px-3 py-1 rounded-full bg-black/[0.05] text-muted-foreground text-xs font-bold uppercase tracking-wider dark:bg-white/10">
+                        McGill ID Req.
+                      </span>
+                    </div>
+
+                    {/* Register Now CTA — primary CTA is "Register on organizer
+                        site" when discovery is present; native RSVP (children,
+                        below) stays secondary either way. */}
+                    {event.rsvp_link ? (
+                      <a
+                        href={event.rsvp_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-4 rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(237,29,49,0.25)] hover:shadow-[0_0_35px_rgba(237,29,49,0.4)] flex items-center justify-center gap-2"
+                      >
+                        {discovery ? "Register on organizer site" : "Register Now"}
+                        <ExternalLink className="h-5 w-5" />
+                      </a>
+                    ) : (
+                      <button
+                        disabled
+                        className="w-full bg-muted text-muted-foreground font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed"
+                      >
+                        No Registration Link
+                      </button>
+                    )}
+                    {event.rsvp_link && (
+                      <p className="text-center text-muted-foreground text-xs mt-4">
+                        Opens external registration page.
+                      </p>
+                    )}
+                  </>
                 )}
 
                 {/* Report link */}
